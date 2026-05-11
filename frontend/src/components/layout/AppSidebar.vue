@@ -7,6 +7,9 @@
       <router-link to="/" class="nav-item" exact-active-class="active">
         <span>Workspaces</span>
       </router-link>
+      <router-link to="/chat" class="nav-item" active-class="active">
+        <span>AI Chat</span>
+      </router-link>
       <div v-if="workspaceStore.workspaces.length" class="nav-section">
         <p class="nav-section-title">My Workspaces</p>
         <router-link

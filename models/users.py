@@ -10,6 +10,7 @@ from config import settings
 from database import Base
 
 if TYPE_CHECKING:
+    from .chat import Conversation
     from .workspaces import Workspace
 
 
@@ -29,6 +30,9 @@ class User(Base):
     )
     workspaces: Mapped[list["Workspace"]] = relationship(
         "Workspace", back_populates="user", cascade="all, delete-orphan"
+    )
+    conversations: Mapped[list["Conversation"]] = relationship(
+        "Conversation", back_populates="user", cascade="all, delete-orphan"
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC)

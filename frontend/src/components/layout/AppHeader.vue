@@ -25,6 +25,7 @@ const pageTitle = computed(() => {
   if (name === 'WorkspaceDetail') return 'Workspace'
   if (name === 'ProjectDetail') return 'Project'
   if (name === 'TaskDetail') return 'Task'
+  if (name === 'Chat') return 'AI Chat'
   return 'Dashboard'
 })
 

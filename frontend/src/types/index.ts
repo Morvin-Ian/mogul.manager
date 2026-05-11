@@ -133,3 +133,24 @@ export interface CommentCreate {
   task_id: number
   content: string
 }
+
+export interface Conversation {
+  id: number
+  user_id: number
+  title: string | null
+  is_archived: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface Message {
+  id: number
+  conversation_id: number
+  role: string
+  content: string
+  created_at: string
+}
+
+export interface ConversationDetail extends Conversation {
+  messages: Message[]
+}

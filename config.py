@@ -33,5 +33,9 @@ class Settings(BaseSettings):
 
     frontend_url: str = "http://localhost:8000"
 
+    deepseek_api_key: SecretStr = SecretStr("")
+    deepseek_base_url: str = "https://api.deepseek.com"
+    deepseek_model: str = "deepseek-chat"
+
 
 settings = Settings()  # type: ignore[call-arg]
