@@ -1,21 +1,16 @@
 import os
 
-from fastapi import FastAPI, Request
-from fastapi.exception_handlers import (
-    http_exception_handler,
-    request_validation_exception_handler,
-)
-from fastapi.exceptions import RequestValidationError
+from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from routes import users
-
-app = FastAPI()
+from routes import comments, projects, tasks, users, workspaces
 
 os.makedirs("static", exist_ok=True)
 os.makedirs("media", exist_ok=True)
+
+
+app = FastAPI()
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 app.mount("/media", StaticFiles(directory="media"), name="media")
@@ -23,21 +18,7 @@ app.mount("/media", StaticFiles(directory="media"), name="media")
 templates = Jinja2Templates(directory="templates")
 
 app.include_router(users.router)
-
-
-@app.exception_handler(StarletteHTTPException)
-async def general_http_exception_handler(
-    request: Request,
-    exception: StarletteHTTPException,
-):
-    if request.url.path.startswith("/api"):
-        return await http_exception_handler(request, exception)
-
-
-@app.exception_handler(RequestValidationError)
-async def validation_exception_handler(
-    request: Request,
-    exception: RequestValidationError,
-):
-    if request.url.path.startswith("/api"):
-        return await request_validation_exception_handler(request, exception)
+app.include_router(workspaces.router)
+app.include_router(projects.router)
+app.include_router(tasks.router)
+app.include_router(comments.router)

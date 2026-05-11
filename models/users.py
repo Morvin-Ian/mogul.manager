@@ -1,12 +1,16 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from config import settings
 from database import Base
+
+if TYPE_CHECKING:
+    from .workspaces import Workspace
 
 
 class User(Base):
@@ -22,6 +26,9 @@ class User(Base):
 
     reset_tokens: Mapped[list[PasswordResetToken]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
+    )
+    workspaces: Mapped[list["Workspace"]] = relationship(
+        "Workspace", back_populates="user", cascade="all, delete-orphan"
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC)
