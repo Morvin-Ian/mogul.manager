@@ -6,26 +6,38 @@
     @dragstart="onDragStart"
     @click="$router.push(`/tasks/${task.id}`)"
   >
-    <div class="task-card-header">
-      <span class="priority-indicator" :class="`priority-${task.priority}`"></span>
-      <span v-if="task.assigned_agent" class="task-agent">{{ task.assigned_agent }}</span>
+    <p class="task-title">{{ task.title }}</p>
+    <div class="task-meta">
+      <span class="priority-pill" :class="`priority-${task.priority}`">{{ priorityLabel }}</span>
+      <span v-if="task.assigned_agent" class="agent-tag">{{ task.assigned_agent }}</span>
     </div>
-    <p class="task-card-title">{{ task.title }}</p>
-    <div class="task-card-footer">
-      <span v-if="task.due_date" class="date">{{ formatDate(task.due_date) }}</span>
-      <span v-if="task.estimated_hours" class="hours">{{ task.estimated_hours }}h</span>
+    <div v-if="task.due_date || task.estimated_hours" class="task-footer">
+      <span v-if="task.due_date" class="due-chip">
+        <svg viewBox="0 0 12 12" fill="none" width="10" height="10">
+          <rect x="1" y="1.5" width="10" height="9" rx="1.5" stroke="currentColor" stroke-width="1.2"/>
+          <path d="M1 4.5h10M4 1v2M8 1v2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+        </svg>
+        {{ formatDate(task.due_date) }}
+      </span>
+      <span v-if="task.estimated_hours" class="hours-chip">{{ task.estimated_hours }}h</span>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { Task } from '../../types'
 
 const props = defineProps<{ task: Task }>()
 const emit = defineEmits<{ dragstart: [id: number] }>()
 
+const priorityLabel = computed(() => {
+  const labels: Record<number, string> = { 1: 'Low', 2: 'Medium', 3: 'High', 4: 'Urgent' }
+  return labels[props.task.priority] || ''
+})
+
 function formatDate(d: string) {
-  return new Date(d).toLocaleDateString()
+  return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
 function onDragStart() {
@@ -39,83 +51,80 @@ function onDragStart() {
   border: 1px solid var(--border);
   border-left: 3px solid transparent;
   border-radius: var(--radius-sm);
-  padding: 11px 12px;
+  padding: 12px 14px;
   cursor: pointer;
-  transition: box-shadow 0.12s, transform 0.12s, border-color 0.12s;
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
   user-select: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .task-card:hover {
   box-shadow: var(--shadow-sm);
   transform: translateY(-1px);
-  border-color: var(--border-strong);
 }
 
-.task-card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 6px;
-}
-
-.task-card-title {
+.task-title {
   font-size: 13px;
   font-weight: 500;
   color: var(--text);
-  line-height: 1.4;
-  margin-bottom: 8px;
+  line-height: 1.45;
 }
 
-.task-card-footer {
+.task-meta {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
-.priority-indicator {
-  width: 8px;
-  height: 8px;
+.priority-pill {
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 2px 8px;
   border-radius: var(--radius-full);
-  flex-shrink: 0;
 }
 
-.task-agent {
-  font-size: 10px;
+.priority-1 { background: #E6F9F1; color: #027A48; }
+.priority-2 { background: #FFFBEB; color: #92400E; }
+.priority-3 { background: #FFF7ED; color: #C2410C; }
+.priority-4 { background: #FFF1F2; color: #BE123C; }
+
+.agent-tag {
+  font-size: 10.5px;
   font-weight: 600;
   color: var(--text-muted);
   background: var(--bg);
-  padding: 2px 7px;
+  padding: 2px 8px;
   border-radius: var(--radius-full);
   border: 1px solid var(--border);
   text-overflow: ellipsis;
   overflow: hidden;
-  max-width: 120px;
+  max-width: 110px;
   white-space: nowrap;
 }
 
-.hours {
+.task-footer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-top: 4px;
+  border-top: 1px solid var(--border);
+}
+
+.due-chip, .hours-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-size: 11px;
   color: var(--text-light);
+  font-weight: 500;
 }
-
-/* Priority indicator dot colors */
-.priority-1, .priority-low      { background: #86efac; }
-.priority-2, .priority-medium   { background: #fbbf24; }
-.priority-3, .priority-high     { background: #f97316; }
-.priority-4, .priority-urgent   { background: #ef4444; animation: pulse 1.4s ease-in-out infinite; }
 
 /* Priority left-border colors */
-.priority-border-1,
-.priority-border-low    { border-left-color: #86efac; }
-.priority-border-2,
-.priority-border-medium { border-left-color: #fbbf24; }
-.priority-border-3,
-.priority-border-high   { border-left-color: #f97316; }
-.priority-border-4,
-.priority-border-urgent { border-left-color: #ef4444; }
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50%       { opacity: 0.6; transform: scale(1.25); }
-}
+.priority-border-1 { border-left-color: #10B981; }
+.priority-border-2 { border-left-color: #F59E0B; }
+.priority-border-3 { border-left-color: #F97316; }
+.priority-border-4 { border-left-color: #EF4444; }
 </style>

@@ -90,6 +90,15 @@ TASK_TOOLS = [
 ]
 
 
+_PRIORITY_MAP = {"low": 1, "medium": 2, "high": 3, "urgent": 4}
+
+
+def _coerce_priority(args: dict) -> dict:
+    if "priority" in args and isinstance(args["priority"], str):
+        args = {**args, "priority": _PRIORITY_MAP.get(args["priority"], 2)}
+    return args
+
+
 def _serialize(task: models.Task) -> dict:
     return TaskRead.model_validate(task).model_dump(mode="json")
 
@@ -98,7 +107,7 @@ async def handle(name: str, args: dict, db: AsyncSession) -> str:
     svc = TaskService(db)  # type: ignore[arg-type]
 
     if name == "create_task":
-        inp = TaskCreate(**args)
+        inp = TaskCreate(**_coerce_priority(args))
         task = await svc.create(inp.model_dump(exclude_none=True))
         return json.dumps({"success": True, "task": _serialize(task)})
 
@@ -107,7 +116,7 @@ async def handle(name: str, args: dict, db: AsyncSession) -> str:
         task = await svc.get_by_id(task_id)
         if not task:
             return json.dumps({"error": f"Task {task_id} not found"})
-        inp = TaskUpdate(**args)
+        inp = TaskUpdate(**_coerce_priority(args))
         task = await svc.update(task, inp.model_dump(exclude_unset=True))
         return json.dumps({"success": True, "task": _serialize(task)})
 

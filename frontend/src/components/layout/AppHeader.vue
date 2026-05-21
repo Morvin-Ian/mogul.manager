@@ -4,9 +4,16 @@
       <h1>{{ pageTitle }}</h1>
     </div>
     <div class="header-right">
-      <div class="user-avatar" :title="auth.user?.username">{{ initials }}</div>
-      <span class="user-info">{{ auth.user?.username }}</span>
-      <button class="btn btn-ghost btn-sm" @click="handleLogout">Sign out</button>
+      <div class="user-pill">
+        <div class="user-avatar" :title="auth.user?.username">{{ initials }}</div>
+        <span class="user-name">{{ auth.user?.username }}</span>
+      </div>
+      <button class="btn btn-sm sign-out-btn" @click="handleLogout">
+        <svg viewBox="0 0 16 16" fill="none" width="14" height="14">
+          <path d="M11 3.5L14 7m0 0l-3 3.5M14 7H5m3-4H4a1 1 0 00-1 1v8a1 1 0 001 1h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Sign out
+      </button>
     </div>
   </header>
 </template>
@@ -27,7 +34,7 @@ const pageTitle = computed(() => {
   if (name === 'ProjectDetail') return 'Project'
   if (name === 'TaskDetail') return 'Task'
   if (name === 'Chat') return 'AI Chat'
-  return 'mogul'
+  return 'Mogul Manager'
 })
 
 const initials = computed(() =>
@@ -46,7 +53,7 @@ function handleLogout() {
   align-items: center;
   justify-content: space-between;
   padding: 0 28px;
-  height: 56px;
+  height: 58px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
@@ -55,10 +62,11 @@ function handleLogout() {
   z-index: 10;
 }
 
-.app-header h1 {
+h1 {
   font-size: 15px;
-  font-weight: 600;
-  letter-spacing: -0.2px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  color: var(--text);
 }
 
 .header-right {
@@ -67,23 +75,51 @@ function handleLogout() {
   gap: 10px;
 }
 
-.user-avatar {
-  width: 32px;
-  height: 32px;
+.user-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px 4px 4px;
   border-radius: var(--radius-full);
-  background: var(--primary-light);
-  border: 1.5px solid var(--primary-border);
-  color: var(--primary);
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+
+.user-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-full);
+  background: var(--primary);
+  color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 11px;
-  font-weight: 700;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
 }
 
-.user-info {
+.user-name {
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
+  color: var(--text);
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sign-out-btn {
   color: var(--text-muted);
+  border-color: var(--border);
+  background: transparent;
+  font-size: 12.5px;
+  gap: 5px;
+}
+
+.sign-out-btn:hover:not(:disabled) {
+  background: var(--danger-bg);
+  color: var(--danger);
+  border-color: var(--danger-border);
 }
 </style>

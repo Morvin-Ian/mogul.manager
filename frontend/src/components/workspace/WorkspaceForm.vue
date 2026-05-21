@@ -1,7 +1,12 @@
 <template>
   <div class="modal-overlay" @click.self="$emit('close')">
     <div class="modal">
-      <h2>{{ workspace ? 'Edit Workspace' : 'New Workspace' }}</h2>
+      <div class="modal-header">
+        <h2>{{ workspace ? 'Edit Workspace' : 'New Workspace' }}</h2>
+        <button type="button" class="modal-close" @click="$emit('close')">
+          <svg viewBox="0 0 16 16" fill="none" width="16" height="16"><path d="M12 4L4 12M4 4l8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </button>
+      </div>
       <form @submit.prevent="handleSubmit">
         <div class="form-group">
           <label for="ws-title">Title</label>

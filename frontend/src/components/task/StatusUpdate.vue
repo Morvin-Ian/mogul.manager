@@ -13,7 +13,7 @@
         {{ s.label }}
       </button>
     </div>
-    <p v-if="updating" class="form-error">Updating...</p>
+    <p v-if="updating" class="updating-msg">Updating…</p>
   </div>
 </template>
 
@@ -63,12 +63,18 @@ async function updateStatus(status: TaskStatus) {
 }
 
 .status-update h3 {
-  font-size: 13px;
+  font-size: 11.5px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.7px;
   color: var(--text-muted);
   margin-bottom: 12px;
+}
+
+.updating-msg {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 8px;
 }
 
 .status-buttons {

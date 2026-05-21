@@ -1,10 +1,15 @@
 <template>
   <div class="task-board">
     <div class="section-header">
-      <h2>Tasks</h2>
-      <button class="btn btn-sm btn-primary" @click="showModal = true">+ New Task</button>
+      <h2>Board</h2>
+      <button class="btn btn-sm btn-primary" @click="showModal = true">
+        <svg viewBox="0 0 16 16" fill="none" width="13" height="13">
+          <path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        New Task
+      </button>
     </div>
-    <div v-if="loading" class="loading">Loading…</div>
+    <SkeletonBoard v-if="loading" />
     <div v-else class="board-columns">
       <div
         v-for="col in columns"
@@ -15,7 +20,10 @@
         @drop="onDrop(col.key)"
       >
         <div class="column-header">
-          <h3>{{ col.label }}</h3>
+          <div class="column-header-left">
+            <span class="col-dot"></span>
+            <h3>{{ col.label }}</h3>
+          </div>
           <span class="count">{{ grouped[col.key]?.length || 0 }}</span>
         </div>
         <div class="column-body">
@@ -25,7 +33,12 @@
             :task="task"
             @dragstart="onDragStart"
           />
-          <p v-if="!grouped[col.key]?.length" class="empty-col">Empty</p>
+          <div v-if="!grouped[col.key]?.length" class="empty-col">
+            <svg viewBox="0 0 20 20" fill="none" width="18" height="18">
+              <path d="M10 5v10M5 10h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+            <span>Drop tasks here</span>
+          </div>
         </div>
       </div>
     </div>
@@ -45,6 +58,7 @@ import type { TaskStatus } from '../../types'
 import { patch } from '../../stores/client'
 import TaskCard from './TaskCard.vue'
 import TaskModal from './TaskModal.vue'
+import SkeletonBoard from '../common/SkeletonBoard.vue'
 
 const props = defineProps<{ projectId: number }>()
 
@@ -60,7 +74,7 @@ const columns: Column[] = [
   { key: 'in_progress', label: 'In Progress' },
   { key: 'review',      label: 'Review' },
   { key: 'blocked',     label: 'Blocked' },
-  { key: 'completed',   label: 'Completed' },
+  { key: 'completed',   label: 'Done' },
 ]
 
 const grouped = computed(() => {
@@ -100,21 +114,19 @@ async function onTaskCreated(data: Record<string, any>) {
 </script>
 
 <style scoped>
-.task-board {
-  padding: 0;
-}
+.task-board { padding: 0; }
 
 .board-columns {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   overflow-x: auto;
-  padding-bottom: 12px;
+  padding-bottom: 16px;
   align-items: flex-start;
 }
 
 .board-column {
   flex: 0 0 260px;
-  background: var(--surface);
+  background: var(--bg);
   border-radius: var(--radius);
   border: 1px solid var(--border);
   display: flex;
@@ -126,48 +138,76 @@ async function onTaskCreated(data: Record<string, any>) {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 14px 10px;
+  padding: 12px 14px;
   border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: var(--radius) var(--radius) 0 0;
 }
+
+.column-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.col-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.col-todo        .col-dot { background: #8A919E; }
+.col-in_progress .col-dot { background: #0052FF; }
+.col-review      .col-dot { background: #F59E0B; }
+.col-blocked     .col-dot { background: #CF202F; }
+.col-completed   .col-dot { background: #05B169; }
 
 .column-header h3 {
   font-size: 12px;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
+  letter-spacing: -0.1px;
   color: var(--text-muted);
 }
 
-.col-todo       .column-header h3 { color: #71717a; }
-.col-in_progress .column-header h3 { color: #0369a1; }
-.col-review     .column-header h3 { color: #92400e; }
-.col-blocked    .column-header h3 { color: #991b1b; }
-.col-completed  .column-header h3 { color: #065f46; }
+.col-todo        .column-header h3 { color: #5B616E; }
+.col-in_progress .column-header h3 { color: #0039B3; }
+.col-review      .column-header h3 { color: #92400E; }
+.col-blocked     .column-header h3 { color: #BE123C; }
+.col-completed   .column-header h3 { color: #027A48; }
 
 .count {
-  background: var(--bg);
+  background: var(--surface);
   color: var(--text-muted);
   font-size: 11px;
   font-weight: 700;
-  padding: 2px 7px;
+  padding: 2px 8px;
   border-radius: var(--radius-full);
   border: 1px solid var(--border);
+  min-width: 24px;
+  text-align: center;
 }
 
 .column-body {
-  padding: 10px;
+  padding: 8px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   overflow-y: auto;
   flex: 1;
   min-height: 80px;
 }
 
 .empty-col {
-  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 24px 0;
   color: var(--text-light);
-  text-align: center;
-  padding: 20px 0;
+}
+
+.empty-col span {
+  font-size: 11.5px;
 }
 </style>
