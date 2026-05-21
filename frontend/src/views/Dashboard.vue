@@ -31,3 +31,23 @@ onMounted(async () => {
   }
 })
 </script>
+
+<style scoped>
+.dashboard-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.dashboard-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.dashboard-content {
+  flex: 1;
+  padding: 28px;
+  overflow-y: auto;
+}
+</style>

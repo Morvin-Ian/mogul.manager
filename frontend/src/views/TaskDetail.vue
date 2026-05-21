@@ -150,3 +150,99 @@ function onStatusUpdated() {
   taskStore.fetchOne(taskId.value)
 }
 </script>
+
+<style scoped>
+.task-detail {
+  padding: 28px 32px;
+  max-width: 800px;
+}
+
+.task-description {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 22px;
+  margin-bottom: 24px;
+}
+
+.task-description h3 {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
+.task-description p {
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--text);
+  white-space: pre-wrap;
+}
+
+.task-comments {
+  margin-top: 8px;
+}
+
+.task-comments h3 {
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 14px;
+  color: var(--text);
+}
+
+.comment-form {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  margin-bottom: 20px;
+}
+
+.comment-form textarea {
+  flex: 1;
+  padding: 9px 13px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-family: inherit;
+  resize: none;
+  background: var(--surface);
+  color: var(--text);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.comment-form textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-muted);
+}
+
+.comment {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  margin-bottom: 8px;
+}
+
+.comment-body {
+  flex: 1;
+}
+
+.comment-body p {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text);
+  margin-bottom: 5px;
+}
+
+.comment-date {
+  font-size: 11px;
+  color: var(--text-light);
+}
+</style>

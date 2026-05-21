@@ -1,12 +1,11 @@
 from typing import Annotated
 
 from fastapi import Depends
-from openai import AsyncOpenAI
+from openai.types.chat import ChatCompletionMessageParam
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import models
-from config import settings
 from database import get_db
 
 
@@ -94,45 +93,14 @@ class ChatService:
         )
         return list(result.scalars().all())
 
-    async def get_context(self, conversation_id: int) -> list[dict]:
+    async def get_context(self, conversation_id: int) -> list[ChatCompletionMessageParam]:
         messages = await self.get_messages(conversation_id)
-        return [
-            {"role": m.role, "content": m.content}
-            for m in messages
-        ]
-
-
-class DeepSeekAgent:
-    def __init__(self):
-        self.client = AsyncOpenAI(
-            api_key=settings.deepseek_api_key.get_secret_value(),
-            base_url=settings.deepseek_base_url,
-        )
-        self.model = settings.deepseek_model
-
-    def _build_system_prompt(self) -> str:
-        return (
-            "You are an AI assistant for a project management system called Memory-Driven Agents. "
-            "You help users manage their workspaces, projects, and tasks. "
-            "You can answer questions about their data, suggest next steps, "
-            "and help them organize their work. "
-            "Keep responses concise and practical. "
-            "When referencing specific items, use their IDs and titles."
-        )
-
-    async def stream_response(self, messages: list[dict]):
-        system_msg = {"role": "system", "content": self._build_system_prompt()}
-        full_messages = [system_msg] + messages
-
-        stream = await self.client.chat.completions.create(
-            model=self.model,
-            messages=full_messages,
-            stream=True,
-            temperature=0.7,
-            max_tokens=2048,
-        )
-
-        async for chunk in stream:
-            delta = chunk.choices[0].delta if chunk.choices else None
-            if delta and delta.content:
-                yield delta.content
+        result: list[ChatCompletionMessageParam] = []
+        for m in messages:
+            if m.role == "user":
+                result.append({"role": "user", "content": m.content})
+            elif m.role == "assistant":
+                result.append({"role": "assistant", "content": m.content})
+            elif m.role == "system":
+                result.append({"role": "system", "content": m.content})
+        return result

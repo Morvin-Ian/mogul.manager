@@ -110,3 +110,45 @@ async function handleDelete() {
   router.push('/')
 }
 </script>
+
+<style scoped>
+.workspace-detail {
+  padding: 28px 32px;
+  max-width: 1200px;
+}
+
+.workspace-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.workspace-head h2 {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.5px;
+}
+
+.workspace-head p {
+  color: var(--text-muted);
+  margin-top: 5px;
+  font-size: 14px;
+}
+
+.workspace-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.workspace-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+</style>

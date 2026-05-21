@@ -52,3 +52,28 @@ async function updateStatus(status: TaskStatus) {
   }
 }
 </script>
+
+<style scoped>
+.status-update {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  margin-bottom: 24px;
+}
+
+.status-update h3 {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+
+.status-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+</style>

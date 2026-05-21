@@ -4,6 +4,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
 
+from agents.deepseek import DeepSeekAgent
 from schemas.chat import (
     ConversationCreate,
     ConversationDetail,
@@ -14,6 +15,8 @@ from schemas.chat import (
 )
 from services.auth import CurrentUser
 from services.chat import ChatService
+from services.projects import ProjectService
+from services.workspaces import WorkspaceService
 
 router = APIRouter(
     prefix="/api/chat",
@@ -22,7 +25,6 @@ router = APIRouter(
 
 
 def get_deepseek():
-    from services.chat import DeepSeekAgent
     return DeepSeekAgent()
 
 
@@ -121,8 +123,24 @@ async def send_message(
     async def generate():
         collected = []
         context = await service.get_context(conversation_id)
+
+        # Build a snapshot of the user's workspaces and projects so the agent
+        # knows which IDs to pass to tools without asking the user.
+        ws_svc = WorkspaceService(service.db)  # type: ignore[arg-type]
+        proj_svc = ProjectService(service.db)  # type: ignore[arg-type]
+        workspaces = await ws_svc.list_by_user(current_user.id)
+        lines = ["User's current data (use these IDs when calling tools):"]
+        for ws in workspaces:
+            lines.append(f"  Workspace: {ws.title!r} (id={ws.id})")
+            projects = await proj_svc.list_by_workspace(ws.id)
+            for proj in projects:
+                lines.append(
+                    f"    Project: {proj.title!r} (id={proj.id}, status={proj.status.value})"
+                )
+        user_context = "\n".join(lines)
+
         agent = get_deepseek()
-        async for token in agent.stream_response(context):
+        async for token in agent.stream_response(context, service.db, user_context):
             collected.append(token)
             yield f"data: {json.dumps({'token': token})}\n\n"
 

@@ -90,3 +90,10 @@ async function handleDelete() {
   router.push(`/workspaces/${wsId}`)
 }
 </script>
+
+<style scoped>
+.project-detail {
+  padding: 28px 32px;
+  max-width: 1200px;
+}
+</style>
