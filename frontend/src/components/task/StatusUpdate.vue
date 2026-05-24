@@ -55,11 +55,7 @@ async function updateStatus(status: TaskStatus) {
 
 <style scoped>
 .status-update {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 18px 20px;
-  margin-bottom: 24px;
+  margin-bottom: 0;
 }
 
 .status-update h3 {
@@ -67,19 +63,20 @@ async function updateStatus(status: TaskStatus) {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.7px;
-  color: var(--text-muted);
-  margin-bottom: 12px;
+  color: var(--text-light);
+  margin-bottom: 14px;
 }
 
 .updating-msg {
   font-size: 12px;
   color: var(--text-muted);
-  margin-top: 8px;
+  margin-top: 10px;
+  font-style: italic;
 }
 
 .status-buttons {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 7px;
 }
 </style>

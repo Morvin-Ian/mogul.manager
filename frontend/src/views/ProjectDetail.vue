@@ -120,7 +120,7 @@ async function handleDelete() {
 
 <style scoped>
 .project-detail {
-  padding: 28px 32px;
+  padding: 32px;
   max-width: 1400px;
 }
 
@@ -128,52 +128,55 @@ async function handleDelete() {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: 28px;
+  margin-bottom: 32px;
   gap: 16px;
 }
 
 .page-head-left {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
 .back-btn {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  background: none;
-  border: none;
+  gap: 6px;
+  background: var(--bg);
+  border: 1.5px solid var(--border);
   color: var(--text-muted);
-  font-size: 13px;
-  font-weight: 500;
+  font-size: 12.5px;
+  font-weight: 600;
   cursor: pointer;
-  padding: 0;
+  padding: 6px 12px;
+  border-radius: 8px;
   font-family: inherit;
-  transition: color 0.1s;
+  transition: all 0.12s;
+  align-self: flex-start;
 }
 
-.back-btn:hover { color: var(--text); }
+.back-btn:hover { background: var(--surface); color: var(--text); border-color: var(--border-strong); }
 
 .project-title-row {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 5px;
+  margin-bottom: 6px;
 }
 
 .project-title-row h2 {
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 800;
   color: var(--text);
-  letter-spacing: -0.5px;
+  letter-spacing: -0.7px;
+  line-height: 1.2;
 }
 
 .page-head p {
   color: var(--text-muted);
   font-size: 14px;
-  line-height: 1.5;
-  margin-bottom: 8px;
+  line-height: 1.6;
+  margin-bottom: 10px;
 }
 
 .project-meta-inline {
@@ -190,7 +193,7 @@ async function handleDelete() {
   font-size: 12px;
   color: var(--text-muted);
   background: var(--bg);
-  border: 1px solid var(--border);
+  border: 1.5px solid var(--border);
   padding: 4px 10px;
   border-radius: var(--radius-full);
   font-weight: 500;

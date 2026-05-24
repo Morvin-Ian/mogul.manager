@@ -5,12 +5,25 @@
       <aside class="chat-sidebar">
         <div class="chat-sidebar-header">
           <h2>Conversations</h2>
-          <button class="btn btn-sm btn-primary new-chat-btn" @click="handleNewConversation" :disabled="chatStore.streaming">
-            <svg viewBox="0 0 14 14" fill="none" width="12" height="12">
-              <path d="M7 2v10M2 7h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-            </svg>
-            New
-          </button>
+          <div class="sidebar-header-actions">
+            <button
+              v-if="chatStore.conversations.length > 0"
+              class="btn btn-sm btn-ghost icon-btn"
+              @click="handleClearAll"
+              :disabled="chatStore.streaming"
+              title="Clear all conversations"
+            >
+              <svg viewBox="0 0 14 14" fill="none" width="13" height="13">
+                <path d="M2 3.5h10M5.5 3.5V2.5a1 1 0 011-1h1a1 1 0 011 1v1M5.5 6v4M8.5 6v4M3 3.5l.7 7a1 1 0 001 .9h4.6a1 1 0 001-.9l.7-7" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+            <button class="btn btn-sm btn-primary new-chat-btn" @click="handleNewConversation" :disabled="chatStore.streaming">
+              <svg viewBox="0 0 14 14" fill="none" width="12" height="12">
+                <path d="M7 2v10M2 7h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+              </svg>
+              New
+            </button>
+          </div>
         </div>
 
         <div v-if="chatStore.loading" class="sk-convs">
@@ -31,15 +44,19 @@
             :class="{ active: chatStore.current?.id === conv.id }"
             @click="selectConversation(conv.id)"
           >
-            <div class="conv-icon">
-              <svg viewBox="0 0 14 14" fill="none" width="12" height="12">
-                <path fill-rule="evenodd" d="M1 7c0 3.31 2.69 6 6 6a5.94 5.94 0 003-.81L13 13l-1.19-3A5.99 5.99 0 0013 7c0-3.31-2.69-6-6-6S1 3.69 1 7z" fill="currentColor"/>
-              </svg>
-            </div>
             <div class="conv-info">
-              <div class="conv-title">{{ conv.title || 'New conversation' }}</div>
+              <div class="conv-title">{{ cleanTitle(conv.title) }}</div>
               <div class="conv-date">{{ formatDate(conv.updated_at) }}</div>
             </div>
+            <button
+              class="conv-delete-btn"
+              @click.stop="handleDeleteConv(conv.id)"
+              title="Delete conversation"
+            >
+              <svg viewBox="0 0 12 12" fill="none" width="12" height="12">
+                <path d="M1.5 3h9M4.5 3V2a.5.5 0 01.5-.5h1a.5.5 0 01.5.5v1M3 3l.5 6.5a.5.5 0 00.5.5h4a.5.5 0 00.5-.5L9 3" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
           </div>
         </div>
       </aside>
@@ -158,6 +175,17 @@ function autoResize() {
   el.style.height = Math.min(el.scrollHeight, 140) + 'px'
 }
 
+function cleanTitle(title: string | null): string {
+  if (!title) return 'New conversation'
+  const cleaned = title
+    .replace(/[\u{1F000}-\u{1FFFF}]/gu, '')
+    .replace(/[\u{2600}-\u{27BF}]/gu, '')
+    .replace(/[︀-﻿]/g, '')
+    .replace(/️/g, '')
+    .trim()
+  return cleaned || 'New conversation'
+}
+
 async function selectConversation(id: number) {
   try { await chatStore.fetchConversation(id) } catch {}
 }
@@ -167,6 +195,18 @@ async function handleNewConversation() {
     const conv = await chatStore.createConversation()
     await chatStore.fetchConversation(conv.id)
   } catch {}
+}
+
+async function handleDeleteConv(id: number) {
+  try { await chatStore.removeConversation(id) } catch {}
+}
+
+async function handleClearAll() {
+  if (!confirm('Delete all conversations? This cannot be undone.')) return
+  const ids = chatStore.conversations.map(c => c.id)
+  for (const id of ids) {
+    try { await chatStore.removeConversation(id) } catch {}
+  }
 }
 
 async function handleSend() {
@@ -225,8 +265,9 @@ function formatDate(d: string) {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px;
+  padding: 14px 16px;
   border-bottom: 1px solid var(--border);
+  gap: 8px;
 }
 
 .chat-sidebar-header h2 {
@@ -234,6 +275,19 @@ function formatDate(d: string) {
   font-weight: 700;
   color: var(--text);
   letter-spacing: -0.2px;
+  flex: 1;
+}
+
+.sidebar-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.icon-btn {
+  padding: 5px 7px;
+  color: var(--text-muted);
 }
 
 .new-chat-btn { gap: 5px; }
@@ -253,37 +307,18 @@ function formatDate(d: string) {
 
 .chat-conv-item {
   display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 10px 12px;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
   border-radius: var(--radius-sm);
   cursor: pointer;
-  transition: background 0.1s;
-  margin-bottom: 1px;
+  transition: background 0.12s;
+  margin-bottom: 2px;
+  position: relative;
 }
 
 .chat-conv-item:hover { background: var(--bg); }
 .chat-conv-item.active { background: var(--primary-light); }
-
-.conv-icon {
-  width: 24px;
-  height: 24px;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  color: var(--text-muted);
-  margin-top: 1px;
-}
-
-.chat-conv-item.active .conv-icon {
-  background: var(--primary-muted);
-  border-color: var(--primary-border);
-  color: var(--primary);
-}
 
 .conv-info { flex: 1; min-width: 0; }
 
@@ -294,10 +329,31 @@ function formatDate(d: string) {
   overflow: hidden;
   text-overflow: ellipsis;
   color: var(--text);
+  letter-spacing: -0.1px;
 }
 
 .chat-conv-item.active .conv-title { color: var(--primary); font-weight: 600; }
 .conv-date { font-size: 11px; color: var(--text-light); margin-top: 2px; }
+
+.conv-delete-btn {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-light);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.1s, background 0.1s, color 0.1s;
+  padding: 0;
+}
+
+.chat-conv-item:hover .conv-delete-btn { opacity: 1; }
+.conv-delete-btn:hover { background: var(--danger-bg); color: var(--danger); }
 
 /* Main */
 .chat-main {
@@ -311,7 +367,7 @@ function formatDate(d: string) {
 .chat-messages {
   flex: 1;
   overflow-y: auto;
-  padding: 32px;
+  padding: 28px 32px;
   display: flex;
   flex-direction: column;
   gap: 24px;
@@ -325,35 +381,36 @@ function formatDate(d: string) {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 48px 20px;
-  gap: 12px;
+  padding: 56px 20px 40px;
+  gap: 14px;
   text-align: center;
 }
 
 .chat-welcome-icon {
-  width: 56px;
-  height: 56px;
-  background: var(--primary);
-  border-radius: 16px;
+  width: 58px;
+  height: 58px;
+  background: linear-gradient(135deg, var(--primary) 0%, #003CBF 100%);
+  border-radius: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: #fff;
   margin-bottom: 4px;
+  box-shadow: 0 8px 24px rgba(0, 82, 255, 0.3);
 }
 
 .chat-welcome h3 {
-  font-size: 18px;
-  font-weight: 700;
+  font-size: 20px;
+  font-weight: 800;
   color: var(--text);
-  letter-spacing: -0.3px;
+  letter-spacing: -0.5px;
 }
 
 .chat-welcome p {
   color: var(--text-muted);
   font-size: 14px;
-  max-width: 400px;
-  line-height: 1.6;
+  max-width: 380px;
+  line-height: 1.65;
 }
 
 .quick-prompts {
@@ -361,7 +418,7 @@ function formatDate(d: string) {
   flex-wrap: wrap;
   gap: 8px;
   justify-content: center;
-  margin-top: 8px;
+  margin-top: 6px;
 }
 
 .quick-prompt {
@@ -371,10 +428,11 @@ function formatDate(d: string) {
   border-radius: var(--radius-full);
   font-size: 13px;
   font-weight: 500;
-  color: var(--text);
+  color: var(--text-muted);
   cursor: pointer;
   font-family: inherit;
-  transition: border-color 0.15s, background 0.15s;
+  transition: all 0.15s;
+  letter-spacing: -0.1px;
 }
 
 .quick-prompt:hover {
@@ -427,14 +485,14 @@ function formatDate(d: string) {
 
 /* Input bar */
 .chat-input-bar {
-  padding: 16px 32px 20px;
+  padding: 16px 32px 24px;
   background: var(--bg);
   max-width: 820px;
   width: 100%;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
 .chat-input-wrap {
@@ -443,9 +501,13 @@ function formatDate(d: string) {
   gap: 0;
   background: var(--surface);
   border: 1.5px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-lg);
   overflow: hidden;
   transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.chat-input-wrap.disabled {
+  background: var(--bg);
 }
 
 .chat-input-wrap.focused {
@@ -472,20 +534,21 @@ function formatDate(d: string) {
 .chat-input-wrap textarea:disabled { opacity: 0.6; }
 
 .send-btn {
-  width: 44px;
-  height: 44px;
-  margin: 8px;
+  width: 40px;
+  height: 40px;
+  margin: 10px 10px 10px 4px;
   border: none;
-  border-radius: var(--radius-sm);
-  background: var(--primary);
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--primary) 0%, #003CBF 100%);
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   flex-shrink: 0;
-  transition: background 0.15s, transform 0.1s;
+  transition: all 0.15s;
   align-self: flex-end;
+  box-shadow: 0 2px 8px rgba(0, 82, 255, 0.3);
 }
 
 .send-btn:hover:not(:disabled) { background: var(--primary-hover); }

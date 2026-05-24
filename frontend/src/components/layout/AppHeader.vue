@@ -53,7 +53,7 @@ function handleLogout() {
   align-items: center;
   justify-content: space-between;
   padding: 0 28px;
-  height: 58px;
+  height: 56px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
@@ -78,18 +78,24 @@ h1 {
 .user-pill {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
   padding: 4px 12px 4px 4px;
   border-radius: var(--radius-full);
   background: var(--bg);
-  border: 1px solid var(--border);
+  border: 1.5px solid var(--border);
+  transition: border-color 0.15s;
+  cursor: default;
+}
+
+.user-pill:hover {
+  border-color: var(--border-strong);
 }
 
 .user-avatar {
   width: 28px;
   height: 28px;
   border-radius: var(--radius-full);
-  background: var(--primary);
+  background: linear-gradient(135deg, var(--primary) 0%, #003CBF 100%);
   color: #fff;
   display: flex;
   align-items: center;
@@ -97,6 +103,7 @@ h1 {
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.5px;
+  flex-shrink: 0;
 }
 
 .user-name {
@@ -107,6 +114,7 @@ h1 {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  letter-spacing: -0.1px;
 }
 
 .sign-out-btn {

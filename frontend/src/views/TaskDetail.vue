@@ -208,49 +208,50 @@ function onStatusUpdated() {
 
 <style scoped>
 .task-detail {
-  padding: 28px 32px;
-  max-width: 760px;
+  padding: 36px 32px;
+  max-width: 780px;
 }
 
 .task-header {
   margin-bottom: 28px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
 }
 
 .back-btn {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  background: none;
-  border: none;
+  gap: 6px;
+  background: var(--bg);
+  border: 1.5px solid var(--border);
   color: var(--text-muted);
-  font-size: 13px;
-  font-weight: 500;
+  font-size: 12.5px;
+  font-weight: 600;
   cursor: pointer;
-  padding: 0;
+  padding: 6px 12px;
+  border-radius: 8px;
   font-family: inherit;
-  transition: color 0.1s;
+  transition: all 0.12s;
   align-self: flex-start;
 }
 
-.back-btn:hover { color: var(--text); }
+.back-btn:hover { background: var(--surface); color: var(--text); border-color: var(--border-strong); }
 
 .task-title-row {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 
 .task-title-row h2 {
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 800;
   color: var(--text);
-  letter-spacing: -0.5px;
-  line-height: 1.3;
+  letter-spacing: -0.7px;
+  line-height: 1.25;
 }
 
 .header-actions {
@@ -272,13 +273,14 @@ function onStatusUpdated() {
   padding: 3px 10px;
   border-radius: var(--radius-full);
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
+  border: 1px solid transparent;
 }
 
-.priority-chip-1 { background: #E6F9F1; color: #027A48; }
-.priority-chip-2 { background: #FFFBEB; color: #92400E; }
-.priority-chip-3 { background: #FFF7ED; color: #C2410C; }
-.priority-chip-4 { background: #FFF1F2; color: #BE123C; }
+.priority-chip-1 { background: #ECFDF5; color: #047857; border-color: #A7F3D0; }
+.priority-chip-2 { background: #FFFBEB; color: #92400E; border-color: #FDE68A; }
+.priority-chip-3 { background: #FFF7ED; color: #C2410C; border-color: #FED7AA; }
+.priority-chip-4 { background: #FFF1F2; color: #BE123C; border-color: #FECDD3; }
 
 .agent-chip, .date-chip, .time-chip {
   display: inline-flex;
@@ -287,7 +289,7 @@ function onStatusUpdated() {
   font-size: 12px;
   color: var(--text-muted);
   background: var(--bg);
-  border: 1px solid var(--border);
+  border: 1.5px solid var(--border);
   padding: 3px 10px;
   border-radius: var(--radius-full);
   font-weight: 500;
@@ -296,19 +298,19 @@ function onStatusUpdated() {
 /* Sections */
 .task-section {
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: 1.5px solid var(--border);
   border-radius: var(--radius);
-  padding: 20px 22px;
-  margin-bottom: 16px;
+  padding: 22px 24px;
+  margin-bottom: 14px;
 }
 
 .section-label {
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.6px;
-  color: var(--text-muted);
-  margin-bottom: 14px;
+  letter-spacing: 0.7px;
+  color: var(--text-light);
+  margin-bottom: 16px;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -328,28 +330,29 @@ function onStatusUpdated() {
 
 .task-desc {
   font-size: 14px;
-  line-height: 1.7;
+  line-height: 1.75;
   color: var(--text);
   white-space: pre-wrap;
 }
 
 /* Comments */
 .comment-input-wrap {
-  background: var(--bg);
+  background: var(--surface);
   border: 1.5px solid var(--border);
-  border-radius: var(--radius-sm);
+  border-radius: 10px;
   overflow: hidden;
-  margin-bottom: 20px;
-  transition: border-color 0.15s;
+  margin-bottom: 22px;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
 
 .comment-input-wrap:focus-within {
   border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-muted);
 }
 
 .comment-textarea {
   width: 100%;
-  padding: 12px 14px;
+  padding: 14px 16px;
   border: none;
   background: transparent;
   font-size: 14px;
@@ -357,17 +360,18 @@ function onStatusUpdated() {
   resize: none;
   color: var(--text);
   display: block;
+  line-height: 1.6;
 }
 
 .comment-textarea:focus { outline: none; }
 .comment-textarea::placeholder { color: var(--text-light); }
 
 .comment-input-footer {
-  padding: 10px 12px;
+  padding: 10px 14px;
   display: flex;
   justify-content: flex-end;
   border-top: 1px solid var(--border);
-  background: var(--surface);
+  background: var(--bg);
 }
 
 .empty-comments {
@@ -380,7 +384,7 @@ function onStatusUpdated() {
 .comments-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 14px;
 }
 
 .comment-item {
@@ -393,7 +397,7 @@ function onStatusUpdated() {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: var(--primary);
+  background: linear-gradient(135deg, var(--primary) 0%, #003CBF 100%);
   color: #fff;
   display: flex;
   align-items: center;
@@ -406,8 +410,8 @@ function onStatusUpdated() {
 .comment-body {
   flex: 1;
   background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
   padding: 12px 14px;
 }
 
@@ -415,13 +419,14 @@ function onStatusUpdated() {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 6px;
+  margin-bottom: 7px;
 }
 
 .comment-author {
   font-size: 13px;
   font-weight: 700;
   color: var(--text);
+  letter-spacing: -0.1px;
 }
 
 .comment-date {
@@ -431,7 +436,7 @@ function onStatusUpdated() {
 
 .comment-text {
   font-size: 13.5px;
-  line-height: 1.6;
+  line-height: 1.65;
   color: var(--text);
 }
 

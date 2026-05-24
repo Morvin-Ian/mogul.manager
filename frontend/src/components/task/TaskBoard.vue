@@ -125,29 +125,31 @@ async function onTaskCreated(data: Record<string, any>) {
 }
 
 .board-column {
-  flex: 0 0 260px;
-  background: var(--bg);
+  flex: 0 0 268px;
+  background: #F0F2F5;
   border-radius: var(--radius);
   border: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   max-height: calc(100vh - 280px);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
 }
 
 .column-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 14px;
+  padding: 11px 12px 10px;
   border-bottom: 1px solid var(--border);
-  background: var(--surface);
+  background: rgba(255,255,255,0.7);
   border-radius: var(--radius) var(--radius) 0 0;
+  backdrop-filter: blur(4px);
 }
 
 .column-header-left {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
 }
 
 .col-dot {
@@ -157,35 +159,36 @@ async function onTaskCreated(data: Record<string, any>) {
   flex-shrink: 0;
 }
 
-.col-todo        .col-dot { background: #8A919E; }
-.col-in_progress .col-dot { background: #0052FF; }
-.col-review      .col-dot { background: #F59E0B; }
-.col-blocked     .col-dot { background: #CF202F; }
-.col-completed   .col-dot { background: #05B169; }
+.col-todo        .col-dot { background: #94A3B8; box-shadow: 0 0 0 2px #E2E8F0; }
+.col-in_progress .col-dot { background: #0052FF; box-shadow: 0 0 0 2px #DBEAFE; }
+.col-review      .col-dot { background: #F59E0B; box-shadow: 0 0 0 2px #FEF3C7; }
+.col-blocked     .col-dot { background: #EF4444; box-shadow: 0 0 0 2px #FEE2E2; }
+.col-completed   .col-dot { background: #10B981; box-shadow: 0 0 0 2px #D1FAE5; }
 
 .column-header h3 {
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 700;
-  letter-spacing: -0.1px;
-  color: var(--text-muted);
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
 }
 
-.col-todo        .column-header h3 { color: #5B616E; }
-.col-in_progress .column-header h3 { color: #0039B3; }
+.col-todo        .column-header h3 { color: #64748B; }
+.col-in_progress .column-header h3 { color: #1D4ED8; }
 .col-review      .column-header h3 { color: #92400E; }
-.col-blocked     .column-header h3 { color: #BE123C; }
-.col-completed   .column-header h3 { color: #027A48; }
+.col-blocked     .column-header h3 { color: #B91C1C; }
+.col-completed   .column-header h3 { color: #065F46; }
 
 .count {
-  background: var(--surface);
+  background: rgba(255,255,255,0.9);
   color: var(--text-muted);
   font-size: 11px;
   font-weight: 700;
-  padding: 2px 8px;
+  padding: 1px 7px;
   border-radius: var(--radius-full);
   border: 1px solid var(--border);
-  min-width: 24px;
+  min-width: 22px;
   text-align: center;
+  line-height: 1.7;
 }
 
 .column-body {
@@ -203,8 +206,9 @@ async function onTaskCreated(data: Record<string, any>) {
   flex-direction: column;
   align-items: center;
   gap: 6px;
-  padding: 24px 0;
+  padding: 28px 0;
   color: var(--text-light);
+  opacity: 0.6;
 }
 
 .empty-col span {

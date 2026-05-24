@@ -1,6 +1,11 @@
 <template>
   <aside class="sidebar">
     <div class="sidebar-brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 20 20" fill="none" width="14" height="14">
+          <path d="M3 16V7l4 5 3-7 3 7 4-5v9" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
       <span class="brand-name">Mogul Manager</span>
     </div>
 
@@ -55,7 +60,7 @@ onMounted(() => workspaceStore.fetchAll())
 
 <style scoped>
 .sidebar {
-  width: 236px;
+  width: 240px;
   background: var(--sidebar-bg);
   display: flex;
   flex-direction: column;
@@ -71,15 +76,26 @@ onMounted(() => workspaceStore.fetchAll())
   border-bottom: 1px solid var(--sidebar-border);
 }
 
+.brand-icon {
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, var(--primary) 0%, #003CBF 100%);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
 .brand-name {
   font-size: 14px;
-  font-weight: 800;
+  font-weight: 700;
   color: var(--text);
   letter-spacing: -0.3px;
 }
 
 .sidebar-nav {
-  padding: 12px 8px;
+  padding: 10px 8px;
   display: flex;
   flex-direction: column;
   gap: 0;
@@ -88,36 +104,37 @@ onMounted(() => workspaceStore.fetchAll())
 }
 
 .nav-group {
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 
 .nav-group-workspaces {
-  margin-top: 20px;
+  margin-top: 18px;
   border-top: 1px solid var(--sidebar-border);
-  padding-top: 16px;
+  padding-top: 14px;
 }
 
 .nav-section-title {
   font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.8px;
+  letter-spacing: 0.9px;
   color: var(--text-light);
-  padding: 0 12px 6px;
+  padding: 0 12px 8px;
 }
 
 .nav-item {
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 10px;
   padding: 8px 12px;
   border-radius: var(--radius-sm);
   color: var(--sidebar-text);
   text-decoration: none;
   font-size: 13.5px;
   font-weight: 500;
-  transition: background 0.1s, color 0.1s;
-  margin-bottom: 1px;
+  transition: background 0.12s ease, color 0.12s ease;
+  margin-bottom: 2px;
+  position: relative;
 }
 
 .nav-item:hover {
@@ -132,6 +149,18 @@ onMounted(() => workspaceStore.fetchAll())
   font-weight: 600;
 }
 
+.nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 16px;
+  background: var(--primary);
+  border-radius: 0 2px 2px 0;
+}
+
 .nav-icon {
   width: 20px;
   height: 20px;
@@ -139,8 +168,8 @@ onMounted(() => workspaceStore.fetchAll())
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  opacity: 0.55;
-  transition: opacity 0.1s;
+  opacity: 0.5;
+  transition: opacity 0.12s;
 }
 
 .nav-icon svg {
@@ -148,14 +177,13 @@ onMounted(() => workspaceStore.fetchAll())
   height: 16px;
 }
 
-.nav-item:hover .nav-icon { opacity: 0.8; }
+.nav-item:hover .nav-icon { opacity: 0.75; }
 .nav-item.active .nav-icon { opacity: 1; }
 
 .nav-item-sub {
   padding-left: 10px;
   font-size: 13px;
 }
-
 
 .nav-label {
   overflow: hidden;

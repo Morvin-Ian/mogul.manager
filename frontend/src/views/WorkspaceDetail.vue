@@ -140,7 +140,7 @@ async function handleDelete() {
 
 <style scoped>
 .workspace-detail {
-  padding: 28px 32px;
+  padding: 32px;
   max-width: 1200px;
 }
 
@@ -151,6 +151,10 @@ async function handleDelete() {
   gap: 14px;
   padding: 80px 20px;
   text-align: center;
+}
+
+.empty-state p {
+  max-width: 320px;
 }
 
 .empty-state-icon {
@@ -184,7 +188,7 @@ async function handleDelete() {
 .workspace-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 14px;
+  gap: 16px;
 }
 
 .workspace-head {
@@ -193,7 +197,7 @@ async function handleDelete() {
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 28px;
-  padding-bottom: 24px;
+  padding-bottom: 28px;
   border-bottom: 1px solid var(--border);
 }
 

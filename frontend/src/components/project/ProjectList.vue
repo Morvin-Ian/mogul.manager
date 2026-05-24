@@ -98,8 +98,8 @@ async function onProjectSaved(data: Record<string, any>) {
 .sk-grid,
 .project-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+  gap: 16px;
 }
 
 .empty-projects {
@@ -134,9 +134,9 @@ async function onProjectSaved(data: Record<string, any>) {
 
 .project-card {
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: 1.5px solid var(--border);
   border-radius: var(--radius);
-  padding: 20px 22px;
+  padding: 20px 22px 18px;
   cursor: pointer;
   transition: box-shadow 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
   display: flex;
@@ -157,18 +157,18 @@ async function onProjectSaved(data: Record<string, any>) {
   gap: 8px;
 }
 
-
 h3 {
   font-size: 14.5px;
   font-weight: 700;
   color: var(--text);
-  letter-spacing: -0.2px;
+  letter-spacing: -0.3px;
+  line-height: 1.35;
 }
 
 .card-desc {
   color: var(--text-muted);
   font-size: 13px;
-  line-height: 1.55;
+  line-height: 1.6;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -177,7 +177,7 @@ h3 {
 }
 
 .project-card-footer {
-  margin-top: 4px;
+  margin-top: 2px;
   padding-top: 12px;
   border-top: 1px solid var(--border);
 }

@@ -14,13 +14,25 @@
           <span>{{ content }}</span>
         </template>
       </div>
-      <div v-if="!streaming && content" class="message-time">{{ time }}</div>
+      <div class="message-meta" v-if="!streaming && content">
+        <span class="message-time">{{ time }}</span>
+        <button class="copy-btn" @click="copyContent" :title="copied ? 'Copied!' : 'Copy message'">
+          <svg v-if="!copied" viewBox="0 0 14 14" fill="none" width="12" height="12">
+            <rect x="4.5" y="4.5" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.2"/>
+            <path d="M9.5 4.5V3a1 1 0 00-1-1H3a1 1 0 00-1 1v5.5a1 1 0 001 1h1.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+          </svg>
+          <svg v-else viewBox="0 0 14 14" fill="none" width="12" height="12">
+            <path d="M2.5 7l3 3L11.5 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span class="copy-label">{{ copied ? 'Copied' : 'Copy' }}</span>
+        </button>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 import { useAuthStore } from '../../stores/auth'
@@ -33,6 +45,7 @@ const props = defineProps<{
 }>()
 
 const auth = useAuthStore()
+const copied = ref(false)
 
 const initials = computed(() =>
   (auth.user?.username ?? 'U').slice(0, 2).toUpperCase()
@@ -48,13 +61,21 @@ const renderedContent = computed(() => {
   const raw = marked.parse(props.content, { async: false }) as string
   return DOMPurify.sanitize(raw)
 })
+
+async function copyContent() {
+  try {
+    await navigator.clipboard.writeText(props.content)
+    copied.value = true
+    setTimeout(() => { copied.value = false }, 2000)
+  } catch {}
+}
 </script>
 
 <style scoped>
 .message {
   display: flex;
-  gap: 10px;
-  max-width: 78%;
+  gap: 12px;
+  max-width: 80%;
 }
 
 .message-user {
@@ -73,68 +94,102 @@ const renderedContent = computed(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 11px;
-  font-weight: 700;
+  font-size: 10.5px;
+  font-weight: 800;
   flex-shrink: 0;
-  margin-top: 2px;
+  margin-top: 3px;
+  letter-spacing: 0.3px;
 }
 
 .message-user .message-avatar {
-  background: var(--primary-light);
-  color: var(--primary);
-  border: 1.5px solid var(--primary-border);
+  background: linear-gradient(135deg, var(--primary) 0%, #003CBF 100%);
+  color: #fff;
+  border: none;
 }
 
 .message-assistant .message-avatar {
-  background: #f4f4f5;
-  color: #52525b;
+  background: var(--bg);
+  color: var(--text-muted);
   border: 1.5px solid var(--border);
+  font-size: 10px;
+  letter-spacing: 0.4px;
 }
 
 .message-content {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 5px;
   min-width: 0;
 }
 
 .message-text {
-  padding: 10px 14px;
-  border-radius: var(--radius);
+  padding: 11px 15px;
+  border-radius: 14px;
   font-size: 14px;
-  line-height: 1.6;
+  line-height: 1.65;
   word-break: break-word;
 }
 
 .message-user .message-text {
   background: var(--primary);
   color: #fff;
-  border-bottom-right-radius: var(--radius-xs);
+  border-bottom-right-radius: 4px;
   white-space: pre-wrap;
+  box-shadow: 0 2px 8px rgba(0, 82, 255, 0.25);
 }
 
 .message-assistant .message-text {
-  background: #f4f4f5;
+  background: var(--surface);
   color: var(--text);
-  border-bottom-left-radius: var(--radius-xs);
-  border: 1px solid var(--border);
+  border-bottom-left-radius: 4px;
+  border: 1.5px solid var(--border);
+}
+
+.message-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 2px;
+}
+
+.message-user .message-meta {
+  flex-direction: row-reverse;
 }
 
 .message-time {
   font-size: 11px;
   color: var(--text-light);
-  padding: 0 2px;
 }
 
-.message-user .message-time {
-  text-align: right;
+.copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-light);
+  font-size: 11px;
+  font-family: inherit;
+  padding: 2px 5px;
+  border-radius: 5px;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s, color 0.15s;
+}
+
+.message:hover .copy-btn { opacity: 1; }
+.copy-btn:hover { background: var(--bg); color: var(--text-muted); }
+.copy-btn.copied, .copy-btn:has(svg path[d*="M2.5 7"]) { color: var(--success); opacity: 1; }
+
+.copy-label {
+  font-size: 11px;
 }
 
 .message-streaming .message-text {
-  background: #f4f4f5;
-  border: 1px solid var(--border);
+  background: var(--surface);
+  border: 1.5px solid var(--border);
   color: var(--text);
-  border-bottom-left-radius: var(--radius-xs);
+  border-bottom-left-radius: 4px;
 }
 
 .cursor-blink {
