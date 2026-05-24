@@ -1,4 +1,6 @@
 import json
+from collections import defaultdict
+from time import monotonic
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -24,7 +26,22 @@ router = APIRouter(
 )
 
 
-def get_deepseek():
+_RATE_WINDOW = 60.0
+_RATE_MAX = 15
+_user_timestamps: dict[int, list[float]] = defaultdict(list)
+
+
+def _check_rate_limit(user_id: int) -> bool:
+    now = monotonic()
+    ts = [t for t in _user_timestamps[user_id] if now - t < _RATE_WINDOW]
+    _user_timestamps[user_id] = ts
+    if len(ts) >= _RATE_MAX:
+        return False
+    _user_timestamps[user_id].append(now)
+    return True
+
+
+def get_deepseek() -> DeepSeekAgent:
     return DeepSeekAgent()
 
 
@@ -111,6 +128,11 @@ async def send_message(
     if not conv:
         raise HTTPException(status_code=404, detail="Conversation not found")
 
+    if not _check_rate_limit(current_user.id):
+        raise HTTPException(
+            status_code=429, detail="Too many messages. Please wait a moment."
+        )
+
     await service.add_message(conversation_id, "user", message.content)
 
     if conv.title == "New Conversation":
@@ -140,9 +162,12 @@ async def send_message(
         user_context = "\n".join(lines)
 
         agent = get_deepseek()
-        async for token in agent.stream_response(context, service.db, user_context):
-            collected.append(token)
-            yield f"data: {json.dumps({'token': token})}\n\n"
+        async for event in agent.stream_response(context, service.db, user_context):
+            if event["type"] == "token":
+                collected.append(event["content"])
+                yield f"data: {json.dumps({'token': event['content']})}\n\n"
+            elif event["type"] == "tool_start":
+                yield f"data: {json.dumps({'tool': event['name']})}\n\n"
 
         full_response = "".join(collected)
         msg = await service.add_message(conversation_id, "assistant", full_response)

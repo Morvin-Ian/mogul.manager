@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import Depends
@@ -74,9 +75,7 @@ class ChatService:
 
         conv = await self.db.get(models.Conversation, conversation_id)
         if conv:
-            conv.updated_at = __import__("datetime").datetime.now(
-                __import__("datetime").timezone.utc
-            )
+            conv.updated_at = datetime.now(UTC)
             await self.db.commit()
 
         return msg
@@ -93,8 +92,9 @@ class ChatService:
         )
         return list(result.scalars().all())
 
-    async def get_context(self, conversation_id: int) -> list[ChatCompletionMessageParam]:
+    async def get_context(self, conversation_id: int, max_messages: int = 40) -> list[ChatCompletionMessageParam]:
         messages = await self.get_messages(conversation_id)
+        messages = messages[-max_messages:]
         result: list[ChatCompletionMessageParam] = []
         for m in messages:
             if m.role == "user":

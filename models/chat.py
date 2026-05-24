@@ -24,7 +24,7 @@ class Conversation(Base):
         DateTime(timezone=True), default=datetime.now(UTC)
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=datetime.now(UTC), onupdate=datetime.now(UTC)
+        DateTime(timezone=True), default=datetime.now(UTC), onupdate=lambda: datetime.now(UTC)
     )
 
     user: Mapped["User"] = relationship(back_populates="conversations")

@@ -76,6 +76,20 @@ PROJECT_TOOLS = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "delete_project",
+            "description": "Permanently delete a project and all its tasks by ID.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "project_id": {"type": "integer"},
+                },
+                "required": ["project_id"],
+            },
+        },
+    },
 ]
 
 
@@ -109,5 +123,12 @@ async def handle(name: str, args: dict, db: AsyncSession) -> str:
         if not project:
             return json.dumps({"error": f"Project {args['project_id']} not found"})
         return json.dumps({"project": _serialize(project)})
+
+    if name == "delete_project":
+        project = await svc.get_by_id(args["project_id"])
+        if not project:
+            return json.dumps({"error": f"Project {args['project_id']} not found"})
+        await svc.delete(project)
+        return json.dumps({"success": True, "deleted_project_id": args["project_id"]})
 
     return json.dumps({"error": f"Unknown project tool: {name}"})

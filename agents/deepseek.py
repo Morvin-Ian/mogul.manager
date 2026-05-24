@@ -1,4 +1,5 @@
 import json
+import logging
 
 from openai import AsyncOpenAI, AsyncStream
 from openai.types.chat import ChatCompletionChunk, ChatCompletionMessageParam
@@ -7,6 +8,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from config import settings
 from tools import ALL_TOOLS, dispatch
+
+logger = logging.getLogger(__name__)
 
 _MAX_TOOL_ITERATIONS = 5
 
@@ -83,8 +86,12 @@ class DeepSeekAgent:
 
             # Execute each tool and append its result
             for tc in function_calls:
+                yield {"type": "tool_start", "name": tc.function.name}
                 args = json.loads(tc.function.arguments)
                 result = await dispatch(tc.function.name, args, db)
+                parsed_result = json.loads(result)
+                if "error" in parsed_result:
+                    logger.warning("Tool %s returned error: %s", tc.function.name, parsed_result["error"])
                 tool_msg: ChatCompletionMessageParam = {
                     "role": "tool",
                     "tool_call_id": tc.id,
@@ -103,4 +110,4 @@ class DeepSeekAgent:
         async for chunk in stream:
             delta = chunk.choices[0].delta if chunk.choices else None
             if delta and delta.content:
-                yield delta.content
+                yield {"type": "token", "content": delta.content}

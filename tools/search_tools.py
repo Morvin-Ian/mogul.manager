@@ -50,7 +50,10 @@ class SearchTasksInput(BaseModel):
 async def handle(name: str, args: dict, db: AsyncSession) -> str:
     if name == "search_tasks":
         inp = SearchTasksInput(**args)
-        stmt = select(models.Task).where(models.Task.title.ilike(f"%{inp.query}%"))
+        pattern = f"%{inp.query}%"
+        stmt = select(models.Task).where(
+            models.Task.title.ilike(pattern) | models.Task.description.ilike(pattern)
+        )
         if inp.project_id is not None:
             stmt = stmt.where(models.Task.project_id == inp.project_id)
         if inp.status is not None:

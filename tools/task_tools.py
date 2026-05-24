@@ -87,6 +87,20 @@ TASK_TOOLS = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "delete_task",
+            "description": "Permanently delete a task by ID.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "task_id": {"type": "integer"},
+                },
+                "required": ["task_id"],
+            },
+        },
+    },
 ]
 
 
@@ -129,5 +143,12 @@ async def handle(name: str, args: dict, db: AsyncSession) -> str:
         if not task:
             return json.dumps({"error": f"Task {args['task_id']} not found"})
         return json.dumps({"task": _serialize(task)})
+
+    if name == "delete_task":
+        task = await svc.get_by_id(args["task_id"])
+        if not task:
+            return json.dumps({"error": f"Task {args['task_id']} not found"})
+        await svc.delete(task)
+        return json.dumps({"success": True, "deleted_task_id": args["task_id"]})
 
     return json.dumps({"error": f"Unknown task tool: {name}"})

@@ -8,6 +8,7 @@ export const useChatStore = defineStore('chat', () => {
   const current = ref<ConversationDetail | null>(null)
   const streaming = ref(false)
   const streamContent = ref('')
+  const toolActivity = ref<string | null>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)
 
@@ -58,6 +59,7 @@ export const useChatStore = defineStore('chat', () => {
   async function sendMessage(conversationId: number, content: string): Promise<void> {
     streaming.value = true
     streamContent.value = ''
+    toolActivity.value = null
     error.value = null
 
     const token = localStorage.getItem('token')
@@ -101,13 +103,18 @@ export const useChatStore = defineStore('chat', () => {
           if (!raw) continue
           try {
             const parsed = JSON.parse(raw)
+            if (parsed.tool) {
+              toolActivity.value = parsed.tool
+            }
             if (parsed.token) {
+              toolActivity.value = null
               streamContent.value += parsed.token
             }
             if (parsed.done) {
               if (current.value && parsed.message) {
                 current.value.messages.push(parsed.message)
               }
+              toolActivity.value = null
               streamContent.value = ''
             }
           } catch {
@@ -122,11 +129,12 @@ export const useChatStore = defineStore('chat', () => {
       }
     } finally {
       streaming.value = false
+      toolActivity.value = null
     }
   }
 
   return {
-    conversations, current, streaming, streamContent, loading, error,
+    conversations, current, streaming, streamContent, toolActivity, loading, error,
     fetchConversations, fetchConversation, createConversation,
     updateConversation, removeConversation, sendMessage,
   }

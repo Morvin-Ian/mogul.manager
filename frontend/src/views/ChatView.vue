@@ -69,8 +69,12 @@
               :content="msg.content"
               :created-at="msg.created_at"
             />
+            <div v-if="chatStore.streaming && chatStore.toolActivity" class="tool-activity">
+              <span class="tool-activity-dot"></span>
+              Running {{ formatToolName(chatStore.toolActivity) }}…
+            </div>
             <MessageBubble
-              v-if="chatStore.streaming"
+              v-if="chatStore.streaming && (chatStore.streamContent || !chatStore.toolActivity)"
               role="assistant"
               :content="chatStore.streamContent"
               :streaming="true"
@@ -176,6 +180,10 @@ async function handleSend() {
 async function quickSend(text: string) {
   if (chatStore.streaming || !chatStore.current) return
   await chatStore.sendMessage(chatStore.current.id, text)
+}
+
+function formatToolName(name: string) {
+  return name.replace(/_/g, ' ')
 }
 
 function formatDate(d: string) {
@@ -501,6 +509,28 @@ function formatDate(d: string) {
   font-size: 11.5px;
   color: var(--text-light);
   text-align: center;
+}
+
+.tool-activity {
+  align-self: flex-start;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 7px 12px;
+}
+
+.tool-activity-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--primary);
+  animation: pulse 1s ease-in-out infinite;
+  flex-shrink: 0;
 }
 
 /* Sidebar skeleton */
