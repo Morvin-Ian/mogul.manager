@@ -18,7 +18,7 @@ An AI-powered project management tool where you can manage workspaces, projects,
 cp .env.example .env   # fill in DB, DeepSeek API key, S3, JWT secret
 uv sync
 uv run alembic upgrade head
-uv run uvicorn main:app --reload
+uv run fastapi dev main.py
 ```
 
 **Frontend**

@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy.dialects import postgresql
 
 revision = "d1e2f3a4b5c6"
 down_revision = "a1b2c3d4e5f6"
@@ -38,11 +39,13 @@ def upgrade() -> None:
     op.create_index("ix_users_google_id", "users", ["google_id"])
 
     # --- 2. Create enum types ---
-    memberrole_enum = sa.Enum("owner", "admin", "member", name="memberrole")
+    memberrole_enum = postgresql.ENUM(
+        "owner", "admin", "member", name="memberrole", create_type=True
+    )
     memberrole_enum.create(op.get_bind(), checkfirst=True)
 
-    invitationstatus_enum = sa.Enum(
-        "pending", "accepted", "expired", "revoked", name="invitationstatus"
+    invitationstatus_enum = postgresql.ENUM(
+        "pending", "accepted", "expired", "revoked", name="invitationstatus", create_type=True
     )
     invitationstatus_enum.create(op.get_bind(), checkfirst=True)
 
@@ -54,7 +57,7 @@ def upgrade() -> None:
         sa.Column("user_id", sa.Integer(), nullable=False),
         sa.Column(
             "role",
-            sa.Enum("owner", "admin", "member", name="memberrole"),
+            postgresql.ENUM("owner", "admin", "member", name="memberrole", create_type=False),
             nullable=False,
         ),
         sa.Column(
@@ -93,7 +96,7 @@ def upgrade() -> None:
         sa.Column("email", sa.String(120), nullable=False),
         sa.Column(
             "role",
-            sa.Enum("owner", "admin", "member", name="memberrole"),
+            postgresql.ENUM("owner", "admin", "member", name="memberrole", create_type=False),
             nullable=False,
         ),
         sa.Column("token", sa.String(128), nullable=False),
@@ -108,7 +111,11 @@ def upgrade() -> None:
         sa.Column("accepted_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column(
             "status",
-            sa.Enum("pending", "accepted", "expired", "revoked", name="invitationstatus"),
+            postgresql.ENUM(
+                "pending", "accepted", "expired", "revoked",
+                name="invitationstatus",
+                create_type=False,
+            ),
             nullable=False,
             server_default="pending",
         ),
