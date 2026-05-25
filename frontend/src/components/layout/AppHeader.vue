@@ -39,6 +39,8 @@ const pageTitle = computed(() => {
   if (name === 'Chat') return 'AI Chat'
   if (name === 'Plans') return 'Plans'
   if (name === 'PlanDetail') return 'Plan'
+  if (name === 'Documents') return 'Documents'
+  if (name === 'DocumentDetail') return 'Document'
   if (name === 'Settings') return 'Settings'
   return 'Mogul Manager'
 })

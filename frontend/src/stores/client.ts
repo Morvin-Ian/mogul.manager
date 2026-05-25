@@ -58,6 +58,26 @@ export function postForm<T>(endpoint: string, body: URLSearchParams): Promise<T>
   })
 }
 
+export function postFile<T>(endpoint: string, formData: FormData): Promise<T> {
+  const token = localStorage.getItem('token')
+  const headers: Record<string, string> = {}
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`
+  }
+  return fetch(`${BASE_URL}${endpoint}`, {
+    method: 'POST',
+    headers,
+    body: formData,
+  }).then(async (res) => {
+    if (res.status === 201 || res.status === 200) {
+      const data = await res.json()
+      return data as T
+    }
+    const data = await res.json()
+    throw new Error(data.detail || 'Upload failed')
+  })
+}
+
 export function patchFile<T>(endpoint: string, formData: FormData): Promise<T> {
   const token = localStorage.getItem('token')
   const headers: Record<string, string> = {}

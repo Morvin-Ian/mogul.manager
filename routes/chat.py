@@ -146,8 +146,8 @@ async def send_message(
     async def generate():
         collected: list[str] = []
 
-        # Build rich context: workspaces + active tasks + long-term memories
-        user_context = await build_context(current_user.id, service.db)
+        # Build rich context including RAG over user's documents
+        user_context = await build_context(current_user.id, service.db, query=message.content)
 
         # Retrieve recent conversation history (short-term memory)
         context = await service.get_context(conversation_id)

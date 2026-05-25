@@ -222,10 +222,10 @@ async function handleDelete() {
 /* Explainer */
 .explainer-callout {
   position: relative;
-  background: var(--surface);
-  border: 1px solid var(--border);
+  background: var(--primary-light);
+  border: 1px solid var(--primary-border);
   border-radius: var(--radius-lg);
-  padding: 20px 24px 16px;
+  padding: 20px 24px;
   margin-bottom: 24px;
 }
 
@@ -243,27 +243,26 @@ async function handleDelete() {
   border-radius: 4px;
   transition: color 0.1s, background 0.1s;
 }
-.explainer-dismiss:hover { color: var(--text); background: var(--bg); }
+.explainer-dismiss:hover { color: var(--text); background: var(--primary-border); }
 
 .explainer-body {
   display: flex;
   align-items: flex-start;
-  gap: 16px;
+  gap: 20px;
   flex-wrap: wrap;
-  margin-bottom: 14px;
 }
 
 .explainer-col {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
+  gap: 14px;
   flex: 1;
-  min-width: 160px;
+  min-width: 200px;
 }
 
 .explainer-icon {
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
   border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
@@ -275,30 +274,32 @@ async function handleDelete() {
 .explainer-icon--task      { background: var(--primary-light); border: 1px solid var(--primary-border); color: var(--primary); }
 
 .explainer-label {
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: 700;
   color: var(--text);
-  margin-bottom: 3px;
-}
-
-.explainer-text {
-  font-size: 12px;
-  color: var(--text-muted);
-  line-height: 1.55;
   margin-bottom: 4px;
 }
 
+.explainer-text {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  line-height: 1.55;
+  margin-bottom: 6px;
+}
+
 .explainer-example {
-  font-size: 11px;
-  color: var(--text-light);
+  font-size: 11.5px;
+  color: var(--primary);
   font-style: italic;
 }
 
 .explainer-arrow {
   display: flex;
+  flex-direction: column;
   align-items: center;
+  gap: 4px;
+  color: var(--text-light);
   padding-top: 8px;
-  color: var(--border-strong);
   flex-shrink: 0;
 }
 
@@ -306,13 +307,14 @@ async function handleDelete() {
   display: flex;
   align-items: flex-start;
   gap: 7px;
-  font-size: 12px;
+  font-size: 11.5px;
   color: var(--text-muted);
-  background: var(--bg);
+  background: rgba(255,255,255,0.5);
   border-radius: var(--radius-sm);
   padding: 8px 12px;
   line-height: 1.55;
-  border: 1px solid var(--border);
+  border: 1px solid var(--primary-border);
+  margin-top: 14px;
 }
 .explainer-tip svg { margin-top: 1px; color: var(--primary); }
 

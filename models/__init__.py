@@ -1,5 +1,6 @@
 from .chat import Conversation, Message
 from .comments import Comment
+from .documents import Document, DocumentChunk, DocumentStatus, DocumentType
 from .memory import Memory
 from .plans import Plan, PlanStatus, PlanStep, StepPriority, StepStatus
 from .projects import Project, ProjectStatus
@@ -12,6 +13,10 @@ __all__ = [
     "PasswordResetToken",
     "Comment",
     "Conversation",
+    "Document",
+    "DocumentChunk",
+    "DocumentStatus",
+    "DocumentType",
     "Memory",
     "Message",
     "Plan",

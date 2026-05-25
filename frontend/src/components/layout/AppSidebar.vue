@@ -35,6 +35,15 @@
           </span>
           <span class="nav-label">Workspaces</span>
         </router-link>
+        <router-link to="/documents" class="nav-item" active-class="active">
+          <span class="nav-icon">
+            <svg viewBox="0 0 20 20" fill="none">
+              <path d="M13 2H5a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7l-4-5z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+              <path d="M13 2v5h5M7 9h6M7 12h6M7 15h4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+            </svg>
+          </span>
+          <span class="nav-label">Documents</span>
+        </router-link>
       </div>
 
       <div v-if="workspaceStore.workspaces.length" class="nav-group nav-group-workspaces">

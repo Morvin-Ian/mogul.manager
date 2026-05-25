@@ -192,3 +192,33 @@ export interface PlanCreate {
   description?: string | null
   workspace_id?: number | null
 }
+
+// ── Documents ──────────────────────────────────────────────────
+export type DocumentStatus = 'pending' | 'processing' | 'ready' | 'failed'
+export type DocumentFileType = 'pdf' | 'docx' | 'txt' | 'csv'
+
+export interface Document {
+  id: number
+  user_id: number
+  title: string
+  original_filename: string
+  file_type: DocumentFileType
+  file_size: number
+  status: DocumentStatus
+  summary: string | null
+  page_count: number | null
+  word_count: number | null
+  chunk_count: number | null
+  error_message: string | null
+  url: string | null
+  created_at: string
+  processed_at: string | null
+}
+
+export interface SearchHit {
+  document_id: number
+  document_title: string
+  chunk_index: number
+  content: string
+  similarity: number
+}

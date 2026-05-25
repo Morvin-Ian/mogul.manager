@@ -2,6 +2,8 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
+import models
+from agents.planner import PlannerAgent
 from schemas.plans import PlanCreate, PlanDetail, PlanRead, PlanStepUpdate, PlanUpdate
 from schemas.plans import PlanStepRead
 from services.auth import CurrentUser
@@ -29,27 +31,24 @@ async def create_plan(
     current_user: CurrentUser,
     svc: Annotated[PlanService, Depends()],
 ):
-    from agents.planner import PlannerAgent
-    import models as m
-
     plan = await svc.create(current_user.id, {
         "title": data.title,
         "description": data.description,
         "workspace_id": data.workspace_id,
-        "status": m.PlanStatus.ACTIVE,
+        "status": models.PlanStatus.ACTIVE,
     })
 
     planner = PlannerAgent()
     raw_steps = await planner.decompose(f"{data.title}. {data.description or ''}".strip())
 
-    saved: list[m.PlanStep] = []
+    saved: list[models.PlanStep] = []
     for i, raw in enumerate(raw_steps):
         step = await svc.create_step({
             "plan_id": plan.id,
             "title": raw.get("title", f"Step {i + 1}"),
             "description": raw.get("description"),
             "priority": raw.get("priority", "medium"),
-            "status": m.StepStatus.PENDING,
+            "status": models.StepStatus.PENDING,
             "step_order": i,
             "dependencies": [],
         })

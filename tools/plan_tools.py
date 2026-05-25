@@ -3,7 +3,8 @@ import json
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import models
-from schemas.plans import PlanStepRead, PlanDetail
+from agents.planner import PlannerAgent
+from schemas.plans import PlanStepRead
 from services.plans import PlanService
 
 PLAN_TOOLS = [
@@ -19,10 +20,16 @@ PLAN_TOOLS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "user_id":      {"type": "integer", "description": "Current user ID"},
-                    "title":        {"type": "string",  "description": "The high-level goal"},
-                    "description":  {"type": "string",  "description": "Optional extra context"},
-                    "workspace_id": {"type": "integer", "description": "Workspace to associate tasks with"},
+                    "user_id": {"type": "integer", "description": "Current user ID"},
+                    "title": {"type": "string", "description": "The high-level goal"},
+                    "description": {
+                        "type": "string",
+                        "description": "Optional extra context",
+                    },
+                    "workspace_id": {
+                        "type": "integer",
+                        "description": "Workspace to associate tasks with",
+                    },
                 },
                 "required": ["user_id", "title"],
             },
@@ -68,10 +75,25 @@ PLAN_TOOLS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "step_id":     {"type": "integer"},
-                    "status":      {"type": "string", "enum": ["pending", "running", "completed", "failed", "skipped"]},
-                    "agent_notes": {"type": "string", "description": "What was done or why it failed"},
-                    "linked_task_id": {"type": "integer", "description": "Task created while executing this step"},
+                    "step_id": {"type": "integer"},
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "pending",
+                            "running",
+                            "completed",
+                            "failed",
+                            "skipped",
+                        ],
+                    },
+                    "agent_notes": {
+                        "type": "string",
+                        "description": "What was done or why it failed",
+                    },
+                    "linked_task_id": {
+                        "type": "integer",
+                        "description": "Task created while executing this step",
+                    },
                 },
                 "required": ["step_id", "status"],
             },
@@ -85,10 +107,13 @@ PLAN_TOOLS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "plan_id":     {"type": "integer"},
-                    "title":       {"type": "string"},
+                    "plan_id": {"type": "integer"},
+                    "title": {"type": "string"},
                     "description": {"type": "string"},
-                    "status":      {"type": "string", "enum": ["draft", "active", "completed", "cancelled"]},
+                    "status": {
+                        "type": "string",
+                        "enum": ["draft", "active", "completed", "cancelled"],
+                    },
                 },
                 "required": ["plan_id"],
             },
@@ -143,19 +168,20 @@ async def handle(name: str, args: dict, db: AsyncSession) -> str:
 
     # ── create_plan ───────────────────────────────────────────────
     if name == "create_plan":
-        from agents.planner import PlannerAgent  # lazy — avoids circular import
-
         user_id: int = args["user_id"]
         title: str = args["title"]
         description: str | None = args.get("description")
         workspace_id: int | None = args.get("workspace_id")
 
-        plan = await svc.create(user_id, {
-            "title": title,
-            "description": description,
-            "workspace_id": workspace_id,
-            "status": models.PlanStatus.ACTIVE,
-        })
+        plan = await svc.create(
+            user_id,
+            {
+                "title": title,
+                "description": description,
+                "workspace_id": workspace_id,
+                "status": models.PlanStatus.ACTIVE,
+            },
+        )
 
         # Decompose goal into steps
         planner = PlannerAgent()
@@ -164,21 +190,27 @@ async def handle(name: str, args: dict, db: AsyncSession) -> str:
         # Save steps — first pass (collect IDs by index)
         saved_steps: list[models.PlanStep] = []
         for i, raw in enumerate(raw_steps):
-            step = await svc.create_step({
-                "plan_id": plan.id,
-                "title": raw.get("title", f"Step {i + 1}"),
-                "description": raw.get("description"),
-                "priority": _PRIORITY_MAP.get(raw.get("priority", "medium"), "medium"),
-                "status": models.StepStatus.PENDING,
-                "step_order": i,
-                "dependencies": [],  # resolve in second pass
-            })
+            step = await svc.create_step(
+                {
+                    "plan_id": plan.id,
+                    "title": raw.get("title", f"Step {i + 1}"),
+                    "description": raw.get("description"),
+                    "priority": _PRIORITY_MAP.get(
+                        raw.get("priority", "medium"), "medium"
+                    ),
+                    "status": models.StepStatus.PENDING,
+                    "step_order": i,
+                    "dependencies": [],  # resolve in second pass
+                }
+            )
             saved_steps.append(step)
 
         # Second pass — resolve depends_on indices → actual step IDs
         for i, raw in enumerate(raw_steps):
             dep_indices: list[int] = raw.get("depends_on", [])
-            dep_ids = [saved_steps[j].id for j in dep_indices if 0 <= j < len(saved_steps)]
+            dep_ids = [
+                saved_steps[j].id for j in dep_indices if 0 <= j < len(saved_steps)
+            ]
             if dep_ids:
                 saved_steps[i].dependencies = dep_ids
                 await db.commit()
@@ -189,18 +221,20 @@ async def handle(name: str, args: dict, db: AsyncSession) -> str:
     # ── list_plans ────────────────────────────────────────────────
     if name == "list_plans":
         plans = await svc.list_by_user(args["user_id"])
-        return json.dumps({
-            "plans": [
-                {
-                    "id": p.id,
-                    "title": p.title,
-                    "status": p.status.value,
-                    "progress": _calc_progress(p.steps),
-                    "step_count": len(p.steps),
-                }
-                for p in plans
-            ]
-        })
+        return json.dumps(
+            {
+                "plans": [
+                    {
+                        "id": p.id,
+                        "title": p.title,
+                        "status": p.status.value,
+                        "progress": _calc_progress(p.steps),
+                        "step_count": len(p.steps),
+                    }
+                    for p in plans
+                ]
+            }
+        )
 
     # ── get_plan ──────────────────────────────────────────────────
     if name == "get_plan":

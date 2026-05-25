@@ -3,9 +3,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 import models
+from models.documents import DocumentStatus
+from services.documents import DocumentService
 from services.memory import MemoryService
 from services.plans import PlanService
 from services.projects import ProjectService
+from services.rag import RAGService
 from services.workspaces import WorkspaceService
 
 # Active task statuses worth surfacing to the agent
@@ -16,7 +19,7 @@ _ACTIVE_STATUSES = {
 }
 
 
-async def build_context(user_id: int, db: AsyncSession) -> str:
+async def build_context(user_id: int, db: AsyncSession, query: str | None = None) -> str:
     lines: list[str] = []
 
     # ── User identity ────────────────────────────────────────────
@@ -82,6 +85,29 @@ async def build_context(user_id: int, db: AsyncSession) -> str:
         lines.append("\nWhat I know about this user:")
         for mem in memories:
             lines.append(f"  [{mem.memory_type}] {mem.content}")
+
+    # ── Documents ─────────────────────────────────────────────────
+    doc_svc = DocumentService(db)  # type: ignore[arg-type]
+    documents = await doc_svc.list_documents(user_id)
+    ready_docs = [d for d in documents if d.status == DocumentStatus.ready]
+    if ready_docs:
+        lines.append("\nUploaded documents (use search_documents to query them):")
+        for doc in ready_docs[:10]:
+            snippet = (doc.summary or "")[:150].replace("\n", " ")
+            lines.append(
+                f"  [{doc.id}] {doc.title!r} ({doc.file_type.value}, "
+                f"{doc.word_count or 0} words) — {snippet}"
+            )
+
+    # ── RAG: inject relevant chunks when a query is provided ──────
+    if query and ready_docs:
+        try:
+            rag_svc = RAGService(db)  # type: ignore[arg-type]
+            rag_context = await rag_svc.build_rag_context(query, user_id)
+            if rag_context:
+                lines.append(f"\n{rag_context}")
+        except Exception:
+            pass  # RAG is best-effort; never break the chat
 
     return "\n".join(lines)
 
