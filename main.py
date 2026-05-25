@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from routes import memory, plans
+from routes import plans
 from routes.chat import comments_router
 from routes.chat import router as chat_router
 from routes.documents import router as documents_router
@@ -37,7 +37,6 @@ app.include_router(projects_router)
 app.include_router(tasks_router)
 app.include_router(chat_router)
 app.include_router(comments_router)
-app.include_router(memory.router)
 app.include_router(plans.router)
 app.include_router(documents_router)
 app.include_router(members_router)

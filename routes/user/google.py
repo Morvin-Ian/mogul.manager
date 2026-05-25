@@ -89,7 +89,6 @@ async def google_callback(
 ) -> RedirectResponse:
     error_redirect = f"{settings.frontend_url}/login?error=oauth_failed"
 
-    # Handle Google-side errors
     if error:
         logger.warning("Google OAuth error: %s", error)
         return RedirectResponse(url=error_redirect)
@@ -97,12 +96,10 @@ async def google_callback(
     if not code or not state:
         return RedirectResponse(url=error_redirect)
 
-    # Verify state to prevent CSRF
     if not _verify_state_token(state):
         logger.warning("Invalid OAuth state token")
         return RedirectResponse(url=error_redirect)
 
-    # Exchange code for tokens
     try:
         async with httpx.AsyncClient(timeout=15.0) as client:
             token_response = await client.post(
@@ -118,7 +115,6 @@ async def google_callback(
             token_response.raise_for_status()
             token_data = token_response.json()
 
-            # Fetch user info
             userinfo_response = await client.get(
                 GOOGLE_USERINFO_URL,
                 headers={"Authorization": f"Bearer {token_data['access_token']}"},
@@ -140,10 +136,8 @@ async def google_callback(
         logger.error("Google userinfo missing sub or email: %s", userinfo)
         return RedirectResponse(url=error_redirect)
 
-    # Find or create the user
     user = await _find_or_create_user(db, google_id=google_id, email=email, name=name)
 
-    # Issue our own JWT
     access_token = create_access_token(
         data={"sub": str(user.id)},
         expires_delta=timedelta(minutes=settings.access_token_expire_minutes),
@@ -177,7 +171,6 @@ async def _find_or_create_user(
         await db.refresh(user)
         return user
 
-    # 3. Create a brand-new user
     base_username = _make_username_from_email(email)
     username = await _unique_username(db, base_username)
 
