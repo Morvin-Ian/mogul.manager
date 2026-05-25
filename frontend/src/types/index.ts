@@ -154,3 +154,41 @@ export interface Message {
 export interface ConversationDetail extends Conversation {
   messages: Message[]
 }
+
+// ── Plans ──────────────────────────────────────────────────────
+export type PlanStatus = 'draft' | 'active' | 'completed' | 'cancelled'
+export type StepStatus = 'pending' | 'running' | 'completed' | 'failed' | 'skipped'
+export type StepPriority = 'low' | 'medium' | 'high' | 'urgent'
+
+export interface PlanStep {
+  id: number
+  plan_id: number
+  title: string
+  description: string | null
+  priority: StepPriority
+  status: StepStatus
+  step_order: number
+  dependencies: number[]
+  linked_task_id: number | null
+  agent_notes: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface Plan {
+  id: number
+  user_id: number
+  workspace_id: number | null
+  title: string
+  description: string | null
+  status: PlanStatus
+  steps: PlanStep[]
+  created_at: string
+  updated_at: string
+}
+
+export interface PlanCreate {
+  title: string
+  description?: string | null
+  workspace_id?: number | null
+}

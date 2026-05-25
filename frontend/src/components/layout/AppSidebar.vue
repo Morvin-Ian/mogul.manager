@@ -11,14 +11,6 @@
 
     <nav class="sidebar-nav">
       <div class="nav-group">
-        <router-link to="/" class="nav-item" exact-active-class="active">
-          <span class="nav-icon">
-            <svg viewBox="0 0 20 20" fill="currentColor">
-              <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM13 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2h-2z" />
-            </svg>
-          </span>
-          <span class="nav-label">Workspaces</span>
-        </router-link>
         <router-link to="/chat" class="nav-item" active-class="active">
           <span class="nav-icon">
             <svg viewBox="0 0 20 20" fill="currentColor">
@@ -26,6 +18,22 @@
             </svg>
           </span>
           <span class="nav-label">AI Chat</span>
+        </router-link>
+        <router-link to="/plans" class="nav-item" active-class="active">
+          <span class="nav-icon">
+            <svg viewBox="0 0 20 20" fill="currentColor">
+              <path d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 8l2 2 4-4"/>
+            </svg>
+          </span>
+          <span class="nav-label">Plans</span>
+        </router-link>
+        <router-link to="/" class="nav-item" exact-active-class="active">
+          <span class="nav-icon">
+            <svg viewBox="0 0 20 20" fill="currentColor">
+              <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM13 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2h-2z" />
+            </svg>
+          </span>
+          <span class="nav-label">Workspaces</span>
         </router-link>
       </div>
 

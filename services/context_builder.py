@@ -1,8 +1,10 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 import models
 from services.memory import MemoryService
+from services.plans import PlanService
 from services.projects import ProjectService
 from services.workspaces import WorkspaceService
 
@@ -55,6 +57,23 @@ async def build_context(user_id: int, db: AsyncSession) -> str:
                 f"  [{task.status.value}] {task.title!r} "
                 f"(project_id={task.project_id}{due})"
             )
+
+    # ── Active plans ──────────────────────────────────────────────
+    plan_svc = PlanService(db)  # type: ignore[arg-type]
+    plans = await plan_svc.list_by_user(user_id)
+    active_plans = [p for p in plans if p.status.value in ("active", "draft")]
+    if active_plans:
+        lines.append("\nActive plans:")
+        for plan in active_plans[:5]:
+            total = len(plan.steps)
+            done = sum(1 for s in plan.steps if s.status.value in ("completed", "skipped"))
+            pending_steps = [s for s in plan.steps if s.status.value == "pending"]
+            running_steps = [s for s in plan.steps if s.status.value == "running"]
+            lines.append(f"  Plan: {plan.title!r} (id={plan.id}, {done}/{total} steps done)")
+            for s in running_steps:
+                lines.append(f"    [running] {s.title!r} (step_id={s.id})")
+            for s in pending_steps[:3]:
+                lines.append(f"    [pending] {s.title!r} (step_id={s.id}, priority={s.priority.value})")
 
     # ── Long-term memories ────────────────────────────────────────
     mem_svc = MemoryService(db)  # type: ignore[arg-type]

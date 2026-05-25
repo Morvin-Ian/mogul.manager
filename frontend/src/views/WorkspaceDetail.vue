@@ -5,7 +5,7 @@
       <div class="page-head">
         <div>
           <h2>Workspaces</h2>
-          <p>Organize your projects and tasks into focused workspaces.</p>
+          <p>Your execution layer — organise ongoing work into projects, tasks, and deadlines.</p>
         </div>
         <div class="page-actions">
           <button class="btn btn-primary" @click="openCreateForm">
@@ -15,6 +15,73 @@
             New Workspace
           </button>
         </div>
+      </div>
+
+      <!-- Explainer callout -->
+      <div v-if="!dismissedExplainer" class="explainer-callout">
+        <button class="explainer-dismiss" @click="dismissExplainer" title="Dismiss">×</button>
+        <div class="explainer-body">
+          <div class="explainer-col">
+            <div class="explainer-icon explainer-icon--workspace">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18">
+                <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"/>
+              </svg>
+            </div>
+            <div>
+              <p class="explainer-label">Workspace</p>
+              <p class="explainer-text">A top-level container for a team, client, or area of work. Think of it as a folder that holds everything related to one big context.</p>
+              <p class="explainer-example">e.g. "Freelance Clients", "TC4A Internship", "Side Projects"</p>
+            </div>
+          </div>
+
+          <div class="explainer-arrow">
+            <svg viewBox="0 0 24 24" fill="none" width="18" height="18">
+              <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+
+          <div class="explainer-col">
+            <div class="explainer-icon explainer-icon--project">
+              <svg viewBox="0 0 20 20" fill="none" width="18" height="18">
+                <rect x="3" y="3" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
+                <rect x="11" y="3" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
+                <rect x="3" y="11" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
+                <rect x="11" y="11" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
+              </svg>
+            </div>
+            <div>
+              <p class="explainer-label">Project</p>
+              <p class="explainer-text">A defined piece of work inside a workspace with its own kanban board. Use one project per deliverable or initiative.</p>
+              <p class="explainer-example">e.g. "Website Redesign", "Q2 Marketing Campaign"</p>
+            </div>
+          </div>
+
+          <div class="explainer-arrow">
+            <svg viewBox="0 0 24 24" fill="none" width="18" height="18">
+              <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+
+          <div class="explainer-col">
+            <div class="explainer-icon explainer-icon--task">
+              <svg viewBox="0 0 20 20" fill="none" width="18" height="18">
+                <path d="M4 10l4 4 8-8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <div>
+              <p class="explainer-label">Task</p>
+              <p class="explainer-text">A single actionable item. Assign it, set a due date, add notes, and move it across statuses as work progresses.</p>
+              <p class="explainer-example">e.g. "Write homepage copy", "Review pull request #14"</p>
+            </div>
+          </div>
+        </div>
+        <p class="explainer-tip">
+          <svg viewBox="0 0 16 16" fill="none" width="13" height="13" style="flex-shrink:0">
+            <circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.3"/>
+            <path d="M8 7v4M8 5.5v.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+          </svg>
+          <strong>Tip:</strong> Use <em>Plans</em> when you're figuring out <em>what</em> to do. Use <em>Workspaces</em> when you're tracking <em>how it's going</em>. A plan step can create a task directly in a workspace project.
+        </p>
       </div>
 
       <div v-if="workspaceStore.workspaces.length === 0" class="empty-state">
@@ -70,7 +137,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useWorkspaceStore } from '../stores/workspaces'
 import type { Workspace } from '../types'
@@ -82,6 +149,14 @@ import Loading from '../components/common/Loading.vue'
 const route = useRoute()
 const router = useRouter()
 const workspaceStore = useWorkspaceStore()
+
+const dismissedExplainer = ref(localStorage.getItem('ws_explainer_dismissed') === '1')
+function dismissExplainer() {
+  dismissedExplainer.value = true
+  localStorage.setItem('ws_explainer_dismissed', '1')
+}
+
+onMounted(() => workspaceStore.fetchAll())
 
 const showForm = ref(false)
 const editingWorkspace = ref<Workspace | null>(null)
@@ -143,6 +218,103 @@ async function handleDelete() {
   padding: 32px;
   max-width: 1200px;
 }
+
+/* Explainer */
+.explainer-callout {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px 24px 16px;
+  margin-bottom: 24px;
+}
+
+.explainer-dismiss {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  color: var(--text-light);
+  line-height: 1;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: color 0.1s, background 0.1s;
+}
+.explainer-dismiss:hover { color: var(--text); background: var(--bg); }
+
+.explainer-body {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.explainer-col {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex: 1;
+  min-width: 160px;
+}
+
+.explainer-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.explainer-icon--workspace { background: #F0FDF4; border: 1px solid #BBF7D0; color: #15803D; }
+.explainer-icon--project   { background: #EFF6FF; border: 1px solid #BFDBFE; color: #1D4ED8; }
+.explainer-icon--task      { background: var(--primary-light); border: 1px solid var(--primary-border); color: var(--primary); }
+
+.explainer-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 3px;
+}
+
+.explainer-text {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.55;
+  margin-bottom: 4px;
+}
+
+.explainer-example {
+  font-size: 11px;
+  color: var(--text-light);
+  font-style: italic;
+}
+
+.explainer-arrow {
+  display: flex;
+  align-items: center;
+  padding-top: 8px;
+  color: var(--border-strong);
+  flex-shrink: 0;
+}
+
+.explainer-tip {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  font-size: 12px;
+  color: var(--text-muted);
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  line-height: 1.55;
+  border: 1px solid var(--border);
+}
+.explainer-tip svg { margin-top: 1px; color: var(--primary); }
 
 .empty-state {
   display: flex;

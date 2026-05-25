@@ -58,6 +58,16 @@ const routes: RouteRecordRaw[] = [
         component: () => import('../views/ChatView.vue'),
       },
       {
+        path: 'plans',
+        name: 'Plans',
+        component: () => import('../views/PlansView.vue'),
+      },
+      {
+        path: 'plans/:id',
+        name: 'PlanDetail',
+        component: () => import('../views/PlanDetail.vue'),
+      },
+      {
         path: 'settings',
         name: 'Settings',
         component: () => import('../views/ProfileSettings.vue'),
