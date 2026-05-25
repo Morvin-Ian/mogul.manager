@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { User, TokenResponse } from '../types'
-import { get, post, postForm } from './client'
+import { get, post, patch, del, postForm, patchFile } from './client'
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null)
@@ -50,11 +50,71 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  async function forgotPassword(email: string) {
+    await post<{ message: string }>('/users/forgot-password', { email })
+  }
+
+  async function resetPassword(resetToken: string, newPassword: string) {
+    await post<{ message: string }>('/users/reset-password', {
+      token: resetToken,
+      new_password: newPassword,
+    })
+  }
+
+  async function changePassword(currentPassword: string, newPassword: string) {
+    await patch<{ message: string }>('/users/me/password', {
+      current_password: currentPassword,
+      new_password: newPassword,
+    })
+  }
+
+  async function updateProfile(data: { username?: string; email?: string }) {
+    if (!user.value) return
+    const updated = await patch<User>(`/users/${user.value.id}`, data)
+    user.value = updated
+  }
+
+  async function uploadProfilePicture(file: File) {
+    if (!user.value) return
+    const formData = new FormData()
+    formData.append('file', file)
+    const updated = await patchFile<User>(`/users/${user.value.id}/picture`, formData)
+    user.value = updated
+  }
+
+  async function deleteProfilePicture() {
+    if (!user.value) return
+    const updated = await del<User>(`/users/${user.value.id}/picture`)
+    user.value = updated
+  }
+
+  async function deleteAccount() {
+    if (!user.value) return
+    await del<void>(`/users/${user.value.id}`)
+    logout()
+  }
+
   function logout() {
     user.value = null
     token.value = null
     localStorage.removeItem('token')
   }
 
-  return { user, token, loading, error, login, register, fetchUser, logout }
+  return {
+    user,
+    token,
+    loading,
+    error,
+    login,
+    register,
+    fetchUser,
+    forgotPassword,
+    resetPassword,
+    changePassword,
+    updateProfile,
+    uploadProfilePicture,
+    deleteProfilePicture,
+    deleteAccount,
+    logout,
+  }
 })

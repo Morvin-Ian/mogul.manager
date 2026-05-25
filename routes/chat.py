@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
 
 from agents.deepseek import DeepSeekAgent
+from agents.memory_extractor import MemoryExtractor
 from schemas.chat import (
     ConversationCreate,
     ConversationDetail,
@@ -17,14 +18,12 @@ from schemas.chat import (
 )
 from services.auth import CurrentUser
 from services.chat import ChatService
-from services.projects import ProjectService
-from services.workspaces import WorkspaceService
+from services.context_builder import build_context
 
 router = APIRouter(
     prefix="/api/chat",
     tags=["Chat"],
 )
-
 
 _RATE_WINDOW = 60.0
 _RATE_MAX = 15
@@ -43,6 +42,10 @@ def _check_rate_limit(user_id: int) -> bool:
 
 def get_deepseek() -> DeepSeekAgent:
     return DeepSeekAgent()
+
+
+def get_extractor() -> MemoryExtractor:
+    return MemoryExtractor()
 
 
 @router.post("/conversations", response_model=ConversationRead, status_code=201)
@@ -115,9 +118,7 @@ async def delete_conversation(
     await service.delete_conversation(conv)
 
 
-@router.post(
-    "/conversations/{conversation_id}/messages",
-)
+@router.post("/conversations/{conversation_id}/messages")
 async def send_message(
     conversation_id: int,
     message: MessageSend,
@@ -143,23 +144,13 @@ async def send_message(
         await service.db.commit()
 
     async def generate():
-        collected = []
-        context = await service.get_context(conversation_id)
+        collected: list[str] = []
 
-        # Build a snapshot of the user's workspaces and projects so the agent
-        # knows which IDs to pass to tools without asking the user.
-        ws_svc = WorkspaceService(service.db)  # type: ignore[arg-type]
-        proj_svc = ProjectService(service.db)  # type: ignore[arg-type]
-        workspaces = await ws_svc.list_by_user(current_user.id)
-        lines = ["User's current data (use these IDs when calling tools):"]
-        for ws in workspaces:
-            lines.append(f"  Workspace: {ws.title!r} (id={ws.id})")
-            projects = await proj_svc.list_by_workspace(ws.id)
-            for proj in projects:
-                lines.append(
-                    f"    Project: {proj.title!r} (id={proj.id}, status={proj.status.value})"
-                )
-        user_context = "\n".join(lines)
+        # Build rich context: workspaces + active tasks + long-term memories
+        user_context = await build_context(current_user.id, service.db)
+
+        # Retrieve recent conversation history (short-term memory)
+        context = await service.get_context(conversation_id)
 
         agent = get_deepseek()
         async for event in agent.stream_response(context, service.db, user_context):
@@ -172,5 +163,15 @@ async def send_message(
         full_response = "".join(collected)
         msg = await service.add_message(conversation_id, "assistant", full_response)
         yield f"data: {json.dumps({'done': True, 'message': {'id': msg.id, 'role': msg.role, 'content': msg.content, 'created_at': msg.created_at.isoformat()}})}\n\n"
+
+        # Extract and persist long-term memories from this exchange
+        extractor = get_extractor()
+        await extractor.extract_and_store(
+            user_id=current_user.id,
+            conversation_id=conversation_id,
+            user_message=message.content,
+            assistant_message=full_response,
+            db=service.db,
+        )
 
     return StreamingResponse(generate(), media_type="text/event-stream")

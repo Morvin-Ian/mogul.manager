@@ -4,10 +4,13 @@
       <h1>{{ pageTitle }}</h1>
     </div>
     <div class="header-right">
-      <div class="user-pill">
-        <div class="user-avatar" :title="auth.user?.username">{{ initials }}</div>
+      <router-link to="/settings" class="user-pill">
+        <div class="user-avatar" :title="auth.user?.username">
+          <img v-if="auth.user?.profile_path" :src="auth.user.profile_path" class="avatar-img" :alt="auth.user.username" />
+          <span v-else>{{ initials }}</span>
+        </div>
         <span class="user-name">{{ auth.user?.username }}</span>
-      </div>
+      </router-link>
       <button class="btn btn-sm sign-out-btn" @click="handleLogout">
         <svg viewBox="0 0 16 16" fill="none" width="14" height="14">
           <path d="M11 3.5L14 7m0 0l-3 3.5M14 7H5m3-4H4a1 1 0 00-1 1v8a1 1 0 001 1h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -34,6 +37,7 @@ const pageTitle = computed(() => {
   if (name === 'ProjectDetail') return 'Project'
   if (name === 'TaskDetail') return 'Task'
   if (name === 'Chat') return 'AI Chat'
+  if (name === 'Settings') return 'Settings'
   return 'Mogul Manager'
 })
 
@@ -84,7 +88,8 @@ h1 {
   background: var(--bg);
   border: 1.5px solid var(--border);
   transition: border-color 0.15s;
-  cursor: default;
+  cursor: pointer;
+  text-decoration: none;
 }
 
 .user-pill:hover {
@@ -104,6 +109,14 @@ h1 {
   font-weight: 800;
   letter-spacing: 0.5px;
   flex-shrink: 0;
+  overflow: hidden;
+}
+
+.avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: var(--radius-full);
 }
 
 .user-name {

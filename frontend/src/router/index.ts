@@ -16,6 +16,18 @@ const routes: RouteRecordRaw[] = [
     meta: { guest: true },
   },
   {
+    path: '/forgot-password',
+    name: 'ForgotPassword',
+    component: () => import('../views/ForgotPassword.vue'),
+    meta: { guest: true },
+  },
+  {
+    path: '/reset-password',
+    name: 'ResetPassword',
+    component: () => import('../views/ResetPassword.vue'),
+    meta: { guest: true },
+  },
+  {
     path: '/',
     component: () => import('../views/Dashboard.vue'),
     meta: { requiresAuth: true },
@@ -44,6 +56,11 @@ const routes: RouteRecordRaw[] = [
         path: 'chat',
         name: 'Chat',
         component: () => import('../views/ChatView.vue'),
+      },
+      {
+        path: 'settings',
+        name: 'Settings',
+        component: () => import('../views/ProfileSettings.vue'),
       },
     ],
   },

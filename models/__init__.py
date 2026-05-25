@@ -1,5 +1,6 @@
 from .chat import Conversation, Message
 from .comments import Comment
+from .memory import Memory
 from .projects import Project, ProjectStatus
 from .tasks import Task, TaskPriority, TaskStatus
 from .users import PasswordResetToken, User
@@ -10,6 +11,7 @@ __all__ = [
     "PasswordResetToken",
     "Comment",
     "Conversation",
+    "Memory",
     "Message",
     "Project",
     "ProjectStatus",

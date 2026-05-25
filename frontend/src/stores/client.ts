@@ -57,3 +57,20 @@ export function postForm<T>(endpoint: string, body: URLSearchParams): Promise<T>
     return data as T
   })
 }
+
+export function patchFile<T>(endpoint: string, formData: FormData): Promise<T> {
+  const token = localStorage.getItem('token')
+  const headers: Record<string, string> = {}
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`
+  }
+  return fetch(`${BASE_URL}${endpoint}`, {
+    method: 'PATCH',
+    headers,
+    body: formData,
+  }).then(async (res) => {
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.detail || 'Request failed')
+    return data as T
+  })
+}

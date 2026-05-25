@@ -50,12 +50,12 @@ class User(Base):
     #     return "/static/profile_pics/default.jpeg"
 
     @property
-    def profile_path(self) -> str:
+    def profile_path(self) -> str | None:
         if self.profile_pic:
             return (
                 f"https://{settings.s3_custom_domain}/profile_pics/{self.profile_pic}"
             )
-        return "/static/profile_pics/default.jpeg"
+        return None
 
 
 class PasswordResetToken(Base):

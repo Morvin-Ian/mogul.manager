@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from routes import chat, comments, projects, tasks, users, workspaces
+from routes import chat, comments, memory, projects, tasks, users, workspaces
 
 os.makedirs("static", exist_ok=True)
 os.makedirs("media", exist_ok=True)
@@ -23,3 +23,4 @@ app.include_router(projects.router)
 app.include_router(tasks.router)
 app.include_router(chat.router)
 app.include_router(comments.router)
+app.include_router(memory.router)

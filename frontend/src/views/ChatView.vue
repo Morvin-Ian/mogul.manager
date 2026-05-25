@@ -78,6 +78,43 @@
                 <button class="quick-prompt" @click="quickSend('Summarize my overdue tasks')">Summarize overdue tasks</button>
                 <button class="quick-prompt" @click="quickSend('What should I work on next?')">What should I work on next?</button>
               </div>
+
+              <div class="personalize-section">
+                <div class="personalize-header">
+                  <p class="personalize-label">
+                    <svg viewBox="0 0 14 14" fill="none" width="13" height="13"><path d="M7 1.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM7 4v3.5l2 1" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    The more context you share, the smarter I get
+                  </p>
+                  <span class="personalize-hint">Select one or more</span>
+                </div>
+                <div class="personalize-tips">
+                  <button
+                    v-for="tip in personalizeTips"
+                    :key="tip.text"
+                    class="personalize-tip"
+                    :class="{ selected: selectedTips.has(tip.text) }"
+                    @click="toggleTip(tip.text)"
+                  >
+                    <span class="tip-tag" :class="`tip-tag--${tip.kind}`">{{ tip.label }}</span>
+                    <span class="tip-text">{{ tip.text }}</span>
+                    <span class="tip-check">
+                      <svg viewBox="0 0 12 12" fill="none" width="11" height="11">
+                        <path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                    </span>
+                  </button>
+                </div>
+                <div v-if="selectedTips.size > 0" class="personalize-actions">
+                  <span class="selection-count">{{ selectedTips.size }} selected</span>
+                  <button class="btn btn-ghost btn-sm" @click="selectedTips.clear()">Clear</button>
+                  <button class="btn btn-primary btn-sm" @click="sendSelectedTips">
+                    <svg viewBox="0 0 14 14" fill="none" width="12" height="12">
+                      <path d="M2 7l10-5-5 10V8L2 7z" fill="currentColor"/>
+                    </svg>
+                    Send {{ selectedTips.size > 1 ? `${selectedTips.size} preferences` : 'preference' }}
+                  </button>
+                </div>
+              </div>
             </div>
             <MessageBubble
               v-for="msg in chatStore.current.messages"
@@ -102,7 +139,7 @@
             <div class="chat-input-wrap" :class="{ focused: inputFocused, disabled: chatStore.streaming }">
               <textarea
                 v-model="input"
-                placeholder="Message Mogul Manager AI…"
+                :placeholder="currentPlaceholder"
                 rows="1"
                 @keydown.enter.exact.prevent="handleSend"
                 @focus="inputFocused = true"
@@ -149,7 +186,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, nextTick, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useChatStore } from '../stores/chat'
 import MessageBubble from '../components/chat/MessageBubble.vue'
 
@@ -159,7 +196,60 @@ const inputFocused = ref(false)
 const messagesRef = ref<HTMLElement | null>(null)
 const textareaRef = ref<HTMLTextAreaElement | null>(null)
 
-onMounted(() => chatStore.fetchConversations())
+// ── Personalize tips ────────────────────────────────────────────
+const personalizeTips = [
+  { kind: 'style', label: 'Style',    text: "I prefer my task descriptions to be short and action-focused" },
+  { kind: 'goal',  label: 'Goal',     text: "My main goal this month is to ship the v2 release" },
+  { kind: 'style', label: 'Style',    text: "Always show me the highest priority tasks first" },
+  { kind: 'work',  label: 'Workflow', text: "I work in two-week sprints and review goals every Friday" },
+  { kind: 'goal',  label: 'Goal',     text: "I want to clear my backlog before taking on new projects" },
+  { kind: 'work',  label: 'Workflow', text: "I've decided to keep all design work in one dedicated project" },
+]
+
+const selectedTips = ref(new Set<string>())
+
+function toggleTip(text: string) {
+  if (selectedTips.value.has(text)) {
+    selectedTips.value.delete(text)
+  } else {
+    selectedTips.value.add(text)
+  }
+  // Trigger reactivity on Set mutation
+  selectedTips.value = new Set(selectedTips.value)
+}
+
+async function sendSelectedTips() {
+  if (!selectedTips.value.size || chatStore.streaming || !chatStore.current) return
+  const combined = [...selectedTips.value].join('\n')
+  selectedTips.value = new Set()
+  await chatStore.sendMessage(chatStore.current.id, combined)
+}
+
+// ── Rotating input placeholder ─────────────────────────────────
+const placeholders = [
+  "Message Mogul Manager AI…",
+  "Try: \"I prefer tasks grouped by deadline\"",
+  "Try: \"My goal this week is…\"",
+  "Try: \"Always remind me about blocked tasks first\"",
+  "Try: \"I've decided to pause the mobile project\"",
+  "Try: \"Show me everything due this week\"",
+]
+const placeholderIndex = ref(0)
+const currentPlaceholder = computed(() => placeholders[placeholderIndex.value])
+let placeholderTimer: ReturnType<typeof setInterval> | null = null
+
+onMounted(() => {
+  chatStore.fetchConversations()
+  placeholderTimer = setInterval(() => {
+    if (!inputFocused.value && !input.value) {
+      placeholderIndex.value = (placeholderIndex.value + 1) % placeholders.length
+    }
+  }, 3500)
+})
+
+onUnmounted(() => {
+  if (placeholderTimer) clearInterval(placeholderTimer)
+})
 
 watch(() => chatStore.current?.messages.length, async () => { await nextTick(); scrollToBottom() })
 watch(() => chatStore.streamContent, async () => { await nextTick(); scrollToBottom() })
@@ -439,6 +529,159 @@ function formatDate(d: string) {
   border-color: var(--primary-border);
   background: var(--primary-light);
   color: var(--primary);
+}
+
+/* ── Personalize section ── */
+.personalize-section {
+  margin-top: 28px;
+  width: 100%;
+  max-width: 560px;
+  border-top: 1px solid var(--border);
+  padding-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.personalize-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.personalize-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-light);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.personalize-hint {
+  font-size: 11.5px;
+  color: var(--text-light);
+  font-style: italic;
+  flex-shrink: 0;
+}
+
+.personalize-tips {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.personalize-tip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  transition: border-color 0.14s, background 0.14s, box-shadow 0.14s;
+  position: relative;
+}
+
+.personalize-tip:hover {
+  border-color: var(--primary-border);
+  background: var(--primary-light);
+  box-shadow: 0 2px 8px rgba(0, 82, 255, 0.08);
+}
+
+.personalize-tip.selected {
+  border-color: var(--primary);
+  background: var(--primary-light);
+  box-shadow: 0 0 0 3px var(--primary-muted);
+}
+
+.tip-tag {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  border: 1px solid;
+  white-space: nowrap;
+}
+
+.tip-tag--style {
+  background: #EBF0FF;
+  color: #0039B3;
+  border-color: var(--primary-border);
+}
+
+.tip-tag--goal {
+  background: #ECFDF5;
+  color: #047857;
+  border-color: #A7F3D0;
+}
+
+.tip-tag--work {
+  background: #FFFBEB;
+  color: #92400E;
+  border-color: #FDE68A;
+}
+
+.tip-text {
+  flex: 1;
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.4;
+  letter-spacing: -0.1px;
+}
+
+.personalize-tip:hover .tip-text,
+.personalize-tip.selected .tip-text {
+  color: var(--primary);
+}
+
+.tip-check {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: transparent;
+  background: var(--surface);
+  transition: all 0.14s;
+}
+
+.personalize-tip.selected .tip-check {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+.personalize-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 4px;
+  animation: fade-up 0.18s ease;
+}
+
+.selection-count {
+  flex: 1;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--primary);
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 /* Empty state */

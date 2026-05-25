@@ -10,73 +10,54 @@
           </div>
           <span class="brand-name">Mogul Manager</span>
         </div>
-        <h2 class="brand-headline">Work smarter with<br />AI-driven projects</h2>
-        <p class="brand-sub">Manage workspaces, track tasks, and collaborate with your AI assistant — all in one place.</p>
-        <ul class="brand-features">
-          <li>
-            <span class="feature-icon">
-              <svg viewBox="0 0 16 16" fill="none"><path d="M3 8l3.5 3.5L13 4.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </span>
-            Kanban boards &amp; task tracking
-          </li>
-          <li>
-            <span class="feature-icon">
-              <svg viewBox="0 0 16 16" fill="none"><path d="M3 8l3.5 3.5L13 4.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </span>
-            AI-powered project intelligence
-          </li>
-          <li>
-            <span class="feature-icon">
-              <svg viewBox="0 0 16 16" fill="none"><path d="M3 8l3.5 3.5L13 4.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </span>
-            Real-time AI chat assistant
-          </li>
-        </ul>
+        <h2 class="brand-headline">Reset your<br />password</h2>
+        <p class="brand-sub">Enter your email and we'll send you a link to get back into your account.</p>
       </div>
     </div>
 
     <div class="auth-form-panel">
       <div class="auth-form-inner">
-        <div class="auth-form-header">
-          <h1>Welcome back</h1>
-          <p class="auth-subtitle">Sign in to your Mogul Manager account</p>
-        </div>
-        <form @submit.prevent="handleLogin" novalidate>
-          <div class="form-group">
-            <label for="email">Email address</label>
-            <input
-              id="email"
-              v-model="email"
-              type="email"
-              required
-              placeholder="name@example.com"
-              autocomplete="email"
-            />
+        <div v-if="!sent">
+          <div class="auth-form-header">
+            <h1>Forgot password?</h1>
+            <p class="auth-subtitle">We'll email you a reset link.</p>
           </div>
-          <div class="form-group">
-            <div class="label-row">
-              <label for="password">Password</label>
-              <router-link to="/forgot-password" class="forgot-link">Forgot password?</router-link>
+          <form @submit.prevent="handleSubmit" novalidate>
+            <div class="form-group">
+              <label for="email">Email address</label>
+              <input
+                id="email"
+                v-model="email"
+                type="email"
+                required
+                placeholder="name@example.com"
+                autocomplete="email"
+              />
             </div>
-            <input
-              id="password"
-              v-model="password"
-              type="password"
-              required
-              placeholder="Enter your password"
-              autocomplete="current-password"
-            />
+            <p v-if="error" class="form-error">{{ error }}</p>
+            <button type="submit" class="btn btn-primary submit-btn" :disabled="loading">
+              <span v-if="loading" class="btn-loader"></span>
+              {{ loading ? 'Sending…' : 'Send reset link' }}
+            </button>
+          </form>
+        </div>
+
+        <div v-else class="success-state">
+          <div class="success-icon">
+            <svg viewBox="0 0 24 24" fill="none" width="28" height="28">
+              <path d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0l-8 5-8-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
           </div>
-          <p v-if="error" class="form-error">{{ error }}</p>
-          <button type="submit" class="btn btn-primary submit-btn" :disabled="loading">
-            <span v-if="loading" class="btn-loader"></span>
-            {{ loading ? 'Signing in…' : 'Sign in' }}
+          <h1>Check your email</h1>
+          <p class="auth-subtitle">We sent a reset link to <strong>{{ email }}</strong>. It expires in 60 minutes.</p>
+          <button class="btn btn-primary submit-btn" style="margin-top: 24px" @click="sent = false">
+            Try a different email
           </button>
-        </form>
+        </div>
+
         <div class="auth-footer">
           <p class="auth-link">
-            New here?
-            <router-link to="/register">Create a free account →</router-link>
+            <router-link to="/login">← Back to sign in</router-link>
           </p>
         </div>
       </div>
@@ -86,22 +67,20 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 
-const router = useRouter()
 const auth = useAuthStore()
 const email = ref('')
-const password = ref('')
 const error = ref<string | null>(null)
 const loading = ref(false)
+const sent = ref(false)
 
-async function handleLogin() {
+async function handleSubmit() {
   error.value = null
   loading.value = true
   try {
-    await auth.login(email.value, password.value)
-    router.push('/')
+    await auth.forgotPassword(email.value)
+    sent.value = true
   } catch (e) {
     error.value = (e as Error).message
   } finally {
@@ -116,14 +95,13 @@ async function handleLogin() {
   min-height: 100vh;
 }
 
-/* ── Left brand panel ── */
 .auth-brand-panel {
   flex: 0 0 46%;
   background: linear-gradient(150deg, #0052FF 0%, #003CBF 50%, #0028A0 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 60px 60px;
+  padding: 60px;
   position: relative;
   overflow: hidden;
 }
@@ -198,44 +176,8 @@ async function handleLogin() {
   font-size: 15px;
   line-height: 1.75;
   color: rgba(255,255,255,0.72);
-  margin-bottom: 44px;
 }
 
-.brand-features {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.brand-features li {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  font-size: 14px;
-  font-weight: 500;
-  color: rgba(255,255,255,0.9);
-}
-
-.feature-icon {
-  width: 28px;
-  height: 28px;
-  background: rgba(255,255,255,0.15);
-  border: 1px solid rgba(255,255,255,0.2);
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.feature-icon svg {
-  width: 13px;
-  height: 13px;
-  color: #fff;
-}
-
-/* ── Right form panel ── */
 .auth-form-panel {
   flex: 1;
   display: flex;
@@ -290,26 +232,26 @@ h1 {
 
 @keyframes spin { to { transform: rotate(360deg); } }
 
-.label-row {
+.success-state {
+  text-align: center;
+  padding: 16px 0;
+}
+
+.success-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  background: var(--primary-light);
+  border: 1px solid var(--primary-border);
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 7px;
-}
-
-.label-row label {
-  margin-bottom: 0;
-}
-
-.forgot-link {
-  font-size: 12.5px;
-  font-weight: 500;
+  justify-content: center;
+  margin: 0 auto 24px;
   color: var(--primary);
 }
 
-.forgot-link:hover {
-  text-decoration: underline;
-}
+.success-state h1 { text-align: center; }
+.success-state .auth-subtitle { text-align: center; margin-top: 8px; }
 
 .auth-footer {
   margin-top: 28px;
