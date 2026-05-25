@@ -8,7 +8,7 @@ from fastapi.responses import StreamingResponse
 
 from agents.deepseek import DeepSeekAgent
 from agents.memory_extractor import MemoryExtractor
-from schemas.chat import (
+from schemas.chat.chat import (
     ConversationCreate,
     ConversationDetail,
     ConversationRead,
@@ -17,7 +17,7 @@ from schemas.chat import (
     MessageSend,
 )
 from services.auth import CurrentUser
-from services.chat import ChatService
+from services.chat.chat import ChatService
 from services.context_builder import build_context
 
 router = APIRouter(
@@ -157,8 +157,6 @@ async def send_message(
             if event["type"] == "token":
                 collected.append(event["content"])
                 yield f"data: {json.dumps({'token': event['content']})}\n\n"
-            elif event["type"] == "tool_start":
-                yield f"data: {json.dumps({'tool': event['name']})}\n\n"
 
         full_response = "".join(collected)
         msg = await service.add_message(conversation_id, "assistant", full_response)

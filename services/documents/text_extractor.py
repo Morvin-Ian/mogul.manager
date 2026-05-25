@@ -1,7 +1,3 @@
-"""
-Text extraction from PDF, DOCX, TXT, and CSV files.
-Automatically falls back to OCR for scanned PDFs when pytesseract is available.
-"""
 from __future__ import annotations
 
 import csv
@@ -37,8 +33,6 @@ async def extract_text(content: bytes, file_type: str) -> tuple[str, dict]:
     raise ValueError(f"Unsupported file type: {file_type}")
 
 
-# ── PDF ────────────────────────────────────────────────────────────────────────
-
 def _extract_pdf(content: bytes) -> tuple[str, dict]:
     pages: list[str] = []
     with pdfplumber.open(io.BytesIO(content)) as pdf:
@@ -73,8 +67,6 @@ def _try_ocr(content: bytes) -> str:
         return ""
 
 
-# ── DOCX ───────────────────────────────────────────────────────────────────────
-
 def _extract_docx(content: bytes) -> tuple[str, dict]:
     doc = DocxDoc(io.BytesIO(content))
     parts: list[str] = []
@@ -93,8 +85,6 @@ def _extract_docx(content: bytes) -> tuple[str, dict]:
     return full_text, {"word_count": len(full_text.split()), "page_count": None}
 
 
-# ── TXT ────────────────────────────────────────────────────────────────────────
-
 def _extract_txt(content: bytes) -> str:
     for encoding in ("utf-8", "utf-8-sig", "latin-1", "cp1252"):
         try:
@@ -103,8 +93,6 @@ def _extract_txt(content: bytes) -> str:
             continue
     raise RuntimeError("Could not decode text file")
 
-
-# ── CSV ────────────────────────────────────────────────────────────────────────
 
 def _extract_csv(content: bytes) -> str:
     for encoding in ("utf-8", "utf-8-sig", "latin-1"):
@@ -131,8 +119,6 @@ def _extract_csv(content: bytes) -> str:
 
     return "\n".join(lines)
 
-
-# ── Shared ─────────────────────────────────────────────────────────────────────
 
 def _clean_text(text: str) -> str:
     text = text.replace("\r\n", "\n").replace("\r", "\n")

@@ -43,11 +43,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function fetchUser() {
     if (!token.value) return
-    try {
-      user.value = await get<User>('/users/me')
-    } catch {
-      logout()
-    }
+    user.value = await get<User>('/users/me')
   }
 
   async function forgotPassword(email: string) {

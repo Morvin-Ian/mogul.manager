@@ -3,8 +3,8 @@ import json
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import models
-from schemas.workspaces import WorkspaceCreate, WorkspaceRead, WorkspaceUpdate
-from services.workspaces import WorkspaceService
+from schemas.workspace.workspaces import WorkspaceCreate, WorkspaceRead, WorkspaceUpdate
+from services.workspace.workspaces import WorkspaceService
 
 WORKSPACE_TOOLS = [
     {

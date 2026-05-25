@@ -1,11 +1,3 @@
-"""
-Local text embeddings using fastembed (ONNX-based, no GPU required).
-Model: BAAI/bge-small-en-v1.5 — 384 dimensions, ~130 MB download on first use.
-
-The model is loaded once as a module-level singleton and reused across requests.
-All public functions are async; the sync model inference runs in a thread pool
-to avoid blocking the event loop.
-"""
 from __future__ import annotations
 
 import logging

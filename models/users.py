@@ -23,6 +23,9 @@ class User(Base):
         String(120), unique=True, nullable=False, index=True
     )
     password_hash: Mapped[str] = mapped_column(String(200), nullable=False)
+    google_id: Mapped[str | None] = mapped_column(
+        String(200), nullable=True, unique=True, index=True
+    )
     profile_pic: Mapped[str | None] = mapped_column(String(120), nullable=True)
 
     reset_tokens: Mapped[list[PasswordResetToken]] = relationship(
@@ -42,12 +45,6 @@ class User(Base):
         default=lambda: datetime.now(UTC),
         onupdate=lambda: datetime.now(UTC),
     )
-
-    # @property
-    # def profile_path(self) -> str:
-    #     if self.profile_pic:
-    #         return f"/media/profile_pics/{self.profile_pic}"
-    #     return "/static/profile_pics/default.jpeg"
 
     @property
     def profile_path(self) -> str | None:

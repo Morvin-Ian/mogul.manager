@@ -1,10 +1,13 @@
+from __future__ import annotations
+
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from schemas.workspaces import WorkspaceCreate, WorkspaceRead, WorkspaceUpdate
+from schemas.workspace.workspaces import WorkspaceCreate, WorkspaceRead, WorkspaceUpdate
 from services.auth import CurrentUser
-from services.workspaces import WorkspaceService
+from services.workspace.collaboration import CollaborationService
+from services.workspace.workspaces import WorkspaceService
 
 router = APIRouter(
     prefix="/api/workspaces",
@@ -38,17 +41,14 @@ async def get_workspace(
     workspace_id: int,
     current_user: CurrentUser,
     service: Annotated[WorkspaceService, Depends()],
+    collab: Annotated[CollaborationService, Depends()],
 ):
     workspace = await service.get_by_id(workspace_id)
     if not workspace:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found"
         )
-    if workspace.user_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to access this workspace",
-        )
+    await collab.require_access(workspace_id, current_user.id, min_role="member")
     return workspace
 
 
@@ -58,17 +58,14 @@ async def update_workspace(
     workspace_update: WorkspaceUpdate,
     current_user: CurrentUser,
     service: Annotated[WorkspaceService, Depends()],
+    collab: Annotated[CollaborationService, Depends()],
 ):
     workspace = await service.get_by_id(workspace_id)
     if not workspace:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found"
         )
-    if workspace.user_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to update this workspace",
-        )
+    await collab.require_access(workspace_id, current_user.id, min_role="admin")
     return await service.update(
         workspace, workspace_update.model_dump(exclude_unset=True)
     )
@@ -79,15 +76,12 @@ async def delete_workspace(
     workspace_id: int,
     current_user: CurrentUser,
     service: Annotated[WorkspaceService, Depends()],
+    collab: Annotated[CollaborationService, Depends()],
 ):
     workspace = await service.get_by_id(workspace_id)
     if not workspace:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found"
         )
-    if workspace.user_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to delete this workspace",
-        )
+    await collab.require_access(workspace_id, current_user.id, min_role="owner")
     await service.delete(workspace)

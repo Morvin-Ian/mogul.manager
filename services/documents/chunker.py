@@ -1,8 +1,3 @@
-"""
-Recursive character-level text splitter.
-Splits at natural language boundaries (paragraphs → sentences → words)
-with configurable overlap so no context is lost between chunks.
-"""
 from __future__ import annotations
 
 _SEPARATORS = ["\n\n", "\n", ". ", "! ", "? ", ", ", " ", ""]

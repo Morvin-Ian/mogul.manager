@@ -31,11 +31,16 @@ class Settings(BaseSettings):
     mail_from: str = "noreply@example.com"
     mail_use_tls: bool = True
 
-    frontend_url: str = "http://localhost:8000"
+    frontend_url: str = "http://localhost:3000"
 
     deepseek_api_key: SecretStr = SecretStr("")
     deepseek_base_url: str = "https://api.deepseek.com"
     deepseek_model: str = "deepseek-chat"
+
+    # Google OAuth
+    google_client_id: str = ""
+    google_client_secret: SecretStr = SecretStr("")
+    google_redirect_url: str = ""
 
 
 settings = Settings()  # type: ignore[call-arg]

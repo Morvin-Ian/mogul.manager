@@ -37,19 +37,25 @@
             </select>
           </div>
         </div>
+        <div class="form-group">
+          <label for="t-assignee-email">Assign by email</label>
+          <input
+            id="t-assignee-email"
+            v-model="form.assigned_to_email"
+            type="email"
+            placeholder="user@example.com"
+          />
+          <span class="field-hint">Leave blank to keep unassigned</span>
+        </div>
         <div class="form-row">
-          <div class="form-group">
-            <label for="t-agent">Assigned Agent</label>
-            <input id="t-agent" v-model="form.assigned_agent" placeholder="agent name" />
-          </div>
           <div class="form-group">
             <label for="t-est">Est. Hours</label>
             <input id="t-est" v-model.number="form.estimated_hours" type="number" min="0" />
           </div>
-        </div>
-        <div class="form-group">
-          <label for="t-due">Due Date</label>
-          <input id="t-due" v-model="form.due_date" type="date" />
+          <div class="form-group">
+            <label for="t-due">Due Date</label>
+            <input id="t-due" v-model="form.due_date" type="date" />
+          </div>
         </div>
         <p v-if="error" class="form-error">{{ error }}</p>
         <div class="form-actions">
@@ -82,7 +88,7 @@ interface TaskForm {
   description: string
   status: TaskStatus
   priority: TaskPriority | number
-  assigned_agent: string
+  assigned_to_email: string
   estimated_hours: number | null
   due_date: string
 }
@@ -92,7 +98,7 @@ const form = reactive<TaskForm>({
   description: '',
   status: 'todo',
   priority: 2,
-  assigned_agent: '',
+  assigned_to_email: '',
   estimated_hours: null,
   due_date: '',
 })
@@ -105,7 +111,7 @@ watch(() => props.task, (t) => {
     form.description = t.description || ''
     form.status = t.status
     form.priority = t.priority
-    form.assigned_agent = t.assigned_agent || ''
+    form.assigned_to_email = ''
     form.estimated_hours = t.estimated_hours
     form.due_date = t.due_date ? t.due_date.slice(0, 10) : ''
   } else {
@@ -113,7 +119,7 @@ watch(() => props.task, (t) => {
     form.description = ''
     form.status = 'todo'
     form.priority = 2
-    form.assigned_agent = ''
+    form.assigned_to_email = ''
     form.estimated_hours = null
     form.due_date = ''
   }
@@ -125,7 +131,7 @@ async function handleSubmit() {
   const payload: Record<string, any> = { ...form }
   if (!payload.due_date) delete payload.due_date
   if (!payload.estimated_hours) delete payload.estimated_hours
-  if (!payload.assigned_agent) delete payload.assigned_agent
+  if (!payload.assigned_to_email) delete payload.assigned_to_email
   if (props.projectId && !props.task) {
     payload.project_id = props.projectId
   }
@@ -133,3 +139,12 @@ async function handleSubmit() {
   saving.value = false
 }
 </script>
+
+<style scoped>
+.field-hint {
+  display: block;
+  font-size: 11px;
+  color: var(--text-light);
+  margin-top: 3px;
+}
+</style>

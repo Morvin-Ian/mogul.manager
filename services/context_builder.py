@@ -1,17 +1,15 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 import models
 from models.documents import DocumentStatus
 from services.documents import DocumentService
 from services.memory import MemoryService
 from services.plans import PlanService
-from services.projects import ProjectService
-from services.rag import RAGService
-from services.workspaces import WorkspaceService
+from services.project.projects import ProjectService
+from services.documents.rag import RAGService
+from services.workspace.workspaces import WorkspaceService
 
-# Active task statuses worth surfacing to the agent
 _ACTIVE_STATUSES = {
     models.TaskStatus.IN_PROGRESS,
     models.TaskStatus.BLOCKED,
@@ -22,13 +20,12 @@ _ACTIVE_STATUSES = {
 async def build_context(user_id: int, db: AsyncSession, query: str | None = None) -> str:
     lines: list[str] = []
 
-    # ── User identity ────────────────────────────────────────────
     lines.append(
         f"Current user ID: {user_id} "
         "(use this as user_id when calling workspace tools)"
     )
 
-    # ── Workspaces + projects snapshot ───────────────────────────
+
     ws_svc = WorkspaceService(db)  # type: ignore[arg-type]
     proj_svc = ProjectService(db)  # type: ignore[arg-type]
 
@@ -50,7 +47,7 @@ async def build_context(user_id: int, db: AsyncSession, query: str | None = None
     else:
         lines.append("\nThe user has no workspaces yet.")
 
-    # ── Active task summary (in_progress / blocked / review) ─────
+
     active_tasks = await _fetch_active_tasks(user_id, db)
     if active_tasks:
         lines.append("\nTasks currently in progress or needing attention:")
@@ -61,7 +58,7 @@ async def build_context(user_id: int, db: AsyncSession, query: str | None = None
                 f"(project_id={task.project_id}{due})"
             )
 
-    # ── Active plans ──────────────────────────────────────────────
+
     plan_svc = PlanService(db)  # type: ignore[arg-type]
     plans = await plan_svc.list_by_user(user_id)
     active_plans = [p for p in plans if p.status.value in ("active", "draft")]
@@ -78,7 +75,7 @@ async def build_context(user_id: int, db: AsyncSession, query: str | None = None
             for s in pending_steps[:3]:
                 lines.append(f"    [pending] {s.title!r} (step_id={s.id}, priority={s.priority.value})")
 
-    # ── Long-term memories ────────────────────────────────────────
+
     mem_svc = MemoryService(db)  # type: ignore[arg-type]
     memories = await mem_svc.list_by_user(user_id, limit=15)
     if memories:
@@ -86,7 +83,7 @@ async def build_context(user_id: int, db: AsyncSession, query: str | None = None
         for mem in memories:
             lines.append(f"  [{mem.memory_type}] {mem.content}")
 
-    # ── Documents ─────────────────────────────────────────────────
+
     doc_svc = DocumentService(db)  # type: ignore[arg-type]
     documents = await doc_svc.list_documents(user_id)
     ready_docs = [d for d in documents if d.status == DocumentStatus.ready]
@@ -99,7 +96,7 @@ async def build_context(user_id: int, db: AsyncSession, query: str | None = None
                 f"{doc.word_count or 0} words) — {snippet}"
             )
 
-    # ── RAG: inject relevant chunks when a query is provided ──────
+
     if query and ready_docs:
         try:
             rag_svc = RAGService(db)  # type: ignore[arg-type]

@@ -12,7 +12,14 @@
     </div>
     <div class="task-meta">
       <span class="priority-pill" :class="`priority-${task.priority}`">{{ priorityLabel }}</span>
-      <span v-if="task.assigned_agent" class="agent-tag">
+      <span v-if="task.assignee_name" class="assignee-tag">
+        <svg viewBox="0 0 10 10" fill="none" width="9" height="9">
+          <circle cx="5" cy="3.5" r="2" stroke="currentColor" stroke-width="1.1"/>
+          <path d="M1.5 9c0-1.93 1.57-3.5 3.5-3.5S8.5 7.07 8.5 9" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/>
+        </svg>
+        {{ task.assignee_name }}
+      </span>
+      <span v-else-if="task.assigned_agent" class="agent-tag">
         <svg viewBox="0 0 10 10" fill="none" width="9" height="9">
           <circle cx="5" cy="3.5" r="2" stroke="currentColor" stroke-width="1.1"/>
           <path d="M1.5 9c0-1.93 1.57-3.5 3.5-3.5S8.5 7.07 8.5 9" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/>
@@ -140,6 +147,23 @@ function onDragStart() {
 .priority-2 { background: #FFFBEB; color: #78350F; border-color: #FCD34D; }
 .priority-3 { background: #FFF7ED; color: #9A3412; border-color: #FDBA74; }
 .priority-4 { background: #FFF1F2; color: #9F1239; border-color: #FCA5A5; }
+
+.assignee-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--primary);
+  background: var(--primary-light);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--primary-border);
+  text-overflow: ellipsis;
+  overflow: hidden;
+  max-width: 120px;
+  white-space: nowrap;
+}
 
 .agent-tag {
   display: inline-flex;

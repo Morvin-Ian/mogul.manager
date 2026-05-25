@@ -83,6 +83,8 @@ export interface Task {
   status: TaskStatus
   priority: TaskPriority
   assigned_agent: string | null
+  assigned_to_id: number | null
+  assignee_name: string | null
   parent_task_id: number | null
   metadata_json: Record<string, unknown> | null
   estimated_hours: number | null
@@ -100,6 +102,7 @@ export interface TaskCreate {
   status?: TaskStatus
   priority?: TaskPriority
   assigned_agent?: string | null
+  assigned_to_id?: number | null
   parent_task_id?: number | null
   metadata_json?: Record<string, unknown> | null
   estimated_hours?: number | null
@@ -113,6 +116,7 @@ export interface TaskUpdate {
   status?: TaskStatus
   priority?: TaskPriority
   assigned_agent?: string | null
+  assigned_to_id?: number | null
   parent_task_id?: number | null
   metadata_json?: Record<string, unknown> | null
   estimated_hours?: number | null
@@ -221,4 +225,31 @@ export interface SearchHit {
   chunk_index: number
   content: string
   similarity: number
+}
+
+// ── Members & Invitations ──────────────────────────────────────
+export type MemberRole = 'owner' | 'admin' | 'member'
+export type InvitationStatus = 'pending' | 'accepted' | 'expired' | 'revoked'
+
+export interface WorkspaceMember {
+  id: number
+  workspace_id: number
+  user_id: number
+  role: MemberRole
+  joined_at: string
+  last_seen_at: string | null
+  user: { id: number; username: string; email: string; profile_path: string | null }
+}
+
+export interface Invitation {
+  id: number
+  workspace_id: number
+  email: string
+  role: MemberRole
+  token: string
+  invited_by_id: number
+  created_at: string
+  expires_at: string
+  status: InvitationStatus
+  workspace_title?: string
 }

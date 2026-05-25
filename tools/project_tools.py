@@ -3,8 +3,8 @@ import json
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import models
-from schemas.projects import ProjectCreate, ProjectRead, ProjectUpdate
-from services.projects import ProjectService
+from schemas.project.projects import ProjectCreate, ProjectRead, ProjectUpdate
+from services.project.projects import ProjectService
 
 PROJECT_TOOLS = [
     {

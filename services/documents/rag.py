@@ -1,9 +1,3 @@
-"""
-Retrieval-Augmented Generation (RAG) service.
-
-Embeds the user's query, performs cosine similarity search over document chunks
-stored in pgvector, and formats the top hits as context for the AI agent.
-"""
 from __future__ import annotations
 
 import logging
@@ -15,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
 from models.documents import Document, DocumentChunk, DocumentStatus
-from services.embeddings import embed_text
+from services.documents.embeddings import embed_text
 
 logger = logging.getLogger(__name__)
 

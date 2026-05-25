@@ -13,6 +13,7 @@ from database import Base
 if TYPE_CHECKING:
     from .comments import Comment
     from .projects import Project
+    from .users import User
 
 
 class TaskStatus(str, Enum):
@@ -49,6 +50,9 @@ class Task(Base):
         nullable=False,
     )
     assigned_agent: Mapped[str] = mapped_column(String(100), nullable=True)
+    assigned_to_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
     parent_task_id: Mapped[int] = mapped_column(ForeignKey("tasks.id"), nullable=True)
     metadata_json: Mapped[dict] = mapped_column(JSON, nullable=True)
     estimated_hours: Mapped[int] = mapped_column(Integer, nullable=True)
@@ -71,6 +75,15 @@ class Task(Base):
         "Project",
         back_populates="tasks",
     )
+
+    assignee: Mapped["User | None"] = relationship(
+        "User",
+        foreign_keys=[assigned_to_id],
+    )
+
+    @property
+    def assignee_name(self) -> str | None:
+        return self.assignee.username if self.assignee else None
 
     parent_task: Mapped["Task"] = relationship(
         "Task",

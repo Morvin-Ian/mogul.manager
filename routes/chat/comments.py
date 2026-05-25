@@ -6,9 +6,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import models
 from database import get_db
-from schemas.comments import CommentCreate, CommentRead, CommentUpdate
+from schemas.chat.comments import CommentCreate, CommentRead, CommentUpdate
 from services.auth import CurrentUser
-from services.comments import CommentService
+from services.chat.comments import CommentService
 
 router = APIRouter(
     prefix="/api/comments",

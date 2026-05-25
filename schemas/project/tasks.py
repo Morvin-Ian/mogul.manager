@@ -11,6 +11,7 @@ class TaskBase(BaseModel):
     status: TaskStatus = TaskStatus.TODO
     priority: TaskPriority = TaskPriority.MEDIUM
     assigned_agent: str | None = None
+    assigned_to_id: int | None = None
     parent_task_id: int | None = None
     metadata_json: dict | None = None
     estimated_hours: int | None = None
@@ -20,6 +21,7 @@ class TaskBase(BaseModel):
 
 class TaskCreate(TaskBase):
     project_id: int
+    assigned_to_email: str | None = None
 
 
 class TaskUpdate(BaseModel):
@@ -28,6 +30,8 @@ class TaskUpdate(BaseModel):
     status: TaskStatus | None = None
     priority: TaskPriority | None = None
     assigned_agent: str | None = None
+    assigned_to_id: int | None = None
+    assigned_to_email: str | None = None
     parent_task_id: int | None = None
     metadata_json: dict | None = None
     estimated_hours: int | None = None
@@ -43,3 +47,4 @@ class TaskRead(TaskBase):
     completed_at: datetime | None
     created_at: datetime
     updated_at: datetime
+    assignee_name: str | None = None

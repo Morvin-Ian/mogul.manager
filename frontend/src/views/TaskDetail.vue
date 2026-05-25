@@ -29,7 +29,14 @@
             <span class="priority-chip" :class="`priority-chip-${task.priority}`">
               {{ priorityLabel }} priority
             </span>
-            <span v-if="task.assigned_agent" class="agent-chip">
+            <span v-if="task.assignee_name" class="assignee-chip">
+              <svg viewBox="0 0 12 12" fill="none" width="10" height="10">
+                <circle cx="6" cy="4" r="2.5" stroke="currentColor" stroke-width="1.2"/>
+                <path d="M1.5 10.5c0-2.5 2-4 4.5-4s4.5 1.5 4.5 4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+              </svg>
+              {{ task.assignee_name }}
+            </span>
+            <span v-else-if="task.assigned_agent" class="agent-chip">
               <svg viewBox="0 0 12 12" fill="none" width="10" height="10">
                 <circle cx="6" cy="4" r="2.5" stroke="currentColor" stroke-width="1.2"/>
                 <path d="M1.5 10.5c0-2.5 2-4 4.5-4s4.5 1.5 4.5 4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
@@ -281,6 +288,19 @@ function onStatusUpdated() {
 .priority-chip-2 { background: #FFFBEB; color: #92400E; border-color: #FDE68A; }
 .priority-chip-3 { background: #FFF7ED; color: #C2410C; border-color: #FED7AA; }
 .priority-chip-4 { background: #FFF1F2; color: #BE123C; border-color: #FECDD3; }
+
+.assignee-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--primary);
+  background: var(--primary-light);
+  border: 1.5px solid var(--primary-border);
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  font-weight: 600;
+}
 
 .agent-chip, .date-chip, .time-chip {
   display: inline-flex;

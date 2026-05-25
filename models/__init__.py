@@ -1,4 +1,5 @@
 from .chat import Conversation, Message
+from .collaboration import Invitation, InvitationStatus, MemberRole, WorkspaceMember
 from .comments import Comment
 from .documents import Document, DocumentChunk, DocumentStatus, DocumentType
 from .memory import Memory
@@ -17,6 +18,9 @@ __all__ = [
     "DocumentChunk",
     "DocumentStatus",
     "DocumentType",
+    "Invitation",
+    "InvitationStatus",
+    "MemberRole",
     "Memory",
     "Message",
     "Plan",
@@ -30,4 +34,5 @@ __all__ = [
     "TaskPriority",
     "TaskStatus",
     "Workspace",
+    "WorkspaceMember",
 ]

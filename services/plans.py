@@ -13,8 +13,6 @@ class PlanService:
     def __init__(self, db: Annotated[AsyncSession, Depends(get_db)]):
         self.db = db
 
-    # ── Plans ──────────────────────────────────────────────────────
-
     async def create(self, user_id: int, data: dict) -> models.Plan:
         plan = models.Plan(user_id=user_id, **data)
         self.db.add(plan)
@@ -55,8 +53,6 @@ class PlanService:
     async def delete(self, plan: models.Plan) -> None:
         await self.db.delete(plan)
         await self.db.commit()
-
-    # ── Steps ──────────────────────────────────────────────────────
 
     async def create_step(self, data: dict) -> models.PlanStep:
         step = models.PlanStep(**data)

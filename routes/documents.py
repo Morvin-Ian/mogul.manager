@@ -10,7 +10,7 @@ from services.documents import (
     DocumentService,
     process_document_bg,
 )
-from services.rag import RAGService
+from services.documents.rag import RAGService
 from pathlib import Path
 
 router = APIRouter(prefix="/api/documents", tags=["Documents"])

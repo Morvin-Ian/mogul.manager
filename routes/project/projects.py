@@ -6,9 +6,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import models
 from database import get_db
-from schemas.projects import ProjectCreate, ProjectRead, ProjectUpdate
+from schemas.project.projects import ProjectCreate, ProjectRead, ProjectUpdate
 from services.auth import CurrentUser
-from services.projects import ProjectService
+from services.project.projects import ProjectService
 
 router = APIRouter(
     prefix="/api/projects",

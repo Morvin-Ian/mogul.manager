@@ -17,9 +17,9 @@ from starlette.concurrency import run_in_threadpool
 from config import settings
 from database import AsyncSessionLocal, get_db
 from models.documents import Document, DocumentChunk, DocumentStatus, DocumentType
-from services.chunker import chunk_text
-from services.embeddings import embed_texts
-from services.text_extractor import extract_text
+from services.documents.chunker import chunk_text
+from services.documents.embeddings import embed_texts
+from services.documents.text_extractor import extract_text
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +38,7 @@ ALLOWED_CONTENT_TYPES: dict[str, DocumentType] = {
     "application/csv": DocumentType.csv,
 }
 
-MAX_FILE_SIZE = 20 * 1024 * 1024  # 20 MB
+MAX_FILE_SIZE = 20 * 1024 * 1024
 CHUNK_SIZE = 500
 CHUNK_OVERLAP = 50
 SUMMARY_PREVIEW_CHARS = 4000
@@ -77,8 +77,6 @@ class DocumentService:
         await self.db.commit()
         return True
 
-    # ── Upload ─────────────────────────────────────────────────────────────────
-
     async def create_from_upload(
         self,
         user_id: int,
@@ -113,7 +111,6 @@ class DocumentService:
         return doc
 
     async def process(self, document_id: int) -> None:
-        """Full pipeline in the current DB session (call only when session is open)."""
         result = await self.db.execute(
             select(Document).where(Document.id == document_id)
         )
@@ -124,7 +121,6 @@ class DocumentService:
 
 
 async def process_document_bg(document_id: int) -> None:
-    """Creates its own session — safe to call from BackgroundTasks."""
     async with AsyncSessionLocal() as db:
         result = await db.execute(select(Document).where(Document.id == document_id))
         doc = result.scalars().first()

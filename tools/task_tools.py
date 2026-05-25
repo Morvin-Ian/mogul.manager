@@ -3,8 +3,8 @@ import json
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import models
-from schemas.tasks import TaskCreate, TaskRead, TaskUpdate
-from services.tasks import TaskService
+from schemas.project.tasks import TaskCreate, TaskRead, TaskUpdate
+from services.project.tasks import TaskService
 
 TASK_TOOLS = [
     {

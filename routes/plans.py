@@ -4,16 +4,12 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 import models
 from agents.planner import PlannerAgent
-from schemas.plans import PlanCreate, PlanDetail, PlanRead, PlanStepUpdate, PlanUpdate
+from schemas.plans import PlanCreate, PlanDetail, PlanStepUpdate, PlanUpdate
 from schemas.plans import PlanStepRead
 from services.auth import CurrentUser
 from services.plans import PlanService
 
 router = APIRouter(prefix="/api/plans", tags=["Plans"])
-
-
-def _detail(plan, svc=None) -> PlanDetail:
-    return PlanDetail.model_validate(plan)
 
 
 @router.get("", response_model=list[PlanDetail])

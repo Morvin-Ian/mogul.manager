@@ -1,15 +1,10 @@
 import uuid
 from io import BytesIO
-from pathlib import Path
-
 import boto3
 from PIL import Image, ImageOps
 from starlette.concurrency import run_in_threadpool
 
 from config import settings
-
-PROFILE_PICTURES_DIR = Path("media/profile_pics")
-
 
 def get_s3_client():
     return boto3.client(
@@ -60,17 +55,7 @@ def process_profile_image(content: bytes) -> tuple[bytes, str]:
             img = img.convert("RGB")
 
         filename = f"{uuid.uuid4().hex}.jpg"
-        # filepath = PROFILE_PICTURES_DIR / filename
         output = BytesIO()
         img.save(output, "JPEG", quality=85, optimize=True)
         output.seek(0)
         return output.read(), filename
-
-
-# def delete_profile_image(filename: str | None) -> None:
-#     if filename is None:
-#         return
-
-#     filepath = PROFILE_PICTURES_DIR / filename
-#     if filepath.exists():
-#         filepath.unlink()

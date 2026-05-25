@@ -4,7 +4,7 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from services.documents import DocumentService
-from services.rag import RAGService
+from services.documents.rag import RAGService
 
 DOCUMENT_TOOLS = [
     {
