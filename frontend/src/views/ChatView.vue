@@ -123,12 +123,24 @@
               :content="msg.content"
               :created-at="msg.created_at"
             />
-            <div v-if="chatStore.streaming && chatStore.toolActivity" class="tool-activity">
-              <span class="tool-activity-dot"></span>
-              Running {{ formatToolName(chatStore.toolActivity) }}…
-            </div>
+            <Transition name="thinking-fade">
+              <div
+                v-if="chatStore.streaming && !chatStore.streamContent && !chatStore.toolActivity"
+                class="thinking-status"
+                :key="chatStore.thinkingStatus"
+              >
+                <span class="thinking-dot"></span>
+                <span class="thinking-text">{{ chatStore.thinkingStatus }}</span>
+              </div>
+            </Transition>
+            <Transition name="thinking-fade">
+              <div v-if="chatStore.streaming && chatStore.toolActivity" class="tool-activity">
+                <span class="tool-activity-dot"></span>
+                Running {{ formatToolName(chatStore.toolActivity) }}…
+              </div>
+            </Transition>
             <MessageBubble
-              v-if="chatStore.streaming && (chatStore.streamContent || !chatStore.toolActivity)"
+              v-if="chatStore.streaming && chatStore.streamContent"
               role="assistant"
               :content="chatStore.streamContent"
               :streaming="true"
@@ -837,6 +849,52 @@ function formatDate(d: string) {
   background: var(--primary);
   animation: pulse 1s ease-in-out infinite;
   flex-shrink: 0;
+}
+
+.thinking-status {
+  align-self: flex-start;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 7px 12px;
+}
+
+.thinking-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  animation: thinking-bounce 1.4s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+.thinking-text {
+  animation: thinking-breathe 1.8s ease-in-out infinite;
+}
+
+@keyframes thinking-bounce {
+  0%, 100% { transform: translateY(0);   opacity: 1; }
+  50%       { transform: translateY(-3px); opacity: 0.5; }
+}
+
+@keyframes thinking-breathe {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.55; }
+}
+
+.thinking-fade-enter-active,
+.thinking-fade-leave-active {
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+.thinking-fade-enter-from,
+.thinking-fade-leave-to {
+  opacity: 0;
+  transform: translateY(4px);
 }
 
 /* Sidebar skeleton */

@@ -11,9 +11,8 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from database import Base
 
 if TYPE_CHECKING:
-    from .users import User
-    from .workspaces import Workspace
     from .tasks import Task
+    from .users import User
 
 
 class PlanStatus(str, Enum):
@@ -42,11 +41,17 @@ class Plan(Base):
     __tablename__ = "plans"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
-    workspace_id: Mapped[int | None] = mapped_column(ForeignKey("workspaces.id"), nullable=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id"), nullable=False, index=True
+    )
+    workspace_id: Mapped[int | None] = mapped_column(
+        ForeignKey("workspaces.id"), nullable=True
+    )
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
-    status: Mapped[PlanStatus] = mapped_column(SQLEnum(PlanStatus), default=PlanStatus.ACTIVE)
+    status: Mapped[PlanStatus] = mapped_column(
+        SQLEnum(PlanStatus), default=PlanStatus.ACTIVE
+    )
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC)
@@ -70,16 +75,24 @@ class PlanStep(Base):
     __tablename__ = "plan_steps"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    plan_id: Mapped[int] = mapped_column(ForeignKey("plans.id"), nullable=False, index=True)
+    plan_id: Mapped[int] = mapped_column(
+        ForeignKey("plans.id"), nullable=False, index=True
+    )
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
-    priority: Mapped[StepPriority] = mapped_column(SQLEnum(StepPriority), default=StepPriority.MEDIUM)
-    status: Mapped[StepStatus] = mapped_column(SQLEnum(StepStatus), default=StepStatus.PENDING)
+    priority: Mapped[StepPriority] = mapped_column(
+        SQLEnum(StepPriority), default=StepPriority.MEDIUM
+    )
+    status: Mapped[StepStatus] = mapped_column(
+        SQLEnum(StepStatus), default=StepStatus.PENDING
+    )
     step_order: Mapped[int] = mapped_column(Integer, default=0)
     # IDs of PlanStep rows that must be completed before this step can start
     dependencies: Mapped[list] = mapped_column(JSON, default=list)
     # If the agent creates a task while executing this step, link it here
-    linked_task_id: Mapped[int | None] = mapped_column(ForeignKey("tasks.id"), nullable=True)
+    linked_task_id: Mapped[int | None] = mapped_column(
+        ForeignKey("tasks.id"), nullable=True
+    )
     agent_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(

@@ -10,28 +10,50 @@ from services.memory import MemoryService
 logger = logging.getLogger(__name__)
 
 _SYSTEM_PROMPT = """\
-You are a memory extraction system embedded in a project management AI assistant.
+You are a memory extraction system for a project management AI assistant.
 
-Analyze the conversation exchange provided and extract any information worth remembering about the user long-term.
+Analyze the conversation exchange and extract only information genuinely worth remembering long-term — things that would change how the AI responds to this user in future conversations.
 
-Only extract HIGH-VALUE information:
-- preference: how the user likes to work, tools/styles/formats they prefer
-- decision: a significant choice they made about a project or workflow
-- goal: something they want to achieve, a deadline, or a target outcome
-- fact: an important project-specific fact not derivable from structured data
+Extract ONLY these types:
+- preference: how the user likes to work, communicate, or structure their projects (e.g. "prefers tasks broken into sub-tasks before starting")
+- decision: a significant choice the user made that affects future work (e.g. "decided to use Kanban over Scrum for the team")
+- goal: a concrete objective, deadline, or target outcome (e.g. "wants to ship v2 by end of Q3 2025")
+- fact: a specific project fact not derivable from structured workspace data (e.g. "the client requires weekly status reports every Monday")
 
 Return JSON only — no markdown, no explanation:
-{"memories": [{"type": "preference|decision|goal|fact", "content": "one concise sentence", "importance": 1|2|3}]}
+{"memories": [{"type": "preference|decision|goal|fact", "content": "one complete, self-contained sentence", "importance": 1|2|3}]}
 
-If nothing important was said, return: {"memories": []}
+If nothing worth remembering was said, return: {"memories": []}
+
+Importance scale:
+- 1: mildly useful context
+- 2: clearly influences future interactions
+- 3: critical — would significantly change how the AI behaves
 
 Rules:
 - Maximum 3 memories per exchange
-- Importance: 1 = useful to know, 2 = important, 3 = critical
-- Skip trivial requests (listing tasks, checking status, small talk)
-- Each memory must be a single, self-contained sentence
-- Do not duplicate memories that would already be obvious from the workspace data\
+- Skip: task status checks, listing requests, small talk, one-off clarifications
+- Skip anything already captured in the structured workspace/project/task data
+- Each memory must make sense on its own without any conversation context
+- Prefer specific over vague: bad — "user likes organization"; good — "user wants due dates set on all tasks at creation time"\
 """
+
+
+_DEDUP_THRESHOLD = 0.6
+
+
+def _is_duplicate(content: str, existing: list) -> bool:
+    new_words = set(content.lower().split())
+    if not new_words:
+        return False
+    for mem in existing:
+        mem_words = set(mem.content.lower().split())
+        if not mem_words:
+            continue
+        jaccard = len(new_words & mem_words) / len(new_words | mem_words)
+        if jaccard >= _DEDUP_THRESHOLD:
+            return True
+    return False
 
 
 class MemoryExtractor:
@@ -62,7 +84,7 @@ class MemoryExtractor:
                     {"role": "user", "content": exchange},
                 ],
                 temperature=0.2,
-                max_tokens=512,
+                max_tokens=256,
             )
             raw = response.choices[0].message.content or "{}"
             # Strip markdown fences if the model wraps anyway
@@ -77,12 +99,18 @@ class MemoryExtractor:
             return
 
         svc = MemoryService(db)  # type: ignore[arg-type]
+        existing = await svc.list_by_user(user_id, limit=100)
+
         for item in memories[:3]:
             memory_type = item.get("type", "fact")
             content = item.get("content", "").strip()
             importance = int(item.get("importance", 1))
 
             if not content or memory_type not in ("preference", "decision", "goal", "fact"):
+                continue
+
+            if _is_duplicate(content, existing):
+                logger.debug("Skipping duplicate memory for user %d: %s", user_id, content)
                 continue
 
             await svc.create(

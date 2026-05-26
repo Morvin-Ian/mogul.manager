@@ -157,6 +157,8 @@ async def send_message(
             if event["type"] == "token":
                 collected.append(event["content"])
                 yield f"data: {json.dumps({'token': event['content']})}\n\n"
+            elif event["type"] == "tool_start":
+                yield f"data: {json.dumps({'tool': event['name']})}\n\n"
 
         full_response = "".join(collected)
         msg = await service.add_message(conversation_id, "assistant", full_response)

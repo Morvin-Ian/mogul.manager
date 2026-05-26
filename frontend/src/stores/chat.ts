@@ -3,14 +3,57 @@ import { ref } from 'vue'
 import type { Conversation, ConversationDetail, Message } from '../types'
 import { get, post, patch, del } from './client'
 
+const THINKING_PHRASES = [
+  'Thinking…',
+  'Analyzing…',
+  'Galvanizing…',
+  'Figuring out…',
+  'Processing…',
+  'Connecting the dots…',
+  'Strategizing…',
+  'Calculating…',
+  'Assembling context…',
+  'Mapping it out…',
+  'Synthesizing…',
+  'Consulting the plan…',
+  'Weighing the options…',
+  'Reasoning through this…',
+  'Crunching the numbers…',
+  'Cross-referencing…',
+  'On it…',
+]
+
 export const useChatStore = defineStore('chat', () => {
   const conversations = ref<Conversation[]>([])
   const current = ref<ConversationDetail | null>(null)
   const streaming = ref(false)
   const streamContent = ref('')
   const toolActivity = ref<string | null>(null)
+  const thinkingStatus = ref('')
   const loading = ref(false)
   const error = ref<string | null>(null)
+
+  let _thinkingTimer: ReturnType<typeof setInterval> | null = null
+
+  function _startThinking() {
+    let lastIdx = -1
+    const pick = () => {
+      let idx
+      do { idx = Math.floor(Math.random() * THINKING_PHRASES.length) } while (idx === lastIdx)
+      lastIdx = idx
+      return THINKING_PHRASES[idx]
+    }
+    thinkingStatus.value = pick()
+    _thinkingTimer = setInterval(() => { thinkingStatus.value = pick() }, 1800)
+  }
+
+  function _stopThinking() {
+    if (_thinkingTimer !== null) {
+      clearInterval(_thinkingTimer)
+      _thinkingTimer = null
+    }
+    thinkingStatus.value = ''
+  }
 
   async function fetchConversations() {
     loading.value = true
@@ -61,6 +104,7 @@ export const useChatStore = defineStore('chat', () => {
     streamContent.value = ''
     toolActivity.value = null
     error.value = null
+    _startThinking()
 
     const token = localStorage.getItem('token')
     const headers: Record<string, string> = {
@@ -107,6 +151,7 @@ export const useChatStore = defineStore('chat', () => {
               toolActivity.value = parsed.tool
             }
             if (parsed.token) {
+              _stopThinking()
               toolActivity.value = null
               streamContent.value += parsed.token
             }
@@ -130,11 +175,12 @@ export const useChatStore = defineStore('chat', () => {
     } finally {
       streaming.value = false
       toolActivity.value = null
+      _stopThinking()
     }
   }
 
   return {
-    conversations, current, streaming, streamContent, toolActivity, loading, error,
+    conversations, current, streaming, streamContent, toolActivity, thinkingStatus, loading, error,
     fetchConversations, fetchConversation, createConversation,
     updateConversation, removeConversation, sendMessage,
   }

@@ -209,8 +209,10 @@ async def _generate_summary(text_preview: str, title: str) -> str:
                 {
                     "role": "system",
                     "content": (
-                        "You are a document analyst. Write a concise 3-5 sentence summary "
-                        "covering the main topic, key points, and any actionable takeaways."
+                        "You are a document analyst. Write a concise summary (3–5 sentences) covering: "
+                        "the document's main topic, its key findings or arguments, and any concrete actions, "
+                        "decisions, or deadlines mentioned. Be specific — include names, numbers, and dates "
+                        "where present. Write in plain prose, no bullet points."
                     ),
                 },
                 {
