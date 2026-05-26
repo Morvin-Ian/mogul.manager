@@ -124,11 +124,19 @@ export interface TaskUpdate {
   due_date?: string | null
 }
 
+export interface CommentUser {
+  id: number
+  username: string
+  profile_path: string | null
+}
+
 export interface Comment {
   id: number
   user_id: number
   task_id: number
+  parent_id: number | null
   content: string
+  user: CommentUser | null
   created_at: string
   updated_at: string
 }
@@ -136,6 +144,7 @@ export interface Comment {
 export interface CommentCreate {
   task_id: number
   content: string
+  parent_id?: number | null
 }
 
 export interface Conversation {

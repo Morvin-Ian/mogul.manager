@@ -1,9 +1,9 @@
 <template>
-  <div class="dashboard-layout">
-    <AppSidebar />
-    <div class="dashboard-main">
-      <AppHeader />
-      <main class="dashboard-content">
+  <div class="app-layout">
+    <AppHeader />
+    <div class="app-body">
+      <AppSidebar />
+      <main class="app-content">
         <router-view />
       </main>
     </div>
@@ -33,21 +33,25 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.dashboard-layout {
-  display: flex;
-  min-height: 100vh;
-}
-
-.dashboard-main {
-  flex: 1;
+.app-layout {
   display: flex;
   flex-direction: column;
-  min-width: 0;
+  min-height: 100vh;
+  background: linear-gradient(115deg, #FFFFFF 0%, #F4F4F6 38%, #E8E9EC 72%, #DCDDE2 100%);
+  background-attachment: fixed;
 }
 
-.dashboard-content {
+.app-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.app-content {
   flex: 1;
   overflow-y: auto;
-  background: var(--bg);
+  background: transparent;
+  min-width: 0;
 }
 </style>

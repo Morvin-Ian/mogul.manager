@@ -1,235 +1,161 @@
 <template>
   <aside class="sidebar">
-    <div class="sidebar-brand">
-      <div class="brand-icon">
-        <svg viewBox="0 0 20 20" fill="none" width="14" height="14">
-          <path d="M3 16V7l4 5 3-7 3 7 4-5v9" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </div>
-      <span class="brand-name">Mogul Manager</span>
-    </div>
-
     <nav class="sidebar-nav">
-      <div class="nav-group">
-        <router-link to="/chat" class="nav-item" active-class="active">
-          <span class="nav-icon">
-            <svg viewBox="0 0 20 20" fill="currentColor">
-              <path fill-rule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clip-rule="evenodd" />
-            </svg>
-          </span>
-          <span class="nav-label">AI Chat</span>
-        </router-link>
-        <router-link to="/plans" class="nav-item" active-class="active">
-          <span class="nav-icon">
-            <svg viewBox="0 0 20 20" fill="currentColor">
-              <path d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 8l2 2 4-4"/>
-            </svg>
-          </span>
-          <span class="nav-label">Plans</span>
-        </router-link>
-        <router-link to="/" class="nav-item" exact-active-class="active">
-          <span class="nav-icon">
-            <svg viewBox="0 0 20 20" fill="currentColor">
-              <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM13 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2h-2z" />
-            </svg>
-          </span>
-          <span class="nav-label">Workspaces</span>
-        </router-link>
-        <router-link to="/documents" class="nav-item" active-class="active">
-          <span class="nav-icon">
-            <svg viewBox="0 0 20 20" fill="none">
-              <path d="M13 2H5a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7l-4-5z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
-              <path d="M13 2v5h5M7 9h6M7 12h6M7 15h4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
-            </svg>
-          </span>
-          <span class="nav-label">Documents</span>
-        </router-link>
-      </div>
+      <router-link to="/" exact-active-class="active" class="nav-item" title="Home">
+        <span class="icon-wrap">
+          <svg viewBox="0 0 20 20" fill="currentColor" width="20" height="20">
+            <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/>
+          </svg>
+        </span>
+        <span class="nav-label">Home</span>
+      </router-link>
 
-      <div v-if="workspaceStore.workspaces.length" class="nav-group nav-group-workspaces">
-        <p class="nav-section-title">My Workspaces</p>
-        <router-link
-          v-for="ws in workspaceStore.workspaces"
-          :key="ws.id"
-          :to="`/workspaces/${ws.id}`"
-          class="nav-item nav-item-sub"
-          active-class="active"
-        >
-          <span class="nav-icon">
-              <svg viewBox="0 0 20 20" fill="currentColor">
-                <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
-              </svg>
-            </span>
-          <span class="nav-label">{{ ws.title }}</span>
-        </router-link>
-      </div>
-    </nav>
+      <router-link to="/chat" active-class="active" class="nav-item" title="AI Chat">
+        <span class="icon-wrap">
+          <svg viewBox="0 0 20 20" fill="currentColor" width="20" height="20">
+            <path fill-rule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clip-rule="evenodd"/>
+          </svg>
+        </span>
+        <span class="nav-label">Chat</span>
+      </router-link>
 
-    <div class="sidebar-footer">
-      <router-link to="/settings" class="nav-item" active-class="active">
-        <span class="nav-icon">
-          <svg viewBox="0 0 20 20" fill="currentColor">
-            <path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd" />
+      <router-link to="/documents" active-class="active" class="nav-item" title="Documents">
+        <span class="icon-wrap">
+          <svg viewBox="0 0 20 20" fill="none" width="20" height="20">
+            <path d="M13 2H5a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7l-4-5z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+            <path d="M13 2v5h5M7 9h6M7 12h6M7 15h4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+          </svg>
+        </span>
+        <span class="nav-label">Docs</span>
+      </router-link>
+
+      <router-link to="/settings" active-class="active" class="nav-item" title="Settings">
+        <span class="icon-wrap">
+          <svg viewBox="0 0 20 20" fill="currentColor" width="20" height="20">
+            <path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/>
           </svg>
         </span>
         <span class="nav-label">Settings</span>
       </router-link>
+    </nav>
+
+    <div class="sidebar-footer">
+      <button class="nav-item logout-btn" @click="handleLogout" title="Sign out">
+        <span class="icon-wrap">
+          <svg viewBox="0 0 20 20" fill="none" width="20" height="20">
+            <path d="M13 3.5L17 7m0 0l-4 4M17 7H7m4-4H5a1 1 0 00-1 1v10a1 1 0 001 1h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </span>
+        <span class="nav-label">Sign Out</span>
+      </button>
     </div>
   </aside>
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
-import { useWorkspaceStore } from '../../stores/workspaces'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '../../stores/auth'
 
-const workspaceStore = useWorkspaceStore()
-onMounted(() => workspaceStore.fetchAll())
+const router = useRouter()
+const auth = useAuthStore()
+
+function handleLogout() {
+  auth.logout()
+  router.push('/login')
+}
 </script>
 
 <style scoped>
 .sidebar {
-  width: 240px;
-  background: var(--sidebar-bg);
+  width: 88px;
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-right: 1px solid rgba(180, 180, 185, 0.4);
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
-  border-right: 1px solid var(--sidebar-border);
-}
-
-.sidebar-brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 18px 16px;
-  border-bottom: 1px solid var(--sidebar-border);
-}
-
-.brand-icon {
-  width: 32px;
-  height: 32px;
-  background: linear-gradient(135deg, var(--primary) 0%, #003CBF 100%);
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.brand-name {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--text);
-  letter-spacing: -0.3px;
+  padding: 16px 0 12px;
 }
 
 .sidebar-nav {
-  padding: 10px 8px;
   display: flex;
   flex-direction: column;
-  gap: 0;
+  align-items: center;
+  gap: 2px;
+  padding: 0 10px;
   flex: 1;
-  overflow-y: auto;
 }
 
 .sidebar-footer {
-  padding: 8px 8px 12px;
-  border-top: 1px solid var(--sidebar-border);
-}
-
-.nav-group {
-  margin-bottom: 2px;
-}
-
-.nav-group-workspaces {
-  margin-top: 18px;
-  border-top: 1px solid var(--sidebar-border);
-  padding-top: 14px;
-}
-
-.nav-section-title {
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.9px;
-  color: var(--text-light);
-  padding: 0 12px 8px;
+  padding: 10px 10px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .nav-item {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
+  gap: 5px;
+  padding: 10px 8px;
   border-radius: var(--radius-sm);
-  color: var(--sidebar-text);
+  color: var(--text-muted);
   text-decoration: none;
-  font-size: 13.5px;
-  font-weight: 500;
-  transition: background 0.12s ease, color 0.12s ease;
-  margin-bottom: 2px;
-  position: relative;
+  width: 100%;
+  transition: color 0.14s;
+  cursor: pointer;
+  background: none;
+  border: none;
 }
 
-.nav-item:hover {
-  background: var(--sidebar-hover);
-  color: var(--sidebar-text-hover);
-  text-decoration: none;
+.nav-item:hover { color: var(--text); text-decoration: none; }
+.nav-item:hover .icon-wrap { box-shadow: 0 2px 8px rgba(10,11,13,0.12); }
+
+.nav-item.active { color: var(--text); }
+.nav-item.active .icon-wrap {
+  background: #1C1C1E;
+  color: #ffffff;
 }
 
-.nav-item.active {
-  background: var(--sidebar-active-bg);
-  color: var(--sidebar-text-active);
-  font-weight: 600;
+.logout-btn:hover .icon-wrap {
+  background: #FEE2E2;
+  color: #EF4444;
 }
 
-.nav-item.active::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 3px;
-  height: 16px;
-  background: var(--primary);
-  border-radius: 0 2px 2px 0;
-}
-
-.nav-icon {
-  width: 20px;
-  height: 20px;
+.icon-wrap {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
+  background: rgba(255,255,255,0.75);
+  box-shadow: 0 2px 8px rgba(10,11,13,0.09), 0 1px 3px rgba(10,11,13,0.05);
+  transition: background 0.14s, color 0.14s, box-shadow 0.14s;
+  color: inherit;
   flex-shrink: 0;
-  opacity: 0.5;
-  transition: opacity 0.12s;
-}
-
-.nav-icon svg {
-  width: 16px;
-  height: 16px;
-}
-
-.nav-item:hover .nav-icon { opacity: 0.75; }
-.nav-item.active .nav-icon { opacity: 1; }
-
-.nav-item-sub {
-  padding-left: 10px;
-  font-size: 13px;
 }
 
 .nav-label {
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0.1px;
+  line-height: 1;
+  text-align: center;
+  color: inherit;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  max-width: 68px;
 }
 
 @media (max-width: 640px) {
-  .sidebar { width: 56px; }
-  .brand-name, .nav-label, .nav-group-workspaces { display: none; }
-  .nav-item { justify-content: center; padding: 10px; }
-  .sidebar-brand { justify-content: center; padding: 14px 0; }
-  .nav-icon { opacity: 0.65; width: 20px; height: 20px; }
-  .nav-icon svg { width: 18px; height: 18px; }
+  .sidebar { width: 68px; padding: 12px 0 8px; }
+  .sidebar-nav { padding: 0 6px; }
+  .sidebar-footer { padding: 8px 6px 0; }
+  .icon-wrap { width: 36px; height: 36px; border-radius: 10px; }
+  .nav-label { font-size: 9.5px; }
 }
 </style>
