@@ -4,37 +4,58 @@
       <div class="modal-header">
         <h2>{{ project ? 'Edit Project' : 'New Project' }}</h2>
         <button type="button" class="modal-close" @click="$emit('close')">
-          <svg viewBox="0 0 16 16" fill="none" width="16" height="16"><path d="M12 4L4 12M4 4l8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <svg viewBox="0 0 16 16" fill="none" width="16" height="16">
+            <path d="M12 4L4 12M4 4l8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
         </button>
       </div>
+
       <form @submit.prevent="handleSubmit">
-        <div class="form-group">
-          <label for="p-title">Title</label>
-          <input id="p-title" v-model="form.title" required maxlength="255" />
-        </div>
-        <div class="form-group">
-          <label for="p-desc">Description</label>
-          <textarea id="p-desc" v-model="form.description" rows="3"></textarea>
-        </div>
-        <div class="form-group">
-          <label for="p-status">Status</label>
-          <select id="p-status" v-model="form.status">
-            <option value="planning">Planning</option>
-            <option value="active">Active</option>
-            <option value="on_hold">On Hold</option>
-            <option value="completed">Completed</option>
-            <option value="archived">Archived</option>
+
+        <!-- Workspace selector — only shown when creating and multiple workspaces exist -->
+        <div v-if="showWorkspacePicker" class="form-group">
+          <label for="p-workspace">Workspace</label>
+          <select id="p-workspace" v-model="form.workspace_id" required>
+            <option disabled value="">Select a workspace</option>
+            <option v-for="ws in workspaces" :key="ws.id" :value="ws.id">
+              {{ ws.title }}
+            </option>
           </select>
         </div>
+
         <div class="form-group">
-          <label for="p-due">Due Date</label>
-          <input id="p-due" v-model="form.due_date" type="date" />
+          <label for="p-title">Title</label>
+          <input id="p-title" v-model="form.title" required maxlength="255" placeholder="Project name" />
         </div>
+
+        <div class="form-group">
+          <label for="p-desc">Description</label>
+          <textarea id="p-desc" v-model="form.description" rows="3" placeholder="What is this project about?"></textarea>
+        </div>
+
+        <div class="form-row-2">
+          <div class="form-group">
+            <label for="p-status">Status</label>
+            <select id="p-status" v-model="form.status">
+              <option value="planning">Planning</option>
+              <option value="active">Active</option>
+              <option value="on_hold">On Hold</option>
+              <option value="completed">Completed</option>
+              <option value="archived">Archived</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="p-due">Due Date</label>
+            <input id="p-due" v-model="form.due_date" type="date" />
+          </div>
+        </div>
+
         <p v-if="error" class="form-error">{{ error }}</p>
+
         <div class="form-actions">
           <button type="button" class="btn" @click="$emit('close')">Cancel</button>
-          <button type="submit" class="btn btn-primary" :disabled="saving">
-            {{ saving ? 'Saving...' : project ? 'Update' : 'Create' }}
+          <button type="submit" class="btn btn-primary" :disabled="saving || (showWorkspacePicker && !form.workspace_id)">
+            {{ saving ? 'Saving…' : project ? 'Update' : 'Create Project' }}
           </button>
         </div>
       </form>
@@ -43,11 +64,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, watch } from 'vue'
+import { ref, reactive, computed, watch, onMounted } from 'vue'
+import { useWorkspaceStore } from '../../stores/workspaces'
 import type { Project } from '../../types'
 
 const props = defineProps<{
   project?: Project | null
+  workspaceId?: number
 }>()
 
 const emit = defineEmits<{
@@ -55,14 +78,30 @@ const emit = defineEmits<{
   saved: [data: Record<string, any>]
 }>()
 
+const workspaceStore = useWorkspaceStore()
+const workspaces = computed(() => workspaceStore.workspaces)
+
+// Show workspace picker only when: creating (not editing) AND no fixed workspaceId AND >1 workspaces
+const showWorkspacePicker = computed(() =>
+  !props.project && !props.workspaceId && workspaces.value.length > 1
+)
+
 const form = reactive({
   title: '',
   description: '',
   status: 'planning' as string,
   due_date: '',
+  workspace_id: '' as number | '',
 })
+
 const saving = ref(false)
 const error = ref<string | null>(null)
+
+onMounted(async () => {
+  if (workspaces.value.length === 0) {
+    await workspaceStore.fetchAll()
+  }
+})
 
 watch(() => props.project, (p) => {
   if (p) {
@@ -70,20 +109,51 @@ watch(() => props.project, (p) => {
     form.description = p.description || ''
     form.status = p.status
     form.due_date = p.due_date ? p.due_date.slice(0, 10) : ''
+    form.workspace_id = p.workspace_id
   } else {
     form.title = ''
     form.description = ''
     form.status = 'planning'
     form.due_date = ''
+    // Pre-select: use fixed prop, or first workspace if only one, or empty for picker
+    if (props.workspaceId) {
+      form.workspace_id = props.workspaceId
+    } else if (workspaces.value.length === 1) {
+      form.workspace_id = workspaces.value[0].id
+    } else {
+      form.workspace_id = ''
+    }
   }
 }, { immediate: true })
+
+// Re-check default once workspaces load (in case they weren't ready on mount)
+watch(workspaces, (list) => {
+  if (!props.project && !props.workspaceId && form.workspace_id === '' && list.length === 1) {
+    form.workspace_id = list[0].id
+  }
+})
 
 async function handleSubmit() {
   saving.value = true
   error.value = null
-  const payload = { ...form }
-  if (!payload.due_date) delete (payload as any).due_date
+
+  const payload: Record<string, any> = {
+    title: form.title,
+    description: form.description,
+    status: form.status,
+  }
+  if (form.due_date) payload.due_date = form.due_date
+  if (form.workspace_id) payload.workspace_id = form.workspace_id
+
   emit('saved', payload)
   saving.value = false
 }
 </script>
+
+<style scoped>
+.form-row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+</style>

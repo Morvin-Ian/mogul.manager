@@ -269,4 +269,46 @@ function isActive(item: { to: string; activeOn: string[] }) {
   .user-section { padding: 4px; }
   .logo-sub { display: none; }
 }
+
+/* ── Dark mode header ── */
+:global([data-theme="dark"]) .app-header {
+  background: rgba(21, 32, 43, 0.88);
+  border-bottom: 1px solid rgba(56, 68, 77, 0.5);
+}
+
+:global([data-theme="dark"]) .hdr-icon {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: #38444D;
+  color: #8B98A5;
+  box-shadow: none;
+}
+:global([data-theme="dark"]) .hdr-icon:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: #536471;
+  color: #F7F9F9;
+}
+
+:global([data-theme="dark"]) .user-section {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: #38444D;
+  box-shadow: none;
+}
+:global([data-theme="dark"]) .user-section:hover {
+  background: rgba(255, 255, 255, 0.10);
+  border-color: #536471;
+}
+
+:global([data-theme="dark"]) .user-avatar {
+  background: #253341;
+  color: #8B98A5;
+}
+
+:global([data-theme="dark"]) .nav-pill:hover {
+  background: rgba(255, 255, 255, 0.07);
+  color: #F7F9F9;
+}
+:global([data-theme="dark"]) .nav-pill.active {
+  background: #F7F9F9;
+  color: #15202B;
+}
 </style>

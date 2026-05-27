@@ -102,7 +102,7 @@ async function copyContent() {
 }
 
 .message-user .message-avatar {
-  background: linear-gradient(135deg, var(--primary) 0%, #003CBF 100%);
+  background: #1c1c1e;
   color: #fff;
   border: none;
 }
@@ -131,11 +131,11 @@ async function copyContent() {
 }
 
 .message-user .message-text {
-  background: var(--primary);
+  background: #1c1c1e;
   color: #fff;
   border-bottom-right-radius: 4px;
   white-space: pre-wrap;
-  box-shadow: 0 2px 8px rgba(0, 82, 255, 0.25);
+  box-shadow: 0 2px 8px rgba(10, 11, 13, 0.22);
 }
 
 .message-assistant .message-text {

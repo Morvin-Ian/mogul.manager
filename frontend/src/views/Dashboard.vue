@@ -37,7 +37,7 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background: linear-gradient(115deg, #FFFFFF 0%, #F4F4F6 38%, #E8E9EC 72%, #DCDDE2 100%);
+  background: var(--layout-bg);
   background-attachment: fixed;
 }
 

@@ -420,7 +420,7 @@ function formatDate(d: string) {
 }
 
 .chat-conv-item:hover { background: var(--bg); }
-.chat-conv-item.active { background: var(--primary-light); }
+.chat-conv-item.active { background: #1c1c1e; }
 
 .conv-info { flex: 1; min-width: 0; }
 
@@ -434,8 +434,9 @@ function formatDate(d: string) {
   letter-spacing: -0.1px;
 }
 
-.chat-conv-item.active .conv-title { color: var(--primary); font-weight: 600; }
+.chat-conv-item.active .conv-title { color: #fff; font-weight: 600; }
 .conv-date { font-size: 11px; color: var(--text-light); margin-top: 2px; }
+.chat-conv-item.active .conv-date { color: rgba(255, 255, 255, 0.5); }
 
 .conv-delete-btn {
   flex-shrink: 0;
@@ -491,14 +492,14 @@ function formatDate(d: string) {
 .chat-welcome-icon {
   width: 58px;
   height: 58px;
-  background: linear-gradient(135deg, var(--primary) 0%, #003CBF 100%);
+  background: #1c1c1e;
   border-radius: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: #fff;
   margin-bottom: 4px;
-  box-shadow: 0 8px 24px rgba(0, 82, 255, 0.3);
+  box-shadow: 0 8px 24px rgba(10, 11, 13, 0.25);
 }
 
 .chat-welcome h3 {
@@ -538,9 +539,9 @@ function formatDate(d: string) {
 }
 
 .quick-prompt:hover {
-  border-color: var(--primary-border);
-  background: var(--primary-light);
-  color: var(--primary);
+  border-color: #B0A8E8;
+  background: #E5E2FF;
+  color: #3830A0;
 }
 
 /* ── Personalize section ── */
@@ -602,15 +603,15 @@ function formatDate(d: string) {
 }
 
 .personalize-tip:hover {
-  border-color: var(--primary-border);
-  background: var(--primary-light);
-  box-shadow: 0 2px 8px rgba(0, 82, 255, 0.08);
+  border-color: #B0A8E8;
+  background: #E5E2FF;
+  box-shadow: 0 2px 8px rgba(56, 48, 160, 0.08);
 }
 
 .personalize-tip.selected {
-  border-color: var(--primary);
-  background: var(--primary-light);
-  box-shadow: 0 0 0 3px var(--primary-muted);
+  border-color: #3830A0;
+  background: #E5E2FF;
+  box-shadow: 0 0 0 3px rgba(56, 48, 160, 0.10);
 }
 
 .tip-tag {
@@ -626,21 +627,21 @@ function formatDate(d: string) {
 }
 
 .tip-tag--style {
-  background: #EBF0FF;
-  color: #0039B3;
-  border-color: var(--primary-border);
+  background: #E5E2FF;
+  color: #3830A0;
+  border-color: #B0A8E8;
 }
 
 .tip-tag--goal {
-  background: #ECFDF5;
-  color: #047857;
-  border-color: #A7F3D0;
+  background: #D8F0DC;
+  color: #1A5820;
+  border-color: #70C878;
 }
 
 .tip-tag--work {
-  background: #FFFBEB;
-  color: #92400E;
-  border-color: #FDE68A;
+  background: #F2E0CC;
+  color: #7A3410;
+  border-color: #CFA070;
 }
 
 .tip-text {
@@ -653,7 +654,7 @@ function formatDate(d: string) {
 
 .personalize-tip:hover .tip-text,
 .personalize-tip.selected .tip-text {
-  color: var(--primary);
+  color: #3830A0;
 }
 
 .tip-check {
@@ -671,8 +672,8 @@ function formatDate(d: string) {
 }
 
 .personalize-tip.selected .tip-check {
-  background: var(--primary);
-  border-color: var(--primary);
+  background: #1c1c1e;
+  border-color: #1c1c1e;
   color: #fff;
 }
 
@@ -688,7 +689,7 @@ function formatDate(d: string) {
   flex: 1;
   font-size: 12.5px;
   font-weight: 600;
-  color: var(--primary);
+  color: #3830A0;
 }
 
 @keyframes fade-up {
@@ -717,7 +718,7 @@ function formatDate(d: string) {
 .empty-icon {
   width: 64px;
   height: 64px;
-  background: var(--primary);
+  background: #1c1c1e;
   border-radius: 18px;
   display: flex;
   align-items: center;
@@ -794,7 +795,7 @@ function formatDate(d: string) {
   margin: 10px 10px 10px 4px;
   border: none;
   border-radius: 10px;
-  background: linear-gradient(135deg, var(--primary) 0%, #003CBF 100%);
+  background: #1c1c1e;
   color: #fff;
   display: flex;
   align-items: center;
@@ -803,10 +804,10 @@ function formatDate(d: string) {
   flex-shrink: 0;
   transition: all 0.15s;
   align-self: flex-end;
-  box-shadow: 0 2px 8px rgba(0, 82, 255, 0.3);
+  box-shadow: 0 2px 8px rgba(10, 11, 13, 0.25);
 }
 
-.send-btn:hover:not(:disabled) { background: var(--primary-hover); }
+.send-btn:hover:not(:disabled) { background: #2e2e30; }
 .send-btn:active:not(:disabled) { transform: scale(0.96); }
 .send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
@@ -846,7 +847,7 @@ function formatDate(d: string) {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--primary);
+  background: #3830A0;
   animation: pulse 1s ease-in-out infinite;
   flex-shrink: 0;
 }

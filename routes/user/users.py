@@ -7,6 +7,8 @@ from fastapi import (
     BackgroundTasks,
     Depends,
     HTTPException,
+    Request,
+    Response,
     UploadFile,
     status,
 )
@@ -33,10 +35,12 @@ from schemas.users import (
 from services.auth import (
     CurrentUser,
     create_access_token,
+    create_refresh_token,
     generate_reset_token,
     hash_password,
     hash_reset_token,
     verify_password,
+    verify_refresh_token,
 )
 from utils.email import send_password_reset_email
 from utils.image import (
@@ -90,13 +94,25 @@ async def create_user(user: UserCreate, db: Annotated[AsyncSession, Depends(get_
     return new_user
 
 
+def _set_refresh_cookie(response: Response, user_id: int) -> None:
+    refresh_token = create_refresh_token(data={"sub": str(user_id)})
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,
+        secure=False,  # set True when serving over HTTPS
+        samesite="lax",
+        max_age=settings.refresh_token_expire_days * 24 * 3600,
+        path="/",
+    )
+
+
 @router.post("/token", response_model=Token)
 async def login_for_access_token(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
+    response: Response,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    # Look up user by email (case-insensitive)
-    # Note: OAuth2PasswordRequestForm uses "username" field, but we treat it as email
     result = await db.execute(
         select(models.User).where(
             func.lower(models.User.email) == form_data.username.lower(),
@@ -111,12 +127,43 @@ async def login_for_access_token(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
     access_token = create_access_token(
         data={"sub": str(user.id)},
-        expires_delta=access_token_expires,
+        expires_delta=timedelta(minutes=settings.access_token_expire_minutes),
+    )
+    _set_refresh_cookie(response, user.id)
+    return Token(access_token=access_token, token_type="bearer")
+
+
+@router.post("/refresh", response_model=Token)
+async def refresh_access_token(
+    request: Request,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    token = request.cookies.get("refresh_token")
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="No refresh token")
+
+    user_id = verify_refresh_token(token)
+    if not user_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired refresh token")
+
+    result = await db.execute(select(models.User).where(models.User.id == int(user_id)))
+    user = result.scalars().first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+
+    access_token = create_access_token(
+        data={"sub": str(user.id)},
+        expires_delta=timedelta(minutes=settings.access_token_expire_minutes),
     )
     return Token(access_token=access_token, token_type="bearer")
+
+
+@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+async def logout(response: Response):
+    response.delete_cookie(key="refresh_token", path="/")
+    return None
 
 
 @router.get("/me", response_model=UserPrivate)

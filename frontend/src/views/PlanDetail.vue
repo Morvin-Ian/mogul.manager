@@ -215,8 +215,8 @@ async function setStatus(step: PlanStep, status: StepStatus) {
   border-radius: var(--radius-full);
   border: 1px solid;
 }
-.badge-active    { background: var(--primary-light); color: var(--primary); border-color: var(--primary-border); }
-.badge-completed { background: #ECFDF5; color: #047857; border-color: #A7F3D0; }
+.badge-active    { background: #E5E2FF; color: #3830A0; border-color: #B0A8E8; }
+.badge-completed { background: #D8F0DC; color: #1A5820; border-color: #70C878; }
 .badge-draft     { background: var(--bg); color: var(--text-muted); border-color: var(--border); }
 .badge-cancelled { background: var(--danger-bg); color: var(--danger); border-color: var(--danger-border); }
 
@@ -299,8 +299,8 @@ async function setStatus(step: PlanStep, status: StepStatus) {
   transition: all 0.2s;
 }
 .num-pending   { background: var(--surface); border-color: var(--border); color: var(--text-muted); }
-.num-running   { background: var(--primary-light); border-color: var(--primary); color: var(--primary); }
-.num-completed { background: #ECFDF5; border-color: #A7F3D0; color: #047857; }
+.num-running   { background: #E5E2FF; border-color: #B0A8E8; color: #3830A0; }
+.num-completed { background: #D8F0DC; border-color: #70C878; color: #1A5820; }
 .num-failed    { background: var(--danger-bg); border-color: var(--danger-border); color: var(--danger); }
 .num-skipped   { background: var(--bg); border-color: var(--border); color: var(--text-light); }
 
@@ -310,15 +310,15 @@ async function setStatus(step: PlanStep, status: StepStatus) {
   min-height: 16px;
   margin: 4px 0;
 }
-.line-completed { background: #A7F3D0; }
-.line-running   { background: var(--primary-border); }
+.line-completed { background: #70C878; }
+.line-running   { background: #B0A8E8; }
 .line-pending, .line-failed, .line-skipped { background: var(--border); }
 
 .running-dot-sm {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--primary);
+  background: #3830A0;
   animation: pulse 1s ease-in-out infinite;
 }
 @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(.75)} }
@@ -362,9 +362,9 @@ async function setStatus(step: PlanStep, status: StepStatus) {
   border: 1px solid;
 }
 .priority-low    { background: var(--bg); color: var(--text-light); border-color: var(--border); }
-.priority-medium { background: #F1F5F9; color: #475569; border-color: #CBD5E1; }
-.priority-high   { background: #EBF0FF; color: #0039B3; border-color: var(--primary-border); }
-.priority-urgent { background: #FFF7ED; color: #C2410C; border-color: #FED7AA; }
+.priority-medium { background: #E5E2FF; color: #3830A0; border-color: #B0A8E8; }
+.priority-high   { background: #F2E0CC; color: #7A3410; border-color: #CFA070; }
+.priority-urgent { background: #F5DEDE; color: #601010; border-color: #D07878; }
 
 .step-desc {
   font-size: 13.5px;
@@ -398,7 +398,7 @@ async function setStatus(step: PlanStep, status: StepStatus) {
   align-items: center;
   gap: 4px;
   font-size: 11.5px;
-  color: var(--primary);
+  color: #3830A0;
   cursor: pointer;
   font-weight: 500;
 }
@@ -433,7 +433,7 @@ async function setStatus(step: PlanStep, status: StepStatus) {
 .loading-state { display: flex; justify-content: center; padding: 80px; }
 .empty { text-align: center; padding: 80px; color: var(--text-muted); }
 
-.spinner { display: inline-block; width: 22px; height: 22px; border: 3px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin .7s linear infinite; }
+.spinner { display: inline-block; width: 22px; height: 22px; border: 3px solid var(--border); border-top-color: #3830A0; border-radius: 50%; animation: spin .7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 @media (max-width: 600px) {

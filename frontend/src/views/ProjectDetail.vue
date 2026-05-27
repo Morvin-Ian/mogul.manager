@@ -5,36 +5,53 @@
     <template v-if="project">
       <div class="page-head">
         <div class="page-head-left">
-          <button class="back-btn" @click="$router.back()">
-            <svg viewBox="0 0 16 16" fill="none" width="14" height="14">
-              <path d="M10 13L5 8l5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <button class="back-pill" @click="$router.back()">
+            <svg viewBox="0 0 12 12" fill="none" width="10" height="10">
+              <path d="M8 2L4 6l4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
-            Back
+            Back to workspace
           </button>
-          <div>
-            <div class="project-title-row">
-              <h2>{{ project.title }}</h2>
-              <span class="badge" :class="`badge-${project.status}`">{{ project.status.replace('_', ' ') }}</span>
+
+          <div class="project-head-row">
+            <!-- Status accent pill -->
+            <div class="proj-status-icon" :class="`icon-${project.status}`">
+              <svg viewBox="0 0 20 20" fill="none" width="18" height="18">
+                <rect x="3" y="3" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
+                <rect x="11" y="3" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
+                <rect x="3" y="11" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
+                <rect x="11" y="11" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
+              </svg>
             </div>
-            <p v-if="project.description">{{ project.description }}</p>
-            <div class="project-meta-inline">
-              <span v-if="project.due_date" class="meta-chip">
-                <svg viewBox="0 0 12 12" fill="none" width="10" height="10">
-                  <rect x="1" y="1.5" width="10" height="9" rx="1.5" stroke="currentColor" stroke-width="1.2"/>
-                  <path d="M1 4.5h10M4 1v2M8 1v2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
-                </svg>
-                Due {{ formatDate(project.due_date) }}
-              </span>
-              <span v-if="project.ai_summary" class="meta-chip ai-chip">
-                <svg viewBox="0 0 14 14" fill="none" width="10" height="10">
-                  <circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.2"/>
-                  <path d="M5 7l1.5 1.5L9 5.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                AI: {{ project.ai_summary }}
-              </span>
+
+            <div class="project-title-block">
+              <div class="project-title-row">
+                <h2>{{ project.title }}</h2>
+                <span class="proj-status-pill" :class="`pill-${project.status}`">
+                  <span class="pill-dot"></span>
+                  {{ statusLabel(project.status) }}
+                </span>
+              </div>
+              <p v-if="project.description" class="proj-description">{{ project.description }}</p>
+              <div class="project-meta-inline">
+                <span v-if="project.due_date" class="meta-chip">
+                  <svg viewBox="0 0 12 12" fill="none" width="10" height="10">
+                    <rect x="1" y="1.5" width="10" height="9" rx="1.5" stroke="currentColor" stroke-width="1.2"/>
+                    <path d="M1 4.5h10M4 1v2M8 1v2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+                  </svg>
+                  Due {{ formatDate(project.due_date) }}
+                </span>
+                <span v-if="project.ai_summary" class="meta-chip ai-chip">
+                  <svg viewBox="0 0 14 14" fill="none" width="10" height="10">
+                    <circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.2"/>
+                    <path d="M5 7l1.5 1.5L9 5.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  {{ project.ai_summary }}
+                </span>
+              </div>
             </div>
           </div>
         </div>
+
         <div class="page-actions">
           <button class="btn btn-sm" @click="editProject">
             <svg viewBox="0 0 14 14" fill="none" width="12" height="12">
@@ -51,6 +68,7 @@
       <ProjectForm
         v-if="showForm"
         :project="editingProject"
+        :workspace-id="project.workspace_id"
         @close="closeForm"
         @saved="onSave"
       />
@@ -62,10 +80,16 @@
 import { ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useProjectStore } from '../stores/projects'
-import type { Project } from '../types'
+import type { Project, ProjectStatus } from '../types'
 import TaskBoard from '../components/task/TaskBoard.vue'
 import ProjectForm from '../components/project/ProjectForm.vue'
 import Loading from '../components/common/Loading.vue'
+
+const STATUS_LABELS: Record<ProjectStatus, string> = {
+  planning: 'Planning', active: 'Active', on_hold: 'On Hold',
+  completed: 'Completed', archived: 'Archived',
+}
+function statusLabel(s: ProjectStatus) { return STATUS_LABELS[s] ?? s }
 
 const route = useRoute()
 const router = useRouter()
@@ -120,7 +144,7 @@ async function handleDelete() {
 
 <style scoped>
 .project-detail {
-  padding: 32px;
+  padding: 36px 36px 80px;
   max-width: 1400px;
 }
 
@@ -128,53 +152,105 @@ async function handleDelete() {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: 32px;
-  gap: 16px;
+  margin-bottom: 36px;
+  gap: 20px;
 }
 
 .page-head-left {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
 }
 
-.back-btn {
+.back-pill {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  background: var(--bg);
+  gap: 5px;
+  background: var(--surface);
   border: 1.5px solid var(--border);
   color: var(--text-muted);
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 600;
+  padding: 5px 12px;
+  border-radius: var(--radius-full);
   cursor: pointer;
-  padding: 6px 12px;
-  border-radius: 8px;
   font-family: inherit;
-  transition: all 0.12s;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
   align-self: flex-start;
 }
+.back-pill:hover { background: var(--bg); color: var(--text); border-color: var(--border-strong); }
 
-.back-btn:hover { background: var(--surface); color: var(--text); border-color: var(--border-strong); }
+.project-head-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+}
+
+/* Status icon box */
+.proj-status-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.icon-planning  { background: rgba(168,160,248,0.18); color: #5248C8; }
+.icon-active    { background: rgba(0,186,124,0.16);   color: #00845A; }
+.icon-on_hold   { background: rgba(255,179,0,0.16);   color: #A87800; }
+.icon-completed { background: rgba(104,204,128,0.18); color: #1A5820; }
+.icon-archived  { background: rgba(139,152,165,0.15); color: #536471; }
+
+.project-title-block { flex: 1; min-width: 0; }
 
 .project-title-row {
   display: flex;
   align-items: center;
   gap: 10px;
   margin-bottom: 6px;
+  flex-wrap: wrap;
 }
 
 .project-title-row h2 {
-  font-size: 24px;
+  font-size: 26px;
   font-weight: 800;
   color: var(--text);
   letter-spacing: -0.7px;
   line-height: 1.2;
 }
 
-.page-head p {
+/* Status pill on project header */
+.proj-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 4px 11px;
+  border-radius: 999px;
+}
+.pill-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.pill-planning  { background: rgba(168,160,248,0.18); color: #5248C8; }
+.pill-active    { background: rgba(0,186,124,0.14);   color: #00845A; }
+.pill-on_hold   { background: rgba(255,179,0,0.16);   color: #A87800; }
+.pill-completed { background: rgba(104,204,128,0.18); color: #1A5820; }
+.pill-archived  { background: rgba(139,152,165,0.15); color: #536471; }
+
+.pill-planning  .pill-dot { background: #A8A0F8; }
+.pill-active    .pill-dot { background: #00BA7C; }
+.pill-on_hold   .pill-dot { background: #FFB300; }
+.pill-completed .pill-dot { background: #68CC80; }
+.pill-archived  .pill-dot { background: #8B98A5; }
+
+.proj-description {
   color: var(--text-muted);
-  font-size: 14px;
+  font-size: 13.5px;
   line-height: 1.6;
   margin-bottom: 10px;
 }
@@ -199,5 +275,9 @@ async function handleDelete() {
   font-weight: 500;
 }
 
-.ai-chip { color: var(--primary); background: var(--primary-light); border-color: var(--primary-border); font-style: italic; }
+.ai-chip {
+  color: var(--primary);
+  background: var(--primary-light);
+  border-color: var(--primary-border);
+}
 </style>

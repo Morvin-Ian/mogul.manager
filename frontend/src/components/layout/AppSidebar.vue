@@ -3,48 +3,59 @@
     <nav class="sidebar-nav">
       <router-link to="/" exact-active-class="active" class="nav-item" title="Home">
         <span class="icon-wrap">
-          <svg viewBox="0 0 20 20" fill="currentColor" width="20" height="20">
-            <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/>
-          </svg>
+          <font-awesome-icon :icon="['fas', 'house']" />
         </span>
         <span class="nav-label">Home</span>
       </router-link>
 
+      <router-link to="/workspaces" active-class="active" class="nav-item" title="Workspaces">
+        <span class="icon-wrap">
+          <font-awesome-icon :icon="['fas', 'layer-group']" />
+        </span>
+        <span class="nav-label">Spaces</span>
+      </router-link>
+
+      <router-link to="/plans" active-class="active" class="nav-item" title="Plans">
+        <span class="icon-wrap">
+          <font-awesome-icon :icon="['fas', 'list-check']" />
+        </span>
+        <span class="nav-label">Plans</span>
+      </router-link>
+
       <router-link to="/chat" active-class="active" class="nav-item" title="AI Chat">
         <span class="icon-wrap">
-          <svg viewBox="0 0 20 20" fill="currentColor" width="20" height="20">
-            <path fill-rule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clip-rule="evenodd"/>
-          </svg>
+          <font-awesome-icon :icon="['fas', 'comments']" />
         </span>
         <span class="nav-label">Chat</span>
       </router-link>
 
       <router-link to="/documents" active-class="active" class="nav-item" title="Documents">
         <span class="icon-wrap">
-          <svg viewBox="0 0 20 20" fill="none" width="20" height="20">
-            <path d="M13 2H5a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7l-4-5z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
-            <path d="M13 2v5h5M7 9h6M7 12h6M7 15h4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
-          </svg>
+          <font-awesome-icon :icon="['fas', 'file-lines']" />
         </span>
         <span class="nav-label">Docs</span>
-      </router-link>
-
-      <router-link to="/settings" active-class="active" class="nav-item" title="Settings">
-        <span class="icon-wrap">
-          <svg viewBox="0 0 20 20" fill="currentColor" width="20" height="20">
-            <path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/>
-          </svg>
-        </span>
-        <span class="nav-label">Settings</span>
       </router-link>
     </nav>
 
     <div class="sidebar-footer">
+      <router-link to="/settings" active-class="active" class="nav-item" title="Settings">
+        <span class="icon-wrap">
+          <font-awesome-icon :icon="['fas', 'gear']" />
+        </span>
+        <span class="nav-label">Settings</span>
+      </router-link>
+
+      <button class="theme-toggle-btn" @click="toggle" :title="isDark ? 'Switch to light mode' : 'Switch to dark mode'">
+        <span class="toggle-track" :class="{ 'is-dark': isDark }">
+          <span class="toggle-thumb">
+            <font-awesome-icon :icon="['fas', isDark ? 'moon' : 'sun']" class="toggle-icon" />
+          </span>
+        </span>
+      </button>
+
       <button class="nav-item logout-btn" @click="handleLogout" title="Sign out">
         <span class="icon-wrap">
-          <svg viewBox="0 0 20 20" fill="none" width="20" height="20">
-            <path d="M13 3.5L17 7m0 0l-4 4M17 7H7m4-4H5a1 1 0 00-1 1v10a1 1 0 001 1h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
+          <font-awesome-icon :icon="['fas', 'right-from-bracket']" />
         </span>
         <span class="nav-label">Sign Out</span>
       </button>
@@ -55,9 +66,11 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
+import { useTheme } from '../../composables/useTheme'
 
 const router = useRouter()
 const auth = useAuthStore()
+const { isDark, toggle } = useTheme()
 
 function handleLogout() {
   auth.logout()
@@ -92,6 +105,7 @@ function handleLogout() {
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 2px;
 }
 
 .nav-item {
@@ -108,26 +122,140 @@ function handleLogout() {
   cursor: pointer;
   background: none;
   border: none;
+  font-family: inherit;
 }
 
 .nav-item:hover { color: var(--text); text-decoration: none; }
-.nav-item:hover .icon-wrap { box-shadow: 0 2px 8px rgba(10,11,13,0.12); }
+.nav-item:hover .icon-wrap {
+  background: rgba(255,255,255,0.95);
+  box-shadow: 0 3px 12px rgba(10,11,13,0.14);
+}
 
 .nav-item.active { color: var(--text); }
 .nav-item.active .icon-wrap {
   background: #1C1C1E;
   color: #ffffff;
+  box-shadow: 0 4px 14px rgba(10,11,13,0.22);
 }
 
 .logout-btn:hover .icon-wrap {
-  background: #FEE2E2;
-  color: #EF4444;
+  background: #FFE5E5;
+  color: #C04040;
+  box-shadow: 0 3px 12px rgba(192,64,64,0.15);
+}
+
+.theme-toggle-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+}
+
+.toggle-track {
+  width: 46px;
+  height: 26px;
+  border-radius: 13px;
+  background: #D8D8DC;
+  position: relative;
+  transition: background 0.28s ease;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.toggle-track.is-dark {
+  background: #1C1C1E;
+}
+
+.toggle-thumb {
+  position: absolute;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: left 0.28s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.22);
+}
+
+.toggle-track.is-dark .toggle-thumb {
+  left: 23px;
+}
+
+.toggle-icon {
+  font-size: 10px;
+  color: #1c1c1e;
+  transition: color 0.2s;
+}
+
+.toggle-track.is-dark .toggle-icon {
+  color: #1c1c1e;
+}
+
+/* ── Dark mode sidebar ── */
+:global([data-theme="dark"]) .sidebar {
+  background: rgba(21, 32, 43, 0.92);
+  border-right-color: rgba(56, 68, 77, 0.5);
+}
+
+:global([data-theme="dark"]) .icon-wrap {
+  background: rgba(255, 255, 255, 0.07);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+:global([data-theme="dark"]) .nav-item:hover .icon-wrap {
+  background: rgba(255, 255, 255, 0.14);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.35);
+}
+
+:global([data-theme="dark"]) .nav-item.active .icon-wrap {
+  background: #F7F9F9;
+  color: #15202B;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+}
+
+:global([data-theme="dark"]) .nav-item { color: #8B98A5; }
+:global([data-theme="dark"]) .nav-item:hover { color: #F7F9F9; }
+:global([data-theme="dark"]) .nav-item.active { color: #F7F9F9; }
+
+:global([data-theme="dark"]) .logout-btn:hover .icon-wrap {
+  background: rgba(255, 107, 120, 0.18);
+  color: #FF8896;
+  box-shadow: 0 3px 12px rgba(255, 107, 120, 0.2);
+}
+
+:global([data-theme="dark"]) .toggle-track {
+  background: #38444D;
+}
+
+:global([data-theme="dark"]) .toggle-track.is-dark {
+  background: #F7F9F9;
+}
+
+:global([data-theme="dark"]) .toggle-thumb {
+  background: #1E2732;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.5);
+}
+
+:global([data-theme="dark"]) .toggle-icon {
+  color: #8B98A5;
+}
+
+:global([data-theme="dark"]) .toggle-track.is-dark .toggle-icon {
+  color: #8B98A5;
 }
 
 .icon-wrap {
   width: 42px;
   height: 42px;
-  border-radius: 12px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -136,11 +264,12 @@ function handleLogout() {
   transition: background 0.14s, color 0.14s, box-shadow 0.14s;
   color: inherit;
   flex-shrink: 0;
+  font-size: 17px;
 }
 
 .nav-label {
-  font-size: 12px;
-  font-weight: 400;
+  font-size: 11px;
+  font-weight: 500;
   letter-spacing: 0.1px;
   line-height: 1;
   text-align: center;
@@ -155,7 +284,7 @@ function handleLogout() {
   .sidebar { width: 68px; padding: 12px 0 8px; }
   .sidebar-nav { padding: 0 6px; }
   .sidebar-footer { padding: 8px 6px 0; }
-  .icon-wrap { width: 36px; height: 36px; border-radius: 10px; }
+  .icon-wrap { width: 36px; height: 36px; font-size: 15px; }
   .nav-label { font-size: 9.5px; }
 }
 </style>

@@ -34,12 +34,16 @@ export const useDocumentStore = defineStore('documents', () => {
     }
   }
 
-  async function upload(file: File): Promise<Document> {
+  async function upload(
+    file: File,
+    ctx?: { workspace_id?: number | null; project_id?: number | null },
+  ): Promise<Document> {
     const fd = new FormData()
     fd.append('file', file)
+    if (ctx?.workspace_id) fd.append('workspace_id', String(ctx.workspace_id))
+    if (ctx?.project_id) fd.append('project_id', String(ctx.project_id))
     const doc = await postFile<Document>('/documents', fd)
     documents.value.unshift(doc)
-    // Poll until processing is done
     _pollStatus(doc.id)
     return doc
   }

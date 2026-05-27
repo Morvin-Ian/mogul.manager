@@ -250,10 +250,10 @@ async function handleDelete(id: number) {
   border-radius: 50%;
   flex-shrink: 0;
 }
-.dot-active    { background: var(--primary); }
-.dot-completed { background: var(--success); }
+.dot-active    { background: #3830A0; }
+.dot-completed { background: #1A5820; }
 .dot-draft     { background: var(--text-light); }
-.dot-cancelled { background: var(--danger); }
+.dot-cancelled { background: #601010; }
 
 .plan-status-label {
   font-size: 11px;
@@ -315,10 +315,10 @@ async function handleDelete(id: number) {
   border-radius: 9999px;
   transition: width 0.4s ease;
 }
-.fill-active    { background: var(--primary); }
-.fill-completed { background: var(--success); }
+.fill-active    { background: #3830A0; }
+.fill-completed { background: #1A5820; }
 .fill-draft     { background: var(--text-light); }
-.fill-cancelled { background: var(--danger); }
+.fill-cancelled { background: #601010; }
 
 .progress-label {
   font-size: 11.5px;
@@ -342,13 +342,13 @@ async function handleDelete(id: number) {
   color: var(--text-light);
 }
 
-.stat-running { color: var(--primary); }
+.stat-running { color: #3830A0; }
 
 .running-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--primary);
+  background: #3830A0;
   animation: pulse 1s ease-in-out infinite;
 }
 @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(.75)} }
@@ -356,8 +356,8 @@ async function handleDelete(id: number) {
 /* Explainer callout */
 .explainer-callout {
   position: relative;
-  background: var(--primary-light);
-  border: 1px solid var(--primary-border);
+  background: #F4F4F6;
+  border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: 20px 24px;
   margin-bottom: 24px;
@@ -377,7 +377,7 @@ async function handleDelete(id: number) {
   border-radius: 4px;
   transition: color 0.1s, background 0.1s;
 }
-.explainer-dismiss:hover { color: var(--text); background: var(--primary-border); }
+.explainer-dismiss:hover { color: var(--text); background: var(--border); }
 
 .explainer-body {
   display: flex;
@@ -403,8 +403,8 @@ async function handleDelete(id: number) {
   justify-content: center;
   flex-shrink: 0;
 }
-.explainer-icon--plan { background: var(--primary-light); border: 1px solid var(--primary-border); color: var(--primary); }
-.explainer-icon--workspace { background: #F0FDF4; border: 1px solid #BBF7D0; color: #15803D; }
+.explainer-icon--plan      { background: #F2E0CC; border: 1px solid #CFA070; color: #7A3410; }
+.explainer-icon--workspace { background: #E5E2FF; border: 1px solid #B0A8E8; color: #3830A0; }
 
 .explainer-label {
   font-size: 12.5px;
@@ -422,7 +422,7 @@ async function handleDelete(id: number) {
 
 .explainer-example {
   font-size: 11.5px;
-  color: var(--primary);
+  color: #3830A0;
   font-style: italic;
 }
 
@@ -457,12 +457,12 @@ async function handleDelete(id: number) {
   width: 64px;
   height: 64px;
   border-radius: var(--radius-lg);
-  background: var(--primary-light);
-  border: 1px solid var(--primary-border);
+  background: #E5E2FF;
+  border: 1px solid #B0A8E8;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--primary);
+  color: #3830A0;
 }
 
 .empty p { font-size: 14px; color: var(--text-muted); max-width: 340px; line-height: 1.6; }

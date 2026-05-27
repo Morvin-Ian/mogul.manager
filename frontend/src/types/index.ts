@@ -226,6 +226,10 @@ export interface Document {
   url: string | null
   created_at: string
   processed_at: string | null
+  workspace_id?: number | null
+  project_id?: number | null
+  workspace_title?: string | null
+  project_title?: string | null
 }
 
 export interface SearchHit {
