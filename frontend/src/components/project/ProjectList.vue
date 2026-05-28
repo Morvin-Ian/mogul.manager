@@ -6,9 +6,7 @@
         <p class="section-sub">{{ projects.length }} project{{ projects.length !== 1 ? 's' : '' }} in this workspace</p>
       </div>
       <button v-if="canCreateProject" class="new-project-btn" @click="showForm = true">
-        <svg viewBox="0 0 16 16" fill="none" width="13" height="13">
-          <path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-        </svg>
+        <font-awesome-icon :icon="['fas', 'plus']" />
         New Project
       </button>
       <span v-else class="member-hint">
@@ -36,7 +34,10 @@
       <h4>No projects yet</h4>
       <p v-if="canCreateProject">Add your first project to start tracking work inside this workspace.</p>
       <p v-else>The workspace admin hasn't created any projects yet.</p>
-      <button v-if="canCreateProject" class="new-project-btn" @click="showForm = true">Create project</button>
+      <button v-if="canCreateProject" class="new-project-btn" @click="showForm = true">
+        <font-awesome-icon :icon="['fas', 'plus']" />
+        Create project
+      </button>
     </div>
 
     <div v-else class="project-grid">
@@ -44,12 +45,8 @@
         v-for="project in projects"
         :key="project.id"
         class="project-card"
-        :class="`proj-${project.status}`"
         @click="$router.push(`/projects/${project.id}`)"
       >
-        <!-- Status accent bar -->
-        <div class="proj-accent" :style="{ background: statusColor(project.status) }"></div>
-
         <div class="proj-inner">
           <!-- Top: status chip + menu -->
           <div class="proj-top">
@@ -131,7 +128,6 @@ const STATUS_META: Record<ProjectStatus, { label: string; color: string }> = {
   archived:  { label: 'Archived',  color: '#8B98A5' },
 }
 
-function statusColor(s: ProjectStatus) { return STATUS_META[s]?.color ?? '#8B98A5' }
 function statusLabel(s: ProjectStatus) { return STATUS_META[s]?.label ?? s }
 
 function isOverdue(d: string) {
@@ -199,6 +195,7 @@ async function onProjectSaved(data: Record<string, any>) {
 }
 .new-project-btn:hover { opacity: 0.82; }
 .new-project-btn:active { transform: scale(0.97); }
+:global([data-theme="dark"]) .new-project-btn { background: #F7F9F9; color: #15202B; }
 
 .member-hint {
   display: inline-flex;
@@ -260,37 +257,41 @@ async function onProjectSaved(data: Record<string, any>) {
 /* ── Project card ── */
 .project-card {
   background: var(--surface);
-  border: 1.5px solid var(--border);
-  border-radius: 18px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
   cursor: pointer;
-  transition: box-shadow 0.18s, transform 0.16s, border-color 0.16s;
-  display: flex;
+  transition: box-shadow 0.2s, transform 0.18s, border-color 0.18s;
   overflow: hidden;
   position: relative;
   min-height: 160px;
+  box-shadow: 0 2px 8px rgba(10,11,13,0.06), 0 0 0 0 transparent;
 }
 
 .project-card:hover {
-  box-shadow: 0 10px 32px rgba(10,11,13,0.11);
-  transform: translateY(-3px);
+  box-shadow: 0 12px 40px rgba(10,11,13,0.13), 0 2px 8px rgba(10,11,13,0.07);
+  transform: translateY(-4px);
   border-color: var(--border-strong);
 }
 
-/* Left accent bar */
-.proj-accent {
-  width: 5px;
-  flex-shrink: 0;
-  border-radius: 2px 0 0 2px;
-  opacity: 0.85;
+.project-card:active {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(10,11,13,0.1);
 }
 
 .proj-inner {
-  flex: 1;
   padding: 18px 18px 16px;
   display: flex;
   flex-direction: column;
   gap: 10px;
   min-width: 0;
+  height: 100%;
+}
+
+:global([data-theme="dark"]) .project-card {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+}
+:global([data-theme="dark"]) .project-card:hover {
+  box-shadow: 0 12px 40px rgba(0,0,0,0.45), 0 2px 8px rgba(0,0,0,0.3);
 }
 
 .proj-top {

@@ -83,6 +83,11 @@ const routes: RouteRecordRaw[] = [
         component: () => import('../views/TaskDetail.vue'),
       },
       {
+        path: 'review',
+        name: 'Review',
+        component: () => import('../views/ReviewView.vue'),
+      },
+      {
         path: 'chat',
         name: 'Chat',
         component: () => import('../views/ChatView.vue'),

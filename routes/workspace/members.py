@@ -170,7 +170,7 @@ async def update_member_role(
         new_role=body.role,
         by_user_id=current_user.id,
     )
-    return MemberResponse.model_validate(member)
+    return member
 
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)

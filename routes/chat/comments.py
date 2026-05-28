@@ -37,7 +37,20 @@ async def _verify_task_ownership(task_id: int, user_id: int, db) -> None:
         select(models.Workspace).where(models.Workspace.id == project.workspace_id)
     )
     workspace = result.scalars().first()
-    if not workspace or workspace.user_id != user_id:
+    if not workspace:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found"
+        )
+    # Allow workspace owner OR any workspace member
+    if workspace.user_id == user_id:
+        return
+    member_result = await db.execute(
+        select(models.WorkspaceMember).where(
+            models.WorkspaceMember.workspace_id == workspace.id,
+            models.WorkspaceMember.user_id == user_id,
+        )
+    )
+    if not member_result.scalars().first():
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to access this task",

@@ -24,7 +24,7 @@ router = APIRouter(
 )
 
 # Fields a regular member (assignee) is allowed to change on their own task
-ASSIGNEE_EDITABLE_FIELDS = {"status", "actual_hours"}
+ASSIGNEE_EDITABLE_FIELDS = {"status", "actual_hours", "metadata_json"}
 
 # Status transitions a member (assignee) is allowed to make
 MEMBER_ALLOWED_TRANSITIONS: dict[str, set[str]] = {
@@ -168,10 +168,18 @@ async def list_tasks(
     service: Annotated[TaskService, Depends()],
     collab: Annotated[CollaborationService, Depends()],
     db: Annotated[AsyncSession, Depends(get_db)],
-    project_id: int = Query(...),
+    project_id: int | None = Query(None),
+    workspace_id: int | None = Query(None),
+    status: str | None = Query(None),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500),
 ):
+    if workspace_id is not None:
+        await collab.require_access(workspace_id, current_user.id, min_role="member")
+        tasks = await service.list_by_workspace(workspace_id, status=status, skip=skip, limit=limit)
+        return [_to_read(t) for t in tasks]
+    if project_id is None:
+        raise HTTPException(status_code=400, detail="Either project_id or workspace_id is required")
     project = await _get_project_or_404(project_id, db)
     await collab.require_access(project.workspace_id, current_user.id, min_role="member")
     tasks = await service.list_by_project(project_id, skip=skip, limit=limit)

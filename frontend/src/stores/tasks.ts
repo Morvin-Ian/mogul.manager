@@ -20,6 +20,10 @@ export const useTaskStore = defineStore('tasks', () => {
     }
   }
 
+  async function fetchReviewTasks(workspaceId: number): Promise<Task[]> {
+    return get<Task[]>(`/tasks?workspace_id=${workspaceId}&status=review`)
+  }
+
   async function fetchOne(id: number) {
     loading.value = true
     try {
@@ -67,7 +71,7 @@ export const useTaskStore = defineStore('tasks', () => {
 
   return {
     tasks, current, loading, error,
-    fetchByProject, fetchOne, create, update, remove,
+    fetchByProject, fetchReviewTasks, fetchOne, create, update, remove,
     fetchComments, createComment, deleteComment,
   }
 })

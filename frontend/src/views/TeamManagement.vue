@@ -6,18 +6,14 @@
       <div class="page-head">
         <div>
           <button class="back-pill" @click="$router.push(`/workspaces/${workspace.id}`)">
-            <svg viewBox="0 0 12 12" fill="none" width="10" height="10">
-              <path d="M8 2L4 6l4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
+            <font-awesome-icon :icon="['fas', 'chevron-left']" />
             {{ workspace.title }}
           </button>
           <h2>Team</h2>
         </div>
         <div class="page-actions">
-          <button v-if="isAdmin" class="btn btn-sm btn-primary" @click="showInviteForm = true">
-            <svg viewBox="0 0 16 16" fill="none" width="13" height="13">
-              <path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            </svg>
+          <button v-if="isAdmin" class="invite-btn" @click="showInviteForm = true">
+            <font-awesome-icon :icon="['fas', 'user-plus']" />
             Invite
           </button>
         </div>
@@ -52,8 +48,9 @@
         <div v-else class="member-list">
           <div v-for="m in members" :key="m.user_id" class="member-card">
             <div class="member-card-left">
-              <div class="member-avatar" :style="{ background: avatarGradient(m.user?.username || '') }">
-                {{ (m.user?.username || '?').charAt(0).toUpperCase() }}
+              <div class="member-avatar" :style="m.user?.profile_path ? {} : { background: avatarGradient(m.user?.username || '') }">
+                <img v-if="m.user?.profile_path" :src="m.user.profile_path" class="member-avatar-img" :alt="m.user?.username" />
+                <template v-else>{{ (m.user?.username || '?').charAt(0).toUpperCase() }}</template>
               </div>
               <div class="member-details">
                 <div class="member-name-row">
@@ -64,17 +61,11 @@
                 <span class="member-email">{{ m.user?.email }}</span>
                 <div class="member-meta">
                   <span class="meta-item">
-                    <svg viewBox="0 0 12 12" fill="none" width="9" height="9">
-                      <rect x="1" y="1.5" width="10" height="9" rx="1.5" stroke="currentColor" stroke-width="1.2"/>
-                      <path d="M1 4.5h10M4 1v2M8 1v2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
-                    </svg>
+                    <font-awesome-icon :icon="['fas', 'calendar']" />
                     Joined {{ shortDate(m.joined_at) }}
                   </span>
                   <span v-if="m.last_seen_at" class="meta-item">
-                    <svg viewBox="0 0 12 12" fill="none" width="9" height="9">
-                      <circle cx="6" cy="6" r="4.5" stroke="currentColor" stroke-width="1.2"/>
-                      <path d="M6 3.5v3l2 1.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
+                    <font-awesome-icon :icon="['fas', 'clock']" />
                     Active {{ timeAgo(m.last_seen_at) }}
                   </span>
                 </div>
@@ -107,10 +98,7 @@
         <div v-if="invitations.length === 0" class="empty-section">No pending invitations.</div>
         <div v-else class="invitation-list">
           <div v-for="inv in invitations" :key="inv.id" class="invitation-row">
-            <svg viewBox="0 0 12 12" fill="none" width="10" height="10">
-              <path d="M1.5 4l4.5 3 4.5-3v5a1 1 0 01-1 1H2.5a1 1 0 01-1-1V4z" stroke="currentColor" stroke-width="1.2"/>
-              <path d="M1.5 4l4.5 3 4.5-3V3a1 1 0 00-1-1H2.5a1 1 0 00-1 1v1z" stroke="currentColor" stroke-width="1.2"/>
-            </svg>
+            <font-awesome-icon :icon="['fas', 'envelope']" class="inv-icon" />
             <span class="inv-email">{{ inv.email }}</span>
             <span class="role-tag" :class="`role-${inv.role}`">{{ inv.role }}</span>
             <span class="inv-status" :class="`status-${inv.status}`">{{ inv.status }}</span>
@@ -265,6 +253,26 @@ async function handleRevoke(invitationId: number) {
   margin-top: 12px;
 }
 
+.invite-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 18px;
+  background: #1c1c1e;
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-full);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: opacity 0.15s, transform 0.1s;
+  white-space: nowrap;
+}
+.invite-btn:hover { opacity: 0.82; }
+.invite-btn:active { transform: scale(0.97); }
+:global([data-theme="dark"]) .invite-btn { background: #F7F9F9; color: #15202B; }
+
 .back-pill {
   display: inline-flex;
   align-items: center;
@@ -390,6 +398,14 @@ async function handleRevoke(invitationId: number) {
   font-weight: 800;
   flex-shrink: 0;
   letter-spacing: -0.5px;
+  overflow: hidden;
+}
+
+.member-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 14px;
 }
 
 .member-details {
@@ -486,7 +502,7 @@ async function handleRevoke(invitationId: number) {
   font-family: inherit;
 }
 
-.invitation-row svg { color: var(--text-light); flex-shrink: 0; }
+.inv-icon { color: var(--text-light); flex-shrink: 0; font-size: 11px; }
 .inv-email { flex: 1; font-size: 13.5px; color: var(--text); }
 
 .inv-status {

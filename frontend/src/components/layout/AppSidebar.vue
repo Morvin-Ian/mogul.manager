@@ -29,7 +29,7 @@
         <span class="nav-label">Plans</span>
       </router-link>
 
-      <router-link to="/chat" active-class="active" class="nav-item" title="AI Chat">
+<router-link to="/chat" active-class="active" class="nav-item" title="AI Chat">
         <span class="icon-wrap">
           <font-awesome-icon :icon="['fas', 'comments']" />
         </span>

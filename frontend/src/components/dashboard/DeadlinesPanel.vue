@@ -15,7 +15,8 @@
         <path d="M14 28h8M14 34h12" stroke="#D1D5DB" stroke-width="2" stroke-linecap="round"/>
       </svg>
       <p>No upcoming deadlines</p>
-      <span>Tasks and projects with due dates appear here</span>
+      <span v-if="isAdminOrOwner">All team tasks with due dates appear here</span>
+      <span v-else>Tasks assigned to you with due dates appear here</span>
     </div>
 
     <div v-else class="deadlines-list">
@@ -32,18 +33,19 @@
         <div class="deadline-info">
           <p class="deadline-title">{{ item.title }}</p>
           <p class="deadline-sub">
-            <span class="deadline-type-dot" :class="item.type" />
+            <span class="deadline-type-dot task" />
             <span class="deadline-sub-label">{{ item.subtitle }}</span>
+            <span v-if="isAdminOrOwner && item.assigneeName" class="deadline-assignee">
+              <font-awesome-icon :icon="['fas', 'user']" style="font-size:9px;" />
+              {{ item.assigneeName }}
+            </span>
             <span class="deadline-date">{{ item.formattedDate }}</span>
           </p>
         </div>
-        <span class="deadline-type-icon" :class="item.type">
-          <svg v-if="item.type === 'task'" viewBox="0 0 16 16" fill="none" width="12" height="12">
+        <span class="deadline-type-icon task">
+          <svg viewBox="0 0 16 16" fill="none" width="12" height="12">
             <rect x="1.5" y="1.5" width="13" height="13" rx="2" stroke="currentColor" stroke-width="1.5"/>
             <path d="M5.5 8.5l2 2 3-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          <svg v-else viewBox="0 0 16 16" fill="none" width="12" height="12">
-            <path d="M2 5h12M5 2v3M11 2v3M3 3h10a1 1 0 011 1v9a1 1 0 01-1 1H3a1 1 0 01-1-1V4a1 1 0 011-1z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
           </svg>
         </span>
       </div>
@@ -53,9 +55,18 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useAuthStore } from '../../stores/auth'
+import { useMembersStore } from '../../stores/members'
 import type { Task, Project } from '../../types'
 
 const props = defineProps<{ tasks: Task[]; projects: Project[] }>()
+const auth = useAuthStore()
+const membersStore = useMembersStore()
+
+const isAdminOrOwner = computed(() => {
+  const role = membersStore.myMembership?.role
+  return role === 'admin' || role === 'owner'
+})
 
 type Urgency = 'overdue' | 'today' | 'soon' | 'later'
 
@@ -82,8 +93,11 @@ const upcomingDeadlines = computed(() => {
     })
   }
 
-  const taskItems = props.tasks
-    .filter(t => t.due_date && t.status !== 'completed')
+  return props.tasks
+    .filter(t => {
+      if (!t.due_date || t.status === 'completed') return false
+      return isAdminOrOwner.value ? true : t.assigned_to_id === auth.user?.id
+    })
     .map(t => {
       const d = new Date(t.due_date!)
       const { label, urgency } = classifyDeadline(d)
@@ -91,34 +105,14 @@ const upcomingDeadlines = computed(() => {
         id: `task-${t.id}`,
         title: t.title,
         subtitle: projectNameFor(t.project_id),
+        assigneeName: t.assignee_name ?? null,
         dueDate: d,
         formattedDate: fmt(d),
-        type: 'task' as const,
         projectId: t.project_id,
         label,
         urgency,
       }
     })
-
-  const projItems = props.projects
-    .filter(p => p.due_date && p.status !== 'completed' && p.status !== 'archived')
-    .map(p => {
-      const d = new Date(p.due_date!)
-      const { label, urgency } = classifyDeadline(d)
-      return {
-        id: `proj-${p.id}`,
-        title: p.title,
-        subtitle: 'Project deadline',
-        dueDate: d,
-        formattedDate: fmt(d),
-        type: 'project' as const,
-        projectId: p.id,
-        label,
-        urgency,
-      }
-    })
-
-  return [...taskItems, ...projItems]
     .sort((a, b) => a.dueDate.getTime() - b.dueDate.getTime())
     .slice(0, 20)
 })
@@ -224,6 +218,21 @@ const upcomingDeadlines = computed(() => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.deadline-assignee {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 1px 7px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .deadline-date {

@@ -28,6 +28,20 @@ class TaskService:
         )
         return result.unique().scalars().first()
 
+    async def list_by_workspace(
+        self, workspace_id: int, status: str | None = None, skip: int = 0, limit: int = 200
+    ) -> list[models.Task]:
+        q = (
+            select(models.Task)
+            .join(models.Project, models.Task.project_id == models.Project.id)
+            .options(joinedload(models.Task.assignee))
+            .where(models.Project.workspace_id == workspace_id)
+        )
+        if status:
+            q = q.where(models.Task.status == status)
+        result = await self.db.execute(q.offset(skip).limit(limit))
+        return list(result.unique().scalars().all())
+
     async def list_by_project(
         self, project_id: int, skip: int = 0, limit: int = 100
     ) -> list[models.Task]:

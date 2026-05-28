@@ -13,16 +13,6 @@
           </button>
 
           <div class="project-head-row">
-            <!-- Status accent pill -->
-            <div class="proj-status-icon" :class="`icon-${project.status}`">
-              <svg viewBox="0 0 20 20" fill="none" width="18" height="18">
-                <rect x="3" y="3" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
-                <rect x="11" y="3" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
-                <rect x="3" y="11" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
-                <rect x="11" y="11" width="6" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
-              </svg>
-            </div>
-
             <div class="project-title-block">
               <div class="project-title-row">
                 <h2>{{ project.title }}</h2>
@@ -40,6 +30,19 @@
                   </svg>
                   Due {{ formatDate(project.due_date) }}
                 </span>
+                <span class="meta-chip task-stat-chip">
+                  <svg viewBox="0 0 12 12" fill="none" width="10" height="10">
+                    <rect x="1" y="1" width="10" height="10" rx="1.5" stroke="currentColor" stroke-width="1.2"/>
+                    <path d="M4 6l2 2 2-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  {{ taskStats.total }} tasks
+                </span>
+                <span class="meta-chip task-stat-chip task-stat-done">
+                  {{ taskStats.done }} done
+                </span>
+                <span v-if="taskStats.inProgress > 0" class="meta-chip task-stat-chip task-stat-progress">
+                  {{ taskStats.inProgress }} in progress
+                </span>
                 <span v-if="project.ai_summary" class="meta-chip ai-chip">
                   <svg viewBox="0 0 14 14" fill="none" width="10" height="10">
                     <circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.2"/>
@@ -47,6 +50,16 @@
                   </svg>
                   {{ project.ai_summary }}
                 </span>
+              </div>
+              <!-- Task progress bar -->
+              <div v-if="taskStats.total > 0" class="progress-bar-wrap">
+                <div class="progress-bar-track">
+                  <div
+                    class="progress-bar-fill"
+                    :style="{ width: taskStats.pct + '%' }"
+                  ></div>
+                </div>
+                <span class="progress-pct">{{ taskStats.pct }}%</span>
               </div>
             </div>
           </div>
@@ -82,6 +95,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useProjectStore } from '../stores/projects'
 import { useMembersStore } from '../stores/members'
 import { useAuthStore } from '../stores/auth'
+import { useTaskStore } from '../stores/tasks'
 import { useConfirm } from '../composables/useConfirm'
 import type { Project, ProjectStatus } from '../types'
 import TaskBoard from '../components/task/TaskBoard.vue'
@@ -99,7 +113,17 @@ const router = useRouter()
 const projectStore = useProjectStore()
 const membersStore = useMembersStore()
 const auth = useAuthStore()
+const taskStore = useTaskStore()
 const { confirm } = useConfirm()
+
+const taskStats = computed(() => {
+  const tasks = taskStore.tasks
+  const total = tasks.length
+  const done = tasks.filter((t) => t.status === 'completed').length
+  const inProgress = tasks.filter((t) => t.status === 'in_progress').length
+  const pct = total ? Math.round((done / total) * 100) : 0
+  return { total, done, inProgress, pct }
+})
 
 const showForm = ref(false)
 const editingProject = ref<Project | null>(null)
@@ -207,24 +231,7 @@ async function handleDelete() {
 .project-head-row {
   display: flex;
   align-items: flex-start;
-  gap: 18px;
 }
-
-/* Status icon box */
-.proj-status-icon {
-  width: 52px;
-  height: 52px;
-  border-radius: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-.icon-planning  { background: rgba(168,160,248,0.18); color: #5248C8; }
-.icon-active    { background: rgba(0,186,124,0.16);   color: #00845A; }
-.icon-on_hold   { background: rgba(255,179,0,0.16);   color: #A87800; }
-.icon-completed { background: rgba(104,204,128,0.18); color: #1A5820; }
-.icon-archived  { background: rgba(139,152,165,0.15); color: #536471; }
 
 .project-title-block { flex: 1; min-width: 0; }
 
@@ -303,5 +310,72 @@ async function handleDelete() {
   color: var(--primary);
   background: var(--primary-light);
   border-color: var(--primary-border);
+}
+
+/* Task stat chips */
+.task-stat-chip {
+  font-weight: 600;
+}
+
+.task-stat-done {
+  background: #ECFDF5;
+  color: #047857;
+  border-color: #A7F3D0;
+}
+
+.task-stat-progress {
+  background: #EBF0FF;
+  color: #1D4ED8;
+  border-color: rgba(0, 82, 255, 0.2);
+}
+
+/* Progress bar */
+.progress-bar-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.progress-bar-track {
+  flex: 1;
+  height: 4px;
+  background: var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #10B981, #059669);
+  border-radius: 999px;
+  transition: width 0.4s ease;
+  min-width: 2px;
+}
+
+.progress-pct {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  min-width: 34px;
+  text-align: right;
+}
+
+/* Dark mode overrides */
+:global([data-theme="dark"]) .task-stat-done {
+  background: rgba(0, 186, 124, 0.15);
+  color: #00BA7C;
+  border-color: rgba(0, 186, 124, 0.3);
+}
+
+:global([data-theme="dark"]) .task-stat-progress {
+  background: rgba(91, 155, 255, 0.15);
+  color: #5B9BFF;
+  border-color: rgba(91, 155, 255, 0.3);
+}
+
+:global([data-theme="dark"]) .progress-bar-track {
+  background: #38444D;
 }
 </style>

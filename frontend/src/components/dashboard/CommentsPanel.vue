@@ -2,7 +2,7 @@
   <div class="panel">
     <div class="panel-hdr">
       <span class="panel-title">Comments</span>
-      <span class="comments-count-badge" v-if="topLevelComments.length">{{ commentStore.all.length }}</span>
+      <span class="comments-count-badge" v-if="topLevelComments.length">{{ topLevelComments.length }}</span>
     </div>
 
     <div v-if="topLevelComments.length === 0" class="comments-empty">
@@ -173,7 +173,7 @@ const expandedReplies = ref<Set<number>>(new Set())
 
 const topLevelComments = computed(() =>
   [...commentStore.all]
-    .filter(c => c.parent_id === null)
+    .filter(c => c.parent_id === null && c.user_id === auth.user?.id)
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     .slice(0, 8)
 )

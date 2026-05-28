@@ -1,20 +1,19 @@
 <template>
   <div class="task-board">
-    <div class="section-header">
-      <h2>Board</h2>
-      <button class="btn btn-sm btn-primary" @click="showModal = true">
-        <svg viewBox="0 0 16 16" fill="none" width="13" height="13">
-          <path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-        </svg>
+    <div class="board-topbar">
+      <div class="board-topbar-left">
+        <font-awesome-icon :icon="['fas', 'table-columns']" class="board-icon" />
+        <span class="board-label">Board</span>
+        <span class="board-total">{{ taskStore.tasks.length }}</span>
+      </div>
+      <button class="new-task-btn" :style="{ background: btnBg, color: btnColor }" @click="showModal = true">
+        <font-awesome-icon :icon="['fas', 'plus']" />
         New Task
       </button>
     </div>
 
     <div v-if="dropError" class="drop-error">
-      <svg viewBox="0 0 16 16" fill="none" width="13" height="13">
-        <circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.4"/>
-        <path d="M8 5v4M8 11v.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
-      </svg>
+      <font-awesome-icon :icon="['fas', 'circle-exclamation']" />
       {{ dropError }}
     </div>
 
@@ -32,8 +31,8 @@
           <div class="column-header-left">
             <span class="col-dot"></span>
             <h3>{{ col.label }}</h3>
+            <span class="count">{{ grouped[col.key]?.length || 0 }}</span>
           </div>
-          <span class="count">{{ grouped[col.key]?.length || 0 }}</span>
         </div>
         <div class="column-body">
           <TaskCard
@@ -41,15 +40,14 @@
             :key="task.id"
             :task="task"
             :can-drag="canDragTask(task)"
+            @select="selectedTask = $event"
             @dragstart="onDragStart"
           />
-          <div v-if="!grouped[col.key]?.length" class="empty-col">
-            <svg viewBox="0 0 20 20" fill="none" width="18" height="18">
-              <path d="M10 5v10M5 10h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-            </svg>
-            <span>Drop tasks here</span>
-          </div>
         </div>
+        <button class="col-add-btn" @click="showModal = true">
+          <font-awesome-icon :icon="['fas', 'plus']" />
+          New
+        </button>
       </div>
     </div>
     <TaskModal
@@ -57,6 +55,15 @@
       :project-id="projectId"
       @close="showModal = false"
       @saved="onTaskCreated"
+    />
+    <TaskDrawer
+      v-if="selectedTask"
+      :task="selectedTask"
+      :workspace-id="workspaceId ?? null"
+      :project-id="projectId"
+      @close="selectedTask = null"
+      @deleted="selectedTask = null; loadTasks()"
+      @updated="onTaskUpdated"
     />
   </div>
 </template>
@@ -66,10 +73,12 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useTaskStore } from '../../stores/tasks'
 import { useMembersStore } from '../../stores/members'
 import { useAuthStore } from '../../stores/auth'
+import { useTheme } from '../../composables/useTheme'
 import type { Task, TaskStatus } from '../../types'
 import { patch } from '../../stores/client'
 import TaskCard from './TaskCard.vue'
 import TaskModal from './TaskModal.vue'
+import TaskDrawer from './TaskDrawer.vue'
 import SkeletonBoard from '../common/SkeletonBoard.vue'
 
 const props = defineProps<{ projectId: number; workspaceId?: number }>()
@@ -77,11 +86,16 @@ const props = defineProps<{ projectId: number; workspaceId?: number }>()
 const taskStore = useTaskStore()
 const membersStore = useMembersStore()
 const auth = useAuthStore()
+const { isDark } = useTheme()
+
+const btnBg = computed(() => isDark.value ? '#F7F9F9' : '#1c1c1e')
+const btnColor = computed(() => isDark.value ? '#15202B' : '#ffffff')
 
 const showModal = ref(false)
 const loading = ref(false)
 const draggedId = ref<number | null>(null)
 const dropError = ref<string | null>(null)
+const selectedTask = ref<Task | null>(null)
 
 // Member-allowed forward transitions
 const MEMBER_ALLOWED: Record<string, Set<TaskStatus>> = {
@@ -188,11 +202,59 @@ async function onTaskCreated(data: Record<string, any>) {
   await taskStore.create(data as any)
   showModal.value = false
 }
+
+function onTaskUpdated(updated: Task) {
+  const idx = taskStore.tasks.findIndex((t) => t.id === updated.id)
+  if (idx !== -1) taskStore.tasks[idx] = updated
+  selectedTask.value = updated
+}
 </script>
 
 <style scoped>
 .task-board { padding: 0; }
 
+/* ── Board topbar ── */
+.board-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+.board-topbar-left { display: flex; align-items: center; gap: 8px; }
+.board-icon { color: var(--text-muted); font-size: 13px; }
+.board-label { font-size: 14px; font-weight: 700; color: var(--text); letter-spacing: -0.2px; }
+.board-total {
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 8px;
+  border-radius: 999px;
+  line-height: 1.7;
+}
+
+.new-task-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 18px;
+  background: #1c1c1e;
+  color: #ffffff;
+  border: none;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: opacity 0.15s, transform 0.1s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.new-task-btn:hover { opacity: 0.82; }
+.new-task-btn:active { transform: scale(0.97); }
+
+/* ── Drop error ── */
 .drop-error {
   display: flex;
   align-items: center;
@@ -206,119 +268,142 @@ async function onTaskCreated(data: Record<string, any>) {
   font-weight: 500;
   margin-bottom: 12px;
 }
-
 :global([data-theme="dark"]) .drop-error {
-  background: rgba(190, 18, 60, 0.15);
-  border-color: rgba(254, 205, 211, 0.3);
+  background: rgba(190,18,60,0.15);
+  border-color: rgba(254,205,211,0.3);
   color: #FDA4AF;
 }
 
+/* ── Board columns layout ── */
 .board-columns {
   display: flex;
   gap: 10px;
   overflow-x: auto;
-  padding-bottom: 16px;
+  padding-bottom: 20px;
   align-items: flex-start;
 }
 
+/* ── Column ── */
 .board-column {
-  flex: 0 0 268px;
-  background: #F0F2F5;
-  border-radius: var(--radius);
-  border: 1px solid var(--border);
+  flex: 0 0 245px;
+  background: #ffffff;
+  border-radius: 10px;
+  border: 1px solid #E8EAED;
   display: flex;
   flex-direction: column;
-  max-height: calc(100vh - 280px);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
+  max-height: calc(100vh - 270px);
   transition: border-color 0.15s, box-shadow 0.15s;
+  overflow: hidden;
 }
 
 .col-drop-target {
-  border-color: var(--primary) !important;
-  box-shadow: 0 0 0 2px var(--primary-muted), inset 0 1px 0 rgba(255,255,255,0.6) !important;
+  border-color: #3B82F6 !important;
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.15) !important;
 }
+.col-drop-blocked { opacity: 0.4; }
 
-.col-drop-blocked {
-  opacity: 0.5;
-}
-
+/* ── Column header ── */
 .column-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 11px 12px 10px;
-  border-bottom: 1px solid var(--border);
-  background: rgba(255,255,255,0.7);
-  border-radius: var(--radius) var(--radius) 0 0;
-  backdrop-filter: blur(4px);
+  padding: 14px 14px 10px;
+  flex-shrink: 0;
 }
-
 .column-header-left {
   display: flex;
   align-items: center;
   gap: 7px;
 }
 
+/* Dot — filled circle, no ring/glow */
 .col-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
   flex-shrink: 0;
 }
+.col-todo        .col-dot { background: #94A3B8; }
+.col-in_progress .col-dot { background: #3B82F6; }
+.col-review      .col-dot { background: #F59E0B; }
+.col-blocked     .col-dot { background: #EF4444; }
+.col-completed   .col-dot { background: #10B981; }
 
-.col-todo        .col-dot { background: #94A3B8; box-shadow: 0 0 0 2px #E2E8F0; }
-.col-in_progress .col-dot { background: #0052FF; box-shadow: 0 0 0 2px #DBEAFE; }
-.col-review      .col-dot { background: #F59E0B; box-shadow: 0 0 0 2px #FEF3C7; }
-.col-blocked     .col-dot { background: #EF4444; box-shadow: 0 0 0 2px #FEE2E2; }
-.col-completed   .col-dot { background: #10B981; box-shadow: 0 0 0 2px #D1FAE5; }
-
+/* Column name — colored to match dot, normal case, semi-bold */
 .column-header h3 {
-  font-size: 11.5px;
-  font-weight: 700;
-  letter-spacing: 0.4px;
-  text-transform: uppercase;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
 }
-
 .col-todo        .column-header h3 { color: #64748B; }
-.col-in_progress .column-header h3 { color: #1D4ED8; }
-.col-review      .column-header h3 { color: #92400E; }
-.col-blocked     .column-header h3 { color: #B91C1C; }
-.col-completed   .column-header h3 { color: #065F46; }
+.col-in_progress .column-header h3 { color: #3B82F6; }
+.col-review      .column-header h3 { color: #F59E0B; }
+.col-blocked     .column-header h3 { color: #EF4444; }
+.col-completed   .column-header h3 { color: #10B981; }
 
+/* Count — plain gray number, no badge */
 .count {
-  background: rgba(255,255,255,0.9);
-  color: var(--text-muted);
-  font-size: 11px;
-  font-weight: 700;
-  padding: 1px 7px;
-  border-radius: var(--radius-full);
-  border: 1px solid var(--border);
-  min-width: 22px;
-  text-align: center;
-  line-height: 1.7;
+  font-size: 12px;
+  font-weight: 500;
+  color: #9CA3AF;
+  line-height: 1;
 }
 
+/* ── Column body ── */
 .column-body {
-  padding: 8px;
+  padding: 0 8px 6px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   overflow-y: auto;
   flex: 1;
-  min-height: 80px;
+  min-height: 40px;
 }
 
-.empty-col {
+/* ── + New button ── */
+.col-add-btn {
   display: flex;
-  flex-direction: column;
   align-items: center;
   gap: 6px;
-  padding: 28px 0;
-  color: var(--text-light);
-  opacity: 0.6;
+  width: 100%;
+  padding: 10px 14px;
+  border: none;
+  border-top: 1px solid #F3F4F6;
+  background: transparent;
+  color: #9CA3AF;
+  font-size: 12.5px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: color 0.12s, background 0.12s;
+  flex-shrink: 0;
+}
+.col-add-btn:hover {
+  color: #6B7280;
+  background: #F9FAFB;
 }
 
-.empty-col span {
-  font-size: 11.5px;
+/* ── Dark mode ── */
+:global([data-theme="dark"]) .board-column {
+  background: #1E2732;
+  border-color: #2F3E4E;
 }
+:global([data-theme="dark"]) .col-add-btn {
+  border-top-color: #2F3E4E;
+  color: #536471;
+}
+:global([data-theme="dark"]) .col-add-btn:hover {
+  background: rgba(255,255,255,0.04);
+  color: #8B98A5;
+}
+:global([data-theme="dark"]) .count { color: #536471; }
+
+:global([data-theme="dark"]) .col-todo        .column-header h3 { color: #8B98A5; }
+:global([data-theme="dark"]) .col-in_progress .column-header h3 { color: #5B9BFF; }
+:global([data-theme="dark"]) .col-in_progress .col-dot          { background: #5B9BFF; }
+:global([data-theme="dark"]) .col-review      .column-header h3 { color: #FFB300; }
+:global([data-theme="dark"]) .col-review      .col-dot          { background: #FFB300; }
+:global([data-theme="dark"]) .col-blocked     .column-header h3 { color: #FF6B78; }
+:global([data-theme="dark"]) .col-blocked     .col-dot          { background: #FF6B78; }
+:global([data-theme="dark"]) .col-completed   .column-header h3 { color: #00BA7C; }
+:global([data-theme="dark"]) .col-completed   .col-dot          { background: #00BA7C; }
+:global([data-theme="dark"]) .col-todo        .col-dot          { background: #8B98A5; }
 </style>

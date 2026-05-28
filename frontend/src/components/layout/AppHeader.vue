@@ -17,6 +17,7 @@
       >
         <font-awesome-icon :icon="item.icon" class="nav-pill-icon" />
         {{ item.label }}
+        <span v-if="item.count" class="nav-pill-dot"></span>
       </router-link>
     </nav>
 
@@ -51,23 +52,50 @@
 </template>
 
 <script setup lang="ts">
+import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
+import { useWorkspaceStore } from '../../stores/workspaces'
+import { useTaskStore } from '../../stores/tasks'
+import { useMembersStore } from '../../stores/members'
 
 const auth = useAuthStore()
 const route = useRoute()
+const workspaceStore = useWorkspaceStore()
+const taskStore = useTaskStore()
+const membersStore = useMembersStore()
 
-const navItems = [
-  { label: 'Home',       to: '/',          icon: ['fas', 'house'],       activeOn: ['/']            },
-  { label: 'Projects',   to: '/projects',  icon: ['fas', 'folder-open'], activeOn: ['/projects']    },
-  { label: 'Workspaces', to: '/workspaces',icon: ['fas', 'layer-group'], activeOn: ['/workspaces']  },
-  { label: 'Settings',   to: '/settings',  icon: ['fas', 'gear'],        activeOn: ['/settings']    },
-]
+const reviewCount = ref(0)
+
+const navItems = computed(() => [
+  { label: 'Home',       to: '/',           icon: ['fas', 'house'],              activeOn: ['/']           },
+  { label: 'Reviews',    to: '/review',     icon: ['fas', 'code-pull-request'],  activeOn: ['/review'],    count: reviewCount.value || undefined },
+  { label: 'Workspaces', to: '/workspaces', icon: ['fas', 'layer-group'],        activeOn: ['/workspaces'] },
+  { label: 'Settings',   to: '/settings',   icon: ['fas', 'gear'],               activeOn: ['/settings']   },
+])
 
 function isActive(item: { to: string; activeOn: string[] }) {
   if (item.to === '/') return route.path === '/'
   return item.activeOn.some(p => route.path.startsWith(p))
 }
+
+async function loadReviewCount() {
+  try {
+    if (workspaceStore.workspaces.length === 0) await workspaceStore.fetchAll()
+    const wsId = workspaceStore.workspaces[0]?.id
+    if (!wsId) return
+
+    await membersStore.fetchMyMembership(wsId)
+    const tasks = await taskStore.fetchReviewTasks(wsId)
+    const role = membersStore.myMembership?.role
+    const isAdminOrOwner = role === 'admin' || role === 'owner'
+    reviewCount.value = isAdminOrOwner
+      ? tasks.length
+      : tasks.filter(t => t.assigned_to_id === auth.user?.id).length
+  } catch { /* non-critical */ }
+}
+
+onMounted(loadReviewCount)
 </script>
 
 <style scoped>
@@ -159,6 +187,14 @@ function isActive(item: { to: string; activeOn: string[] }) {
 
 .nav-pill.active .nav-pill-icon {
   opacity: 1;
+}
+
+.nav-pill-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #EF4444;
+  flex-shrink: 0;
 }
 
 /* ── Right ──────────────────────── */

@@ -8,6 +8,7 @@ from typing import Annotated
 from fastapi import Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload
 
 import models
 from database import get_db
@@ -250,8 +251,15 @@ class CollaborationService:
 
         target.role = MemberRole(new_role)
         await self.db.commit()
-        await self.db.refresh(target)
-        return target
+        result = await self.db.execute(
+            select(models.WorkspaceMember)
+            .options(joinedload(models.WorkspaceMember.user))
+            .where(
+                models.WorkspaceMember.workspace_id == workspace_id,
+                models.WorkspaceMember.user_id == user_id,
+            )
+        )
+        return result.unique().scalars().first()
 
     async def add_owner(
         self, workspace_id: int, user_id: int
