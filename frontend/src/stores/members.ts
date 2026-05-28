@@ -1,28 +1,20 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import type { WorkspaceMember, Invitation, MemberRole } from '../types'
-import { useAuthStore } from './auth'
+import type { WorkspaceMember, Invitation, InvitationInfo, MyMembershipResponse, AcceptInviteResponse, MemberRole } from '../types'
+import { get, post, patch, del } from './client'
 
 export const useMembersStore = defineStore('members', () => {
   const members = ref<WorkspaceMember[]>([])
   const invitations = ref<Invitation[]>([])
+  const myMembership = ref<MyMembershipResponse | null>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)
-
-  function authHeaders() {
-    const auth = useAuthStore()
-    return { Authorization: `Bearer ${auth.token}` }
-  }
 
   async function fetchMembers(workspaceId: number) {
     loading.value = true
     error.value = null
     try {
-      const res = await fetch(`/api/workspaces/${workspaceId}/members`, {
-        headers: authHeaders(),
-      })
-      if (!res.ok) throw new Error(await res.text())
-      members.value = await res.json()
+      members.value = await get<WorkspaceMember[]>(`/workspaces/${workspaceId}/members`)
     } catch (e) {
       error.value = (e as Error).message
     } finally {
@@ -34,11 +26,8 @@ export const useMembersStore = defineStore('members', () => {
     loading.value = true
     error.value = null
     try {
-      const res = await fetch(`/api/workspaces/${workspaceId}/members/invitations`, {
-        headers: authHeaders(),
-      })
-      if (!res.ok) throw new Error(await res.text())
-      invitations.value = await res.json()
+      const items = await get<Invitation[]>(`/workspaces/${workspaceId}/members/invitations`)
+      invitations.value = items
     } catch (e) {
       error.value = (e as Error).message
     } finally {
@@ -48,98 +37,89 @@ export const useMembersStore = defineStore('members', () => {
 
   async function invite(workspaceId: number, email: string, role: MemberRole) {
     error.value = null
-    const res = await fetch(`/api/workspaces/${workspaceId}/members/invite`, {
-      method: 'POST',
-      headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, role }),
-    })
-    if (!res.ok) {
-      const msg = await res.text()
-      error.value = msg
-      throw new Error(msg)
+    try {
+      const inv = await post<Invitation>(`/workspaces/${workspaceId}/members/invite`, { email, role })
+      invitations.value.push(inv)
+      return inv
+    } catch (e) {
+      error.value = (e as Error).message
+      throw e
     }
-    const inv: Invitation = await res.json()
-    invitations.value.push(inv)
-    return inv
   }
 
   async function removeMember(workspaceId: number, userId: number) {
     error.value = null
-    const res = await fetch(`/api/workspaces/${workspaceId}/members/${userId}`, {
-      method: 'DELETE',
-      headers: authHeaders(),
-    })
-    if (!res.ok) {
-      const msg = await res.text()
-      error.value = msg
-      throw new Error(msg)
+    try {
+      await del(`/workspaces/${workspaceId}/members/${userId}`)
+      members.value = members.value.filter((m) => m.user_id !== userId)
+    } catch (e) {
+      error.value = (e as Error).message
+      throw e
     }
-    members.value = members.value.filter((m) => m.user_id !== userId)
   }
 
   async function updateRole(workspaceId: number, userId: number, role: MemberRole) {
     error.value = null
-    const res = await fetch(`/api/workspaces/${workspaceId}/members/${userId}/role`, {
-      method: 'PATCH',
-      headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ role }),
-    })
-    if (!res.ok) {
-      const msg = await res.text()
-      error.value = msg
-      throw new Error(msg)
+    try {
+      const updated = await patch<WorkspaceMember>(`/workspaces/${workspaceId}/members/${userId}/role`, { role })
+      const idx = members.value.findIndex((m) => m.user_id === userId)
+      if (idx !== -1) members.value[idx] = updated
+    } catch (e) {
+      error.value = (e as Error).message
+      throw e
     }
-    const updated: WorkspaceMember = await res.json()
-    const idx = members.value.findIndex((m) => m.user_id === userId)
-    if (idx !== -1) members.value[idx] = updated
   }
 
   async function revokeInvitation(workspaceId: number, invitationId: number) {
     error.value = null
-    const res = await fetch(`/api/workspaces/${workspaceId}/members/invitations/${invitationId}`, {
-      method: 'DELETE',
-      headers: authHeaders(),
-    })
-    if (!res.ok) {
-      const msg = await res.text()
-      error.value = msg
-      throw new Error(msg)
+    try {
+      await del(`/workspaces/${workspaceId}/members/invitations/${invitationId}`)
+      invitations.value = invitations.value.filter((i) => i.id !== invitationId)
+    } catch (e) {
+      error.value = (e as Error).message
+      throw e
     }
-    invitations.value = invitations.value.filter((i) => i.id !== invitationId)
+  }
+
+  async function fetchMyMembership(workspaceId: number) {
+    try {
+      myMembership.value = await get<MyMembershipResponse>(`/workspaces/${workspaceId}/members/me`)
+      return myMembership.value
+    } catch {
+      myMembership.value = null
+      return null
+    }
   }
 
   async function acceptInvite(token: string) {
     error.value = null
-    const res = await fetch(`/api/invitations/${token}/accept`, {
-      method: 'POST',
-      headers: authHeaders(),
-    })
-    if (!res.ok) {
-      const msg = await res.text()
-      error.value = msg
-      throw new Error(msg)
+    try {
+      const res = await post<AcceptInviteResponse>(`/invitations/${token}/accept`)
+      return res
+    } catch (e) {
+      error.value = (e as Error).message
+      throw e
     }
-    return await res.json()
   }
 
   async function getInviteInfo(token: string) {
-    error.value = null
-    const res = await fetch(`/api/invitations/${token}`)
-    if (!res.ok) {
-      const msg = await res.text()
-      error.value = msg
-      throw new Error(msg)
+    try {
+      return await get<InvitationInfo>(`/invitations/${token}`)
+    } catch (e) {
+      error.value = (e as Error).message
+      throw e
     }
-    return (await res.json()) as Invitation
   }
 
   return {
     members,
     invitations,
+    myMembership,
     loading,
     error,
     fetchMembers,
     fetchInvitations,
+    fetchMyMembership,
     invite,
     removeMember,
     updateRole,

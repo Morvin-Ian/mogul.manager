@@ -14,6 +14,7 @@ from schemas.workspace.collaboration import (
     InvitationResponse,
     InviteRequest,
     MemberResponse,
+    MyMembershipResponse,
     RoleUpdateRequest,
 )
 from services.auth import CurrentUser
@@ -39,6 +40,28 @@ async def _get_workspace_or_404(
             status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found"
         )
     return workspace
+
+
+@router.get("/me", response_model=MyMembershipResponse)
+async def get_my_membership(
+    workspace_id: int,
+    current_user: CurrentUser,
+    collab: Annotated[CollaborationService, Depends()],
+    ws_service: Annotated[WorkspaceService, Depends()],
+):
+    await _get_workspace_or_404(workspace_id, ws_service)
+    member = await collab.get_member(workspace_id, current_user.id)
+    if not member:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are not a member of this workspace",
+        )
+    return MyMembershipResponse(
+        workspace_id=member.workspace_id,
+        user_id=member.user_id,
+        role=member.role.value,
+        joined_at=member.joined_at,
+    )
 
 
 @router.get("", response_model=list[MemberResponse])

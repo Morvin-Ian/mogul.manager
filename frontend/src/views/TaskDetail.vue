@@ -14,13 +14,13 @@
           <div class="task-title-row">
             <h2>{{ task.title }}</h2>
             <div class="header-actions">
-              <button class="btn btn-sm" @click="editTask">
+              <button v-if="canEditTask" class="btn btn-sm" @click="editTask">
                 <svg viewBox="0 0 14 14" fill="none" width="12" height="12">
                   <path d="M9.5 2.5l2 2L5 11H3v-2l6.5-6.5zM8.5 3.5l2 2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
                 Edit
               </button>
-              <button class="btn btn-sm btn-danger" @click="handleDelete">Delete</button>
+              <button v-if="isAdmin" class="btn btn-sm btn-danger" @click="handleDelete">Delete</button>
             </div>
           </div>
 
@@ -65,7 +65,13 @@
       <!-- Status update -->
       <div class="task-section">
         <h3 class="section-label">Status</h3>
-        <StatusUpdate :task="task" @updated="onStatusUpdated" />
+        <StatusUpdate
+          :task="task"
+          :user-role="membership?.role ?? null"
+          :assigned-to-id="task.assigned_to_id"
+          :current-user-id="auth.user?.id ?? null"
+          @updated="onStatusUpdated"
+        />
       </div>
 
       <!-- Comments -->
@@ -130,7 +136,10 @@ import { ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useTaskStore } from '../stores/tasks'
 import { useAuthStore } from '../stores/auth'
+import { useMembersStore } from '../stores/members'
+import { useConfirm } from '../composables/useConfirm'
 import type { Task, Comment } from '../types'
+import { get } from '../stores/client'
 import TaskModal from '../components/task/TaskModal.vue'
 import StatusUpdate from '../components/task/StatusUpdate.vue'
 import Loading from '../components/common/Loading.vue'
@@ -139,6 +148,8 @@ const route = useRoute()
 const router = useRouter()
 const taskStore = useTaskStore()
 const auth = useAuthStore()
+const membersStore = useMembersStore()
+const { confirm } = useConfirm()
 
 const showForm = ref(false)
 const editingTask = ref<Task | null>(null)
@@ -147,6 +158,10 @@ const newComment = ref('')
 
 const taskId = computed(() => Number(route.params.id))
 const task = computed(() => taskStore.current)
+
+const membership = computed(() => membersStore.myMembership)
+const isAdmin = computed(() => membership.value?.role === 'admin' || membership.value?.role === 'owner')
+const canEditTask = computed(() => isAdmin.value || task.value?.assigned_to_id === auth.user?.id)
 
 const priorityLabel = computed(() => {
   const labels: Record<number, string> = { 1: 'Low', 2: 'Medium', 3: 'High', 4: 'Urgent' }
@@ -162,6 +177,10 @@ watch(taskId, async (id) => {
     try {
       await taskStore.fetchOne(id)
       comments.value = await taskStore.fetchComments(id)
+      if (taskStore.current) {
+        const project = await get<{ workspace_id: number }>(`/projects/${taskStore.current.project_id}`)
+        await membersStore.fetchMyMembership(project.workspace_id)
+      }
     } catch {
       router.push('/')
     }
@@ -189,7 +208,14 @@ async function onSave(data: Record<string, any>) {
 
 async function handleDelete() {
   if (!task.value) return
-  if (!confirm('Delete this task?')) return
+  const ok = await confirm({
+    title: 'Delete task?',
+    message: `"${task.value.title}" will be permanently removed along with all its comments.`,
+    confirmLabel: 'Yes, delete task',
+    cancelLabel: 'Keep it',
+    danger: true,
+  })
+  if (!ok) return
   const pid = task.value.project_id
   await taskStore.remove(taskId.value)
   router.push(`/projects/${pid}`)
@@ -203,7 +229,13 @@ async function addComment() {
 }
 
 async function handleDeleteComment(id: number) {
-  if (!confirm('Delete this comment?')) return
+  const ok = await confirm({
+    title: 'Delete comment?',
+    message: 'This comment will be permanently deleted.',
+    confirmLabel: 'Delete comment',
+    danger: true,
+  })
+  if (!ok) return
   await taskStore.deleteComment(id)
   comments.value = comments.value.filter((c) => c.id !== id)
 }

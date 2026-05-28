@@ -33,6 +33,7 @@ class ProjectRead(ProjectBase):
 
     id: int
     workspace_id: int
+    created_by_id: int | None
     ai_summary: str | None
     completed_at: datetime | None
     is_archived: bool

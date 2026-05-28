@@ -53,17 +53,17 @@
         </div>
 
         <div class="page-actions">
-          <button class="btn btn-sm" @click="editProject">
+          <button v-if="canEdit" class="btn btn-sm" @click="editProject">
             <svg viewBox="0 0 14 14" fill="none" width="12" height="12">
               <path d="M9.5 2.5l2 2L5 11H3v-2l6.5-6.5zM8.5 3.5l2 2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
             Edit
           </button>
-          <button class="btn btn-sm btn-danger" @click="handleDelete">Delete</button>
+          <button v-if="isAdmin" class="btn btn-sm btn-danger" @click="handleDelete">Delete</button>
         </div>
       </div>
 
-      <TaskBoard :project-id="project.id" />
+      <TaskBoard :project-id="project.id" :workspace-id="project.workspace_id" />
 
       <ProjectForm
         v-if="showForm"
@@ -80,6 +80,9 @@
 import { ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useProjectStore } from '../stores/projects'
+import { useMembersStore } from '../stores/members'
+import { useAuthStore } from '../stores/auth'
+import { useConfirm } from '../composables/useConfirm'
 import type { Project, ProjectStatus } from '../types'
 import TaskBoard from '../components/task/TaskBoard.vue'
 import ProjectForm from '../components/project/ProjectForm.vue'
@@ -94,11 +97,17 @@ function statusLabel(s: ProjectStatus) { return STATUS_LABELS[s] ?? s }
 const route = useRoute()
 const router = useRouter()
 const projectStore = useProjectStore()
+const membersStore = useMembersStore()
+const auth = useAuthStore()
+const { confirm } = useConfirm()
 
 const showForm = ref(false)
 const editingProject = ref<Project | null>(null)
 const projectId = computed(() => Number(route.params.id))
 const project = computed(() => projectStore.current)
+const membership = computed(() => membersStore.myMembership)
+const isAdmin = computed(() => membership.value?.role === 'admin' || membership.value?.role === 'owner')
+const canEdit = computed(() => isAdmin.value || project.value?.created_by_id === auth.user?.id)
 
 function formatDate(d: string) {
   return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
@@ -108,6 +117,9 @@ watch(projectId, async (id) => {
   if (id) {
     try {
       await projectStore.fetchOne(id)
+      if (projectStore.current) {
+        await membersStore.fetchMyMembership(projectStore.current.workspace_id)
+      }
     } catch {
       router.push('/')
     }
@@ -135,7 +147,19 @@ async function onSave(data: Record<string, any>) {
 
 async function handleDelete() {
   if (!project.value) return
-  if (!confirm('Delete this project and all its tasks?')) return
+  const ok = await confirm({
+    title: 'Delete project?',
+    message: `"${project.value.title}" will be permanently removed.`,
+    consequences: [
+      'All tasks inside this project will be deleted',
+      'All comments and attachments will be lost',
+      'This action cannot be undone',
+    ],
+    confirmLabel: 'Yes, delete project',
+    cancelLabel: 'Keep it',
+    danger: true,
+  })
+  if (!ok) return
   const wsId = project.value.workspace_id
   await projectStore.remove(projectId.value)
   router.push(`/workspaces/${wsId}`)

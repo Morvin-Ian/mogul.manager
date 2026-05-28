@@ -12,15 +12,20 @@ class RoleUpdateRequest(BaseModel):
     role: str
 
 
+class UserBasic(BaseModel):
+    id: int
+    username: str | None = None
+    email: str | None = None
+    profile_path: str | None = None
+
+
 class MemberResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
     workspace_id: int
     user_id: int
-    username: str | None = None
-    email: str | None = None
-    profile_path: str | None = None
+    user: UserBasic
     role: str
     joined_at: datetime
     last_seen_at: datetime | None = None
@@ -51,6 +56,13 @@ class AcceptResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    workspace_id: int
+    user_id: int
+    role: str
+    joined_at: datetime
+
+
+class MyMembershipResponse(BaseModel):
     workspace_id: int
     user_id: int
     role: str

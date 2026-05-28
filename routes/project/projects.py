@@ -1,14 +1,15 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import models
 from database import get_db
+from models.collaboration import MemberRole
 from schemas.project.projects import ProjectCreate, ProjectRead, ProjectUpdate
 from services.auth import CurrentUser
 from services.project.projects import ProjectService
+from services.workspace.collaboration import CollaborationService
 
 router = APIRouter(
     prefix="/api/projects",
@@ -16,23 +17,25 @@ router = APIRouter(
 )
 
 
-async def _verify_workspace_ownership(
-    workspace_id: int, user_id: int, db
-) -> models.Workspace:
-    result = await db.execute(
-        select(models.Workspace).where(models.Workspace.id == workspace_id)
-    )
-    workspace = result.scalars().first()
-    if not workspace:
+async def _require_workspace_member(
+    workspace_id: int,
+    current_user: models.User,
+    collab: CollaborationService,
+    min_role: str = "member",
+) -> models.WorkspaceMember:
+    member = await collab.require_access(workspace_id, current_user.id, min_role=min_role)
+    return member
+
+
+async def _get_project_or_404(
+    project_id: int, service: ProjectService
+) -> models.Project:
+    project = await service.get_by_id(project_id)
+    if not project:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
         )
-    if workspace.user_id != user_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to access this workspace",
-        )
-    return workspace
+    return project
 
 
 @router.post("", response_model=ProjectRead, status_code=status.HTTP_201_CREATED)
@@ -40,22 +43,24 @@ async def create_project(
     project: ProjectCreate,
     current_user: CurrentUser,
     service: Annotated[ProjectService, Depends()],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    collab: Annotated[CollaborationService, Depends()],
 ):
-    await _verify_workspace_ownership(project.workspace_id, current_user.id, db)
-    return await service.create(project.model_dump(exclude_unset=True))
+    await _require_workspace_member(project.workspace_id, current_user, collab, min_role="admin")
+    data = project.model_dump(exclude_unset=True)
+    data["created_by_id"] = current_user.id
+    return await service.create(data)
 
 
 @router.get("", response_model=list[ProjectRead])
 async def list_projects(
     current_user: CurrentUser,
     service: Annotated[ProjectService, Depends()],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    collab: Annotated[CollaborationService, Depends()],
     workspace_id: int = Query(...),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500),
 ):
-    await _verify_workspace_ownership(workspace_id, current_user.id, db)
+    await _require_workspace_member(workspace_id, current_user, collab, min_role="member")
     return await service.list_by_workspace(workspace_id, skip=skip, limit=limit)
 
 
@@ -64,14 +69,10 @@ async def get_project(
     project_id: int,
     current_user: CurrentUser,
     service: Annotated[ProjectService, Depends()],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    collab: Annotated[CollaborationService, Depends()],
 ):
-    project = await service.get_by_id(project_id)
-    if not project:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
-        )
-    await _verify_workspace_ownership(project.workspace_id, current_user.id, db)
+    project = await _get_project_or_404(project_id, service)
+    await _require_workspace_member(project.workspace_id, current_user, collab, min_role="member")
     return project
 
 
@@ -81,14 +82,18 @@ async def update_project(
     project_update: ProjectUpdate,
     current_user: CurrentUser,
     service: Annotated[ProjectService, Depends()],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    collab: Annotated[CollaborationService, Depends()],
 ):
-    project = await service.get_by_id(project_id)
-    if not project:
+    project = await _get_project_or_404(project_id, service)
+    member = await _require_workspace_member(
+        project.workspace_id, current_user, collab, min_role="member"
+    )
+    # Members can only edit if they created the project; admins/owners can edit any
+    if member.role == MemberRole.member and project.created_by_id != current_user.id:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the project creator or an admin can edit this project",
         )
-    await _verify_workspace_ownership(project.workspace_id, current_user.id, db)
     return await service.update(project, project_update.model_dump(exclude_unset=True))
 
 
@@ -97,12 +102,8 @@ async def delete_project(
     project_id: int,
     current_user: CurrentUser,
     service: Annotated[ProjectService, Depends()],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    collab: Annotated[CollaborationService, Depends()],
 ):
-    project = await service.get_by_id(project_id)
-    if not project:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
-        )
-    await _verify_workspace_ownership(project.workspace_id, current_user.id, db)
+    project = await _get_project_or_404(project_id, service)
+    await _require_workspace_member(project.workspace_id, current_user, collab, min_role="admin")
     await service.delete(project)

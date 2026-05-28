@@ -34,6 +34,15 @@ const routes: RouteRecordRaw[] = [
     meta: { guest: true },
   },
   {
+    path: '/invitations/:token',
+    name: 'InviteAccept',
+    component: () => import('../views/InviteAccept.vue'),
+  },
+  {
+    path: '/invite/:token',
+    redirect: (to) => ({ path: `/invitations/${to.params.token}` }),
+  },
+  {
     path: '/',
     component: () => import('../views/Dashboard.vue'),
     meta: { requiresAuth: true },
@@ -52,6 +61,16 @@ const routes: RouteRecordRaw[] = [
         path: 'workspaces/:id',
         name: 'WorkspaceDetail',
         component: () => import('../views/WorkspaceDetail.vue'),
+      },
+      {
+        path: 'team',
+        name: 'TeamHub',
+        component: () => import('../views/TeamHub.vue'),
+      },
+      {
+        path: 'team/:id',
+        name: 'TeamManagement',
+        component: () => import('../views/TeamManagement.vue'),
       },
       {
         path: 'projects/:id',

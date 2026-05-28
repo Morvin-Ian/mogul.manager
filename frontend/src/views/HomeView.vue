@@ -25,7 +25,7 @@
     <div class="dash-grid">
       <TasksPanel
         class="tasks-panel"
-        :tasks="allTasks"
+        :tasks="myTasks"
         :projects="allProjects"
         :loading="loading"
         :searchQuery="searchQuery"
@@ -64,11 +64,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useWorkspaceStore } from '../stores/workspaces'
 import { useProjectStore } from '../stores/projects'
 import { useTaskStore } from '../stores/tasks'
 import { useCommentStore } from '../stores/comments'
+import { useAuthStore } from '../stores/auth'
 import { get } from '../stores/client'
 import type { Task, Project, Workspace } from '../types'
 import ProjectForm from '../components/project/ProjectForm.vue'
@@ -84,6 +85,7 @@ const workspaceStore = useWorkspaceStore()
 const projectStore = useProjectStore()
 const taskStore = useTaskStore()
 const commentStore = useCommentStore()
+const auth = useAuthStore()
 
 const loading = ref(false)
 const searchQuery = ref('')
@@ -92,6 +94,13 @@ const showWorkspaceForm = ref(false)
 const editingWorkspace = ref<Workspace | null>(null)
 const allProjects = ref<Project[]>([])
 const allTasks = ref<Task[]>([])
+
+// Tasks panel: only show tasks assigned to me, or unassigned tasks (solo workspace)
+const myTasks = computed(() =>
+  allTasks.value.filter(t =>
+    t.assigned_to_id === auth.user?.id || t.assigned_to_id === null
+  )
+)
 
 async function loadAllData() {
   loading.value = true

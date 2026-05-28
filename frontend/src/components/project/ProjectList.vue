@@ -5,12 +5,19 @@
         <h2 class="section-title">Projects</h2>
         <p class="section-sub">{{ projects.length }} project{{ projects.length !== 1 ? 's' : '' }} in this workspace</p>
       </div>
-      <button class="new-project-btn" @click="showForm = true">
+      <button v-if="canCreateProject" class="new-project-btn" @click="showForm = true">
         <svg viewBox="0 0 16 16" fill="none" width="13" height="13">
           <path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
         </svg>
         New Project
       </button>
+      <span v-else class="member-hint">
+        <svg viewBox="0 0 14 14" fill="none" width="11" height="11">
+          <circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.3"/>
+          <path d="M7 6v4M7 4.5v.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        Only workspace admins can create projects
+      </span>
     </div>
 
     <div v-if="loading" class="sk-grid">
@@ -27,8 +34,9 @@
         </svg>
       </div>
       <h4>No projects yet</h4>
-      <p>Add your first project to start tracking work inside this workspace.</p>
-      <button class="new-project-btn" @click="showForm = true">Create project</button>
+      <p v-if="canCreateProject">Add your first project to start tracking work inside this workspace.</p>
+      <p v-else>The workspace admin hasn't created any projects yet.</p>
+      <button v-if="canCreateProject" class="new-project-btn" @click="showForm = true">Create project</button>
     </div>
 
     <div v-else class="project-grid">
@@ -86,6 +94,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useProjectStore } from '../../stores/projects'
+import { useMembersStore } from '../../stores/members'
 import type { ProjectStatus } from '../../types'
 import ProjectForm from './ProjectForm.vue'
 import SkeletonCard from '../common/SkeletonCard.vue'
@@ -93,13 +102,22 @@ import SkeletonCard from '../common/SkeletonCard.vue'
 const props = defineProps<{ workspaceId: number }>()
 
 const projectStore = useProjectStore()
+const membersStore = useMembersStore()
 const showForm = ref(false)
 const loading = ref(false)
 const projects = computed(() => projectStore.projects)
 
+const canCreateProject = computed(() => {
+  const role = membersStore.myMembership?.role
+  return !role || role === 'owner' || role === 'admin'
+})
+
 async function loadProjects() {
   loading.value = true
-  await projectStore.fetchByWorkspace(props.workspaceId)
+  await Promise.all([
+    projectStore.fetchByWorkspace(props.workspaceId),
+    membersStore.fetchMyMembership(props.workspaceId),
+  ])
   loading.value = false
 }
 onMounted(loadProjects)
@@ -181,6 +199,19 @@ async function onProjectSaved(data: Record<string, any>) {
 }
 .new-project-btn:hover { opacity: 0.82; }
 .new-project-btn:active { transform: scale(0.97); }
+
+.member-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--text-light);
+  font-weight: 500;
+  padding: 7px 12px;
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-full);
+}
 
 /* Grid */
 .sk-grid,

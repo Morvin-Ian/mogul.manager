@@ -131,7 +131,11 @@ async function handleRegister() {
   try {
     await auth.register({ username: username.value, email: email.value, password: password.value })
     const next = route.query.next as string | undefined
-    router.push(next && next.startsWith('/') ? `/login?next=${encodeURIComponent(next)}` : '/login')
+    if (next && next.startsWith('/')) {
+      router.push(`/login?next=${encodeURIComponent(next)}`)
+    } else {
+      router.push('/login')
+    }
   } catch (e) {
     error.value = (e as Error).message
   } finally {

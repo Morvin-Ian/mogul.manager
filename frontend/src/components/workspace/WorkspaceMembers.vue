@@ -104,6 +104,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useMembersStore } from '../../stores/members'
 import { useAuthStore } from '../../stores/auth'
+import { useConfirm } from '../../composables/useConfirm'
 import type { WorkspaceMember, MemberRole } from '../../types'
 import InviteModal from './InviteModal.vue'
 
@@ -114,6 +115,7 @@ const props = defineProps<{
 
 const membersStore = useMembersStore()
 const auth = useAuthStore()
+const { confirm } = useConfirm()
 const showInviteModal = ref(false)
 
 onMounted(() => {
@@ -180,12 +182,27 @@ async function changeRole(member: WorkspaceMember, newRole: MemberRole) {
 }
 
 async function confirmRemove(member: WorkspaceMember) {
-  if (!confirm(`Remove ${member.user.username} from this workspace?`)) return
+  const ok = await confirm({
+    title: 'Remove member?',
+    message: `${member.user.username} will lose access to this workspace and all its projects.`,
+    confirmLabel: 'Remove member',
+    cancelLabel: 'Cancel',
+    danger: true,
+  })
+  if (!ok) return
   await membersStore.removeMember(props.workspaceId, member.user_id)
 }
 
 async function handleRevoke(invitationId: number) {
-  if (!confirm('Revoke this invitation?')) return
+  const inv = membersStore.invitations.find((i) => i.id === invitationId)
+  const email = inv?.email || 'this invitation'
+  const ok = await confirm({
+    title: 'Revoke invitation?',
+    message: `The invite sent to ${email} will be cancelled.`,
+    confirmLabel: 'Revoke invite',
+    cancelLabel: 'Keep it',
+  })
+  if (!ok) return
   await membersStore.revokeInvitation(props.workspaceId, invitationId)
 }
 

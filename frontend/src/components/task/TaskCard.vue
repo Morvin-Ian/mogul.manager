@@ -1,9 +1,9 @@
 <template>
   <div
     class="task-card"
-    :class="`priority-border-${task.priority}`"
-    draggable="true"
-    @dragstart="onDragStart"
+    :class="[`priority-border-${task.priority}`, { 'task-card--no-drag': !canDrag }]"
+    :draggable="canDrag !== false"
+    @dragstart="canDrag !== false ? onDragStart() : undefined"
     @click="$router.push(`/tasks/${task.id}`)"
   >
     <div class="task-header">
@@ -50,7 +50,7 @@
 import { computed } from 'vue'
 import type { Task } from '../../types'
 
-const props = defineProps<{ task: Task }>()
+const props = defineProps<{ task: Task; canDrag?: boolean }>()
 const emit = defineEmits<{ dragstart: [id: number] }>()
 
 const priorityLabel = computed(() => {
@@ -63,6 +63,7 @@ function formatDate(d: string) {
 }
 
 function onDragStart() {
+  if (props.canDrag === false) return
   emit('dragstart', props.task.id)
 }
 </script>
@@ -81,6 +82,10 @@ function onDragStart() {
   flex-direction: column;
   gap: 8px;
   box-shadow: 0 1px 3px rgba(10,11,13,0.05), 0 0 0 0.5px rgba(10,11,13,0.03);
+}
+
+.task-card--no-drag {
+  cursor: pointer;
 }
 
 .task-card:hover {

@@ -125,10 +125,12 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import type { SearchHit } from '../types'
 import { useDocumentStore } from '../stores/documents'
+import { useConfirm } from '../composables/useConfirm'
 
 const route = useRoute()
 const router = useRouter()
 const store = useDocumentStore()
+const { confirm } = useConfirm()
 
 const docId = computed(() => Number(route.params.id))
 const doc = computed(() => store.current)
@@ -167,7 +169,16 @@ async function handleReprocess() {
 }
 
 async function handleDelete() {
-  if (!confirm('Delete this document and all its indexed data?')) return
+  const doc = store.documents.find((d) => d.id === docId.value)
+  const ok = await confirm({
+    title: 'Delete document?',
+    message: doc?.original_filename ? `"${doc.original_filename}" will be permanently removed.` : 'This document will be permanently removed.',
+    consequences: ['All indexed content and search data will be deleted', 'The AI will no longer have access to this file'],
+    confirmLabel: 'Delete document',
+    cancelLabel: 'Keep it',
+    danger: true,
+  })
+  if (!ok) return
   await store.remove(docId.value)
   router.push('/documents')
 }

@@ -15,6 +15,13 @@
         <span class="nav-label">Spaces</span>
       </router-link>
 
+      <router-link to="/team" active-class="active" class="nav-item" title="Team">
+        <span class="icon-wrap">
+          <font-awesome-icon :icon="['fas', 'users']" />
+        </span>
+        <span class="nav-label">Team</span>
+      </router-link>
+
       <router-link to="/plans" active-class="active" class="nav-item" title="Plans">
         <span class="icon-wrap">
           <font-awesome-icon :icon="['fas', 'list-check']" />

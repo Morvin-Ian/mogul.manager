@@ -82,11 +82,13 @@ import { ref } from 'vue'
 import { timeAgo } from '../../utils/time'
 import type { Workspace, Project } from '../../types'
 import { useTheme } from '../../composables/useTheme'
+import { useConfirm } from '../../composables/useConfirm'
 
 const props = defineProps<{ workspaces: Workspace[]; projects: Project[] }>()
 const emit = defineEmits<{ 'create': []; 'edit': [ws: Workspace]; 'delete': [id: number] }>()
 
 const { isDark } = useTheme()
+const { confirm } = useConfirm()
 const wsMenuOpenId = ref<number | null>(null)
 
 const WS_PALETTE = [
@@ -121,8 +123,23 @@ function handleEdit(ws: Workspace) {
   emit('edit', ws)
 }
 
-function handleDelete(id: number) {
-  if (!confirm('Delete this workspace? All projects inside will also be deleted.')) return
+async function handleDelete(id: number) {
+  const ws = props.workspaces.find((w) => w.id === id)
+  const projectCount = wsProjectCount(id)
+  const ok = await confirm({
+    title: 'Delete workspace?',
+    message: `"${ws?.title || 'This workspace'}" will be permanently deleted.`,
+    consequences: [
+      `All ${projectCount} project${projectCount !== 1 ? 's' : ''} inside will be deleted`,
+      'All tasks, comments, and files will be lost',
+      'Team members will lose access',
+      'This action cannot be undone',
+    ],
+    confirmLabel: 'Yes, delete workspace',
+    cancelLabel: 'Keep it',
+    danger: true,
+  })
+  if (!ok) return
   wsMenuOpenId.value = null
   emit('delete', id)
 }

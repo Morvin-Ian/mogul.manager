@@ -165,9 +165,11 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePlanStore } from '../stores/plans'
+import { useConfirm } from '../composables/useConfirm'
 
 const store = usePlanStore()
 const router = useRouter()
+const { confirm } = useConfirm()
 
 const dismissedExplainer = ref(localStorage.getItem('plans_explainer_dismissed') === '1')
 function dismissExplainer() {
@@ -201,7 +203,15 @@ async function handleCreate() {
 }
 
 async function handleDelete(id: number) {
-  if (!confirm('Delete this plan?')) return
+  const plan = store.plans.find((p) => p.id === id)
+  const ok = await confirm({
+    title: 'Delete plan?',
+    message: plan?.title ? `"${plan.title}" and all its steps will be permanently deleted.` : 'This plan and all its steps will be permanently deleted.',
+    confirmLabel: 'Delete plan',
+    cancelLabel: 'Keep it',
+    danger: true,
+  })
+  if (!ok) return
   await store.remove(id)
 }
 </script>

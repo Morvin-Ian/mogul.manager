@@ -9,13 +9,22 @@
         New Task
       </button>
     </div>
+
+    <div v-if="dropError" class="drop-error">
+      <svg viewBox="0 0 16 16" fill="none" width="13" height="13">
+        <circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.4"/>
+        <path d="M8 5v4M8 11v.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+      </svg>
+      {{ dropError }}
+    </div>
+
     <SkeletonBoard v-if="loading" />
     <div v-else class="board-columns">
       <div
         v-for="col in columns"
         :key="col.key"
         class="board-column"
-        :class="`col-${col.key}`"
+        :class="[`col-${col.key}`, { 'col-drop-target': draggedId && canDropToCol(col.key), 'col-drop-blocked': draggedId && !canDropToCol(col.key) }]"
         @dragover.prevent
         @drop="onDrop(col.key)"
       >
@@ -31,6 +40,7 @@
             v-for="task in grouped[col.key]"
             :key="task.id"
             :task="task"
+            :can-drag="canDragTask(task)"
             @dragstart="onDragStart"
           />
           <div v-if="!grouped[col.key]?.length" class="empty-col">
@@ -54,18 +64,30 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useTaskStore } from '../../stores/tasks'
-import type { TaskStatus } from '../../types'
+import { useMembersStore } from '../../stores/members'
+import { useAuthStore } from '../../stores/auth'
+import type { Task, TaskStatus } from '../../types'
 import { patch } from '../../stores/client'
 import TaskCard from './TaskCard.vue'
 import TaskModal from './TaskModal.vue'
 import SkeletonBoard from '../common/SkeletonBoard.vue'
 
-const props = defineProps<{ projectId: number }>()
+const props = defineProps<{ projectId: number; workspaceId?: number }>()
 
 const taskStore = useTaskStore()
+const membersStore = useMembersStore()
+const auth = useAuthStore()
+
 const showModal = ref(false)
 const loading = ref(false)
 const draggedId = ref<number | null>(null)
+const dropError = ref<string | null>(null)
+
+// Member-allowed forward transitions
+const MEMBER_ALLOWED: Record<string, Set<TaskStatus>> = {
+  todo: new Set(['in_progress']),
+  in_progress: new Set(['review']),
+}
 
 interface Column { key: TaskStatus; label: string }
 
@@ -78,12 +100,15 @@ const columns: Column[] = [
 ]
 
 const grouped = computed(() => {
-  const map: Record<string, any[]> = {}
+  const map: Record<string, Task[]> = {}
   for (const col of columns) {
     map[col.key] = taskStore.tasks.filter((t) => t.status === col.key)
   }
   return map
 })
+
+const myRole = computed(() => membersStore.myMembership?.role ?? null)
+const isAdminOrOwner = computed(() => myRole.value === 'admin' || myRole.value === 'owner')
 
 async function loadTasks() {
   loading.value = true
@@ -91,15 +116,67 @@ async function loadTasks() {
   loading.value = false
 }
 
-onMounted(loadTasks)
+onMounted(async () => {
+  await loadTasks()
+  if (props.workspaceId) {
+    await membersStore.fetchMyMembership(props.workspaceId)
+  }
+})
+
 watch(() => props.projectId, loadTasks)
+watch(() => props.workspaceId, async (id) => {
+  if (id) await membersStore.fetchMyMembership(id)
+})
 
-function onDragStart(id: number) { draggedId.value = id }
+function canDragTask(task: Task): boolean {
+  if (isAdminOrOwner.value) return true
+  return task.assigned_to_id === auth.user?.id
+}
 
-async function onDrop(status: TaskStatus) {
+function canDropToCol(toStatus: TaskStatus): boolean {
+  if (!draggedId.value) return false
+  if (isAdminOrOwner.value) return true
+  const task = taskStore.tasks.find((t) => t.id === draggedId.value)
+  if (!task) return false
+  if (task.assigned_to_id !== auth.user?.id) return false
+  return MEMBER_ALLOWED[task.status]?.has(toStatus) ?? false
+}
+
+function onDragStart(id: number) {
+  draggedId.value = id
+  dropError.value = null
+}
+
+function showDropError(msg: string) {
+  dropError.value = msg
+  setTimeout(() => { dropError.value = null }, 3500)
+}
+
+async function onDrop(toStatus: TaskStatus) {
   if (!draggedId.value) return
+
+  const task = taskStore.tasks.find((t) => t.id === draggedId.value)
+  if (!task) { draggedId.value = null; return }
+
+  // Same column — nothing to do
+  if (task.status === toStatus) { draggedId.value = null; return }
+
+  if (!isAdminOrOwner.value) {
+    if (task.assigned_to_id !== auth.user?.id) {
+      showDropError('You can only move tasks assigned to you.')
+      draggedId.value = null
+      return
+    }
+    const allowed = MEMBER_ALLOWED[task.status]
+    if (!allowed?.has(toStatus)) {
+      showDropError('You can only move: To Do → In Progress → Review.')
+      draggedId.value = null
+      return
+    }
+  }
+
   try {
-    await patch(`/tasks/${draggedId.value}`, { status })
+    await patch(`/tasks/${draggedId.value}`, { status: toStatus })
     await taskStore.fetchByProject(props.projectId)
   } catch (e) {
     console.error(e)
@@ -115,6 +192,26 @@ async function onTaskCreated(data: Record<string, any>) {
 
 <style scoped>
 .task-board { padding: 0; }
+
+.drop-error {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: #FFF1F2;
+  border: 1.5px solid #FECDD3;
+  color: #BE123C;
+  border-radius: 8px;
+  padding: 9px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 12px;
+}
+
+:global([data-theme="dark"]) .drop-error {
+  background: rgba(190, 18, 60, 0.15);
+  border-color: rgba(254, 205, 211, 0.3);
+  color: #FDA4AF;
+}
 
 .board-columns {
   display: flex;
@@ -133,6 +230,16 @@ async function onTaskCreated(data: Record<string, any>) {
   flex-direction: column;
   max-height: calc(100vh - 280px);
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.col-drop-target {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 2px var(--primary-muted), inset 0 1px 0 rgba(255,255,255,0.6) !important;
+}
+
+.col-drop-blocked {
+  opacity: 0.5;
 }
 
 .column-header {

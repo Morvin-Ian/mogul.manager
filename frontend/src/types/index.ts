@@ -42,6 +42,7 @@ export interface WorkspaceUpdate {
 export interface Project {
   id: number
   workspace_id: number
+  created_by_id: number | null
   title: string
   description: string | null
   status: ProjectStatus
@@ -85,6 +86,7 @@ export interface Task {
   assigned_agent: string | null
   assigned_to_id: number | null
   assignee_name: string | null
+  assignee_email: string | null
   parent_task_id: number | null
   metadata_json: Record<string, unknown> | null
   estimated_hours: number | null
@@ -265,4 +267,28 @@ export interface Invitation {
   expires_at: string
   status: InvitationStatus
   workspace_title?: string
+}
+
+export interface MyMembershipResponse {
+  workspace_id: number
+  user_id: number
+  role: MemberRole
+  joined_at: string
+}
+
+export interface AcceptInviteResponse {
+  id: number
+  workspace_id: number
+  user_id: number
+  role: MemberRole
+  joined_at: string
+}
+
+export interface InvitationInfo {
+  id: number
+  email: string
+  role: string
+  status: string
+  expires_at: string
+  workspace: { id: number | null; title: string | null }
 }

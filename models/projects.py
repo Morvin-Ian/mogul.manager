@@ -18,6 +18,7 @@ from database import Base
 
 if TYPE_CHECKING:
     from .tasks import Task
+    from .users import User
     from .workspaces import Workspace
 
 
@@ -39,7 +40,10 @@ class Project(Base):
         SQLEnum(ProjectStatus), default=ProjectStatus.PLANNING
     )
     workspace_id: Mapped[int] = mapped_column(
-        ForeignKey("workspaces.id"), nullable=False
+        ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False
+    )
+    created_by_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
     )
     ai_summary: Mapped[str] = mapped_column(Text, nullable=True)
     metadata_json: Mapped[dict] = mapped_column(JSON, nullable=True)
@@ -60,6 +64,10 @@ class Project(Base):
     workspace: Mapped["Workspace"] = relationship(
         "Workspace",
         back_populates="projects",
+    )
+    creator: Mapped["User | None"] = relationship(
+        "User",
+        foreign_keys=[created_by_id],
     )
 
     tasks: Mapped[list["Task"]] = relationship(

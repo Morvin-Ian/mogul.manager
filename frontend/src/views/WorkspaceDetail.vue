@@ -153,13 +153,19 @@
           </div>
         </div>
         <div class="workspace-actions">
-          <button class="btn btn-sm" @click="editWorkspace">
+          <button class="btn btn-sm" @click="$router.push(`/team/${currentWorkspace.id}`)">
+            <svg viewBox="0 0 14 14" fill="none" width="12" height="12">
+              <path d="M5 10.5c0-1.5 1.12-2.5 3-2.5s3 1 3 2.5M3 7.5a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm8 0a1.5 1.5 0 110-3 1.5 1.5 0 010 3zM8 4.5a1.5 1.5 0 110-3 1.5 1.5 0 010 3z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Team
+          </button>
+          <button v-if="isAdminOrOwner" class="btn btn-sm" @click="editWorkspace">
             <svg viewBox="0 0 14 14" fill="none" width="12" height="12">
               <path d="M9.5 2.5l2 2L5 11H3v-2l6.5-6.5zM8.5 3.5l2 2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
             Edit
           </button>
-          <button class="btn btn-sm btn-danger" @click="handleDelete">Delete</button>
+          <button v-if="isOwner" class="btn btn-sm btn-danger" @click="handleDelete">Delete</button>
         </div>
       </div>
       <ProjectList :workspace-id="currentWorkspace.id" />
@@ -178,6 +184,9 @@
 import { computed, ref, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useWorkspaceStore } from '../stores/workspaces'
+import { useMembersStore } from '../stores/members'
+import { useAuthStore } from '../stores/auth'
+import { useConfirm } from '../composables/useConfirm'
 import type { Workspace } from '../types'
 import WorkspaceCard from '../components/workspace/WorkspaceCard.vue'
 import WorkspaceForm from '../components/workspace/WorkspaceForm.vue'
@@ -187,6 +196,15 @@ import Loading from '../components/common/Loading.vue'
 const route = useRoute()
 const router = useRouter()
 const workspaceStore = useWorkspaceStore()
+const membersStore = useMembersStore()
+const auth = useAuthStore()
+const { confirm } = useConfirm()
+
+const isOwner = computed(() => currentWorkspace.value?.user_id === auth.user?.id)
+const isAdminOrOwner = computed(() => {
+  const role = membersStore.myMembership?.role
+  return isOwner.value || role === 'admin'
+})
 
 const dismissedExplainer = ref(localStorage.getItem('ws_explainer_dismissed') === '1')
 function dismissExplainer() {
@@ -208,6 +226,7 @@ watch(workspaceId, async (id) => {
   if (id) {
     try {
       await workspaceStore.fetchOne(id)
+      await membersStore.fetchMyMembership(id)
     } catch {
       router.push('/')
     }
@@ -245,7 +264,20 @@ async function onSave(data: { title: string; description: string }) {
 
 async function handleDelete() {
   if (!currentWorkspace.value) return
-  if (!confirm('Delete this workspace and all its projects and tasks?')) return
+  const ok = await confirm({
+    title: 'Delete workspace?',
+    message: `"${currentWorkspace.value.title}" will be permanently deleted.`,
+    consequences: [
+      'All projects inside this workspace will be deleted',
+      'All tasks, comments, and files will be deleted',
+      'All team members will lose access',
+      'This action cannot be undone',
+    ],
+    confirmLabel: 'Yes, delete workspace',
+    cancelLabel: 'Keep it',
+    danger: true,
+  })
+  if (!ok) return
   await workspaceStore.remove(currentWorkspace.value.id)
   router.push('/')
 }

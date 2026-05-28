@@ -45,7 +45,7 @@ class Plan(Base):
         ForeignKey("users.id"), nullable=False, index=True
     )
     workspace_id: Mapped[int | None] = mapped_column(
-        ForeignKey("workspaces.id"), nullable=True
+        ForeignKey("workspaces.id", ondelete="SET NULL"), nullable=True
     )
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)

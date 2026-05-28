@@ -237,10 +237,12 @@ import { useRouter } from 'vue-router'
 import { useDocumentStore } from '../stores/documents'
 import { useWorkspaceStore } from '../stores/workspaces'
 import { useProjectStore } from '../stores/projects'
+import { useConfirm } from '../composables/useConfirm'
 import type { Project } from '../types'
 
 const store = useDocumentStore()
 const workspaceStore = useWorkspaceStore()
+const { confirm } = useConfirm()
 const projectStore = useProjectStore()
 const router = useRouter()
 
@@ -351,7 +353,16 @@ async function doUpload(file: File, ctx: { workspace_id?: number; project_id?: n
 
 // ── Other ───────────────────────────────────────────────────────
 async function handleDelete(id: number) {
-  if (!confirm('Delete this document and all its data?')) return
+  const doc = store.documents.find((d) => d.id === id)
+  const ok = await confirm({
+    title: 'Delete document?',
+    message: doc?.original_filename ? `"${doc.original_filename}" will be permanently removed.` : 'This document will be permanently removed.',
+    consequences: ['All indexed content and search data will be deleted', 'The AI will no longer reference this file'],
+    confirmLabel: 'Delete document',
+    cancelLabel: 'Keep it',
+    danger: true,
+  })
+  if (!ok) return
   await store.remove(id)
 }
 

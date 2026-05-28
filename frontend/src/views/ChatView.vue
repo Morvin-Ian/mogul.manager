@@ -200,9 +200,11 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useChatStore } from '../stores/chat'
+import { useConfirm } from '../composables/useConfirm'
 import MessageBubble from '../components/chat/MessageBubble.vue'
 
 const chatStore = useChatStore()
+const { confirm } = useConfirm()
 const input = ref('')
 const inputFocused = ref(false)
 const messagesRef = ref<HTMLElement | null>(null)
@@ -304,7 +306,16 @@ async function handleDeleteConv(id: number) {
 }
 
 async function handleClearAll() {
-  if (!confirm('Delete all conversations? This cannot be undone.')) return
+  const count = chatStore.conversations.length
+  const ok = await confirm({
+    title: 'Clear all conversations?',
+    message: `All ${count} conversation${count !== 1 ? 's' : ''} will be permanently deleted.`,
+    consequences: ['Chat history cannot be recovered after deletion'],
+    confirmLabel: 'Yes, clear all',
+    cancelLabel: 'Cancel',
+    danger: true,
+  })
+  if (!ok) return
   const ids = chatStore.conversations.map(c => c.id)
   for (const id of ids) {
     try { await chatStore.removeConversation(id) } catch {}

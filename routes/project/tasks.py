@@ -9,9 +9,11 @@ from sqlalchemy.orm import joinedload
 import models
 from config import settings
 from database import get_db
+from models.collaboration import MemberRole
 from schemas.project.tasks import TaskCreate, TaskRead, TaskUpdate
 from services.auth import CurrentUser
 from services.project.tasks import TaskService
+from services.workspace.collaboration import CollaborationService
 from utils.email import send_task_assignment_email
 
 logger = logging.getLogger(__name__)
@@ -21,10 +23,17 @@ router = APIRouter(
     tags=["Tasks"],
 )
 
+# Fields a regular member (assignee) is allowed to change on their own task
+ASSIGNEE_EDITABLE_FIELDS = {"status", "actual_hours"}
 
-async def _verify_project_ownership(
-    project_id: int, user_id: int, db
-) -> models.Project:
+# Status transitions a member (assignee) is allowed to make
+MEMBER_ALLOWED_TRANSITIONS: dict[str, set[str]] = {
+    "todo": {"in_progress"},
+    "in_progress": {"review"},
+}
+
+
+async def _get_project_or_404(project_id: int, db: AsyncSession) -> models.Project:
     result = await db.execute(
         select(models.Project).where(models.Project.id == project_id)
     )
@@ -33,21 +42,19 @@ async def _verify_project_ownership(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
         )
-    result = await db.execute(
-        select(models.Workspace).where(models.Workspace.id == project.workspace_id)
-    )
-    workspace = result.scalars().first()
-    if not workspace or workspace.user_id != user_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to access this project",
-        )
     return project
 
 
-async def _resolve_assignee_email(
-    data: dict, db: AsyncSession
-) -> dict:
+async def _get_task_or_404(task_id: int, service: TaskService) -> models.Task:
+    task = await service.get_by_id(task_id)
+    if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
+        )
+    return task
+
+
+async def _resolve_assignee_email(data: dict, db: AsyncSession) -> dict:
     email = data.pop("assigned_to_email", None)
     if email:
         result = await db.execute(
@@ -71,7 +78,7 @@ async def _notify_assignment_background(
     task_description: str | None,
     project_name: str,
     priority: str,
-    status: str,
+    task_status: str,
     task_id: int,
 ) -> None:
     task_url = f"{settings.frontend_url}/tasks/{task_id}"
@@ -84,7 +91,7 @@ async def _notify_assignment_background(
             task_description=task_description,
             project_name=project_name,
             priority=priority,
-            status=status,
+            status=task_status,
             task_url=task_url,
         )
     except Exception as exc:
@@ -122,7 +129,7 @@ async def _schedule_notification(
         task_description=task.description,
         project_name=project_name,
         priority=priority_map.get(task.priority, "Medium"),
-        status=task.status,
+        task_status=task.status,
         task_id=task.id,
     )
 
@@ -133,10 +140,23 @@ async def create_task(
     current_user: CurrentUser,
     bt: BackgroundTasks,
     service: Annotated[TaskService, Depends()],
+    collab: Annotated[CollaborationService, Depends()],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    await _verify_project_ownership(task.project_id, current_user.id, db)
+    project = await _get_project_or_404(task.project_id, db)
+    member = await collab.require_access(project.workspace_id, current_user.id, min_role="member")
+
     data = await _resolve_assignee_email(task.model_dump(exclude_unset=True), db)
+
+    # Regular members may only assign tasks to themselves
+    if member.role == MemberRole.member:
+        assigned_to = data.get("assigned_to_id")
+        if assigned_to and assigned_to != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Members can only assign tasks to themselves",
+            )
+
     created = await service.create(data)
     await _schedule_notification(bt, created, current_user, db)
     return _to_read(created)
@@ -146,12 +166,14 @@ async def create_task(
 async def list_tasks(
     current_user: CurrentUser,
     service: Annotated[TaskService, Depends()],
+    collab: Annotated[CollaborationService, Depends()],
     db: Annotated[AsyncSession, Depends(get_db)],
     project_id: int = Query(...),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500),
 ):
-    await _verify_project_ownership(project_id, current_user.id, db)
+    project = await _get_project_or_404(project_id, db)
+    await collab.require_access(project.workspace_id, current_user.id, min_role="member")
     tasks = await service.list_by_project(project_id, skip=skip, limit=limit)
     return [_to_read(t) for t in tasks]
 
@@ -161,14 +183,12 @@ async def get_task(
     task_id: int,
     current_user: CurrentUser,
     service: Annotated[TaskService, Depends()],
+    collab: Annotated[CollaborationService, Depends()],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    task = await service.get_by_id(task_id)
-    if not task:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
-        )
-    await _verify_project_ownership(task.project_id, current_user.id, db)
+    task = await _get_task_or_404(task_id, service)
+    project = await _get_project_or_404(task.project_id, db)
+    await collab.require_access(project.workspace_id, current_user.id, min_role="member")
     return _to_read(task)
 
 
@@ -179,18 +199,41 @@ async def update_task(
     current_user: CurrentUser,
     bt: BackgroundTasks,
     service: Annotated[TaskService, Depends()],
+    collab: Annotated[CollaborationService, Depends()],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    task = await service.get_by_id(task_id)
-    if not task:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
-        )
-    await _verify_project_ownership(task.project_id, current_user.id, db)
+    task = await _get_task_or_404(task_id, service)
+    project = await _get_project_or_404(task.project_id, db)
+    member = await collab.require_access(project.workspace_id, current_user.id, min_role="member")
+
+    data = task_update.model_dump(exclude_unset=True)
+
+    if member.role == MemberRole.member:
+        # Regular members may only update their own assigned tasks
+        if task.assigned_to_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You can only update tasks assigned to you",
+            )
+        # Restrict which fields they can change
+        disallowed = set(data.keys()) - ASSIGNEE_EDITABLE_FIELDS
+        if disallowed:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Members may only change: {', '.join(sorted(ASSIGNEE_EDITABLE_FIELDS))}",
+            )
+        # Restrict which status transitions are allowed
+        new_status = data.get("status")
+        if new_status and new_status != task.status:
+            allowed = MEMBER_ALLOWED_TRANSITIONS.get(task.status, set())
+            if new_status not in allowed:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="You can only move tasks forward: To Do → In Progress → Review",
+                )
+
     was_assigned_to = task.assigned_to_id
-    data = await _resolve_assignee_email(
-        task_update.model_dump(exclude_unset=True), db
-    )
+    data = await _resolve_assignee_email(data, db)
     updated = await service.update(task, data)
     if updated.assigned_to_id and updated.assigned_to_id != was_assigned_to:
         await _schedule_notification(bt, updated, current_user, db)
@@ -202,14 +245,13 @@ async def delete_task(
     task_id: int,
     current_user: CurrentUser,
     service: Annotated[TaskService, Depends()],
+    collab: Annotated[CollaborationService, Depends()],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    task = await service.get_by_id(task_id)
-    if not task:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
-        )
-    await _verify_project_ownership(task.project_id, current_user.id, db)
+    task = await _get_task_or_404(task_id, service)
+    project = await _get_project_or_404(task.project_id, db)
+    # Only admins and owners can delete tasks
+    await collab.require_access(project.workspace_id, current_user.id, min_role="admin")
     await service.delete(task)
 
 
