@@ -75,6 +75,9 @@ const encodedPath = computed(() => encodeURIComponent(`/invitations/${token.valu
 onMounted(async () => {
   try {
     invite.value = await membersStore.getInviteInfo(token.value)
+    if (isLoggedIn.value && invite.value.status === 'pending') {
+      await handleAccept()
+    }
   } catch (e) {
     error.value = (e as Error).message
   } finally {

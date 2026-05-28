@@ -7,6 +7,7 @@ export interface User {
   username: string
   email: string
   profile_path: string | null
+  google_id: string | null
   created_at: string
 }
 

@@ -202,7 +202,7 @@
           <button class="tab-btn" :class="{ 'tab-active': activeTab === 'description' }" @click="activeTab = 'description'">Description</button>
           <button class="tab-btn" :class="{ 'tab-active': activeTab === 'comments' }" @click="activeTab = 'comments'">
             Comments
-            <span v-if="comments.length" class="tab-badge">{{ comments.length }}</span>
+            <span v-if="commentCount" class="tab-badge">{{ commentCount }}</span>
           </button>
           <button
             v-if="task.status === 'review'"
@@ -212,7 +212,7 @@
           >
             <font-awesome-icon :icon="['fas', 'link']" />
             Review Links
-            <span v-if="currentReviewLinks.length" class="tab-badge">{{ currentReviewLinks.length }}</span>
+            <span v-if="reviewLinksCount" class="tab-badge">{{ reviewLinksCount }}</span>
           </button>
         </div>
 
@@ -231,93 +231,12 @@
 
         <!-- ── Comments tab ── -->
         <div v-if="activeTab === 'comments'" class="tab-content">
-          <!-- New comment -->
-          <div class="comment-compose">
-            <div class="compose-avatar" :style="{ background: memberGradient(auth.user?.username || 'U') }">
-              {{ (auth.user?.username || 'U').charAt(0).toUpperCase() }}
-            </div>
-            <div class="compose-field" :class="{ 'compose-field--focused': commentFocused }">
-              <textarea
-                v-model="newComment"
-                rows="2"
-                placeholder="Write a comment…"
-                class="compose-textarea"
-                @focus="commentFocused = true"
-                @blur="commentFocused = false"
-              ></textarea>
-              <div class="compose-actions">
-                <button
-                  class="btn-post"
-                  :disabled="!newComment.trim() || postingComment"
-                  @click="addComment"
-                >
-                  {{ postingComment ? 'Posting…' : 'Post' }}
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div v-if="loadingComments" class="feed-empty">Loading comments…</div>
-          <div v-else-if="comments.length === 0" class="feed-empty">No comments yet. Be the first!</div>
-          <div v-else class="comments-feed">
-            <div v-for="c in comments" :key="c.id" class="feed-item">
-              <div class="feed-avatar" :style="{ background: memberGradient(c.user?.username || auth.user?.username || 'U') }">
-                {{ (c.user?.username || auth.user?.username || 'U').charAt(0).toUpperCase() }}
-              </div>
-              <div class="feed-body">
-                <div class="feed-meta">
-                  <span class="feed-author">{{ c.user?.username || auth.user?.username }}</span>
-                  <span class="feed-time">{{ timeAgo(c.created_at) }}</span>
-                  <button
-                    v-if="c.user_id === auth.user?.id"
-                    class="feed-delete"
-                    @click="handleDeleteComment(c.id)"
-                    title="Delete comment"
-                  >
-                    <font-awesome-icon :icon="['fas', 'trash']" style="font-size: 10px;" />
-                  </button>
-                </div>
-                <p class="feed-text">{{ c.content }}</p>
-              </div>
-            </div>
-          </div>
+          <DrawerComments v-if="task" :task-id="task.id" @count-change="commentCount = $event" />
         </div>
 
         <!-- ── Review Links tab ── -->
         <div v-if="activeTab === 'review'" class="tab-content">
-          <div v-if="currentReviewLinks.length" class="rv-links-list">
-            <div v-for="(link, i) in currentReviewLinks" :key="i" class="rv-link-row">
-              <span class="rv-link-icon" :class="`rvli-${link.type}`">
-                <font-awesome-icon :icon="reviewLinkIcon(link.type)" />
-              </span>
-              <div class="rv-link-info">
-                <a :href="link.url" target="_blank" rel="noopener noreferrer" class="rv-link-label" @click.stop>
-                  {{ link.label || link.url }}
-                </a>
-                <span class="rv-link-url">{{ link.url }}</span>
-              </div>
-              <button class="rv-link-del" @click="removeReviewLink(i)" title="Remove link">
-                <font-awesome-icon :icon="['fas', 'xmark']" />
-              </button>
-            </div>
-          </div>
-          <p v-else class="desc-empty">No review links added yet.</p>
-
-          <div class="rv-add-form">
-            <p class="rv-add-title">Add a link</p>
-            <select v-model="newLink.type" class="rv-type-select">
-              <option value="repo">Repo / PR</option>
-              <option value="doc">Document</option>
-              <option value="design">Design</option>
-              <option value="link">Other link</option>
-            </select>
-            <input v-model="newLink.url" class="rv-input" placeholder="https://…" type="url" @keydown.enter="addReviewLink" />
-            <input v-model="newLink.label" class="rv-input" placeholder="Label (optional)" @keydown.enter="addReviewLink" />
-            <button class="rv-add-btn" :disabled="!newLink.url.trim() || savingLinks" @click="addReviewLink">
-              <font-awesome-icon :icon="['fas', 'plus']" />
-              {{ savingLinks ? 'Saving…' : 'Add link' }}
-            </button>
-          </div>
+          <DrawerReviewLinks v-if="task" :task="task" @updated="emit('updated', $event)" />
         </div>
 
       </div>
@@ -332,7 +251,9 @@ import { useTaskStore } from '../../stores/tasks'
 import { useMembersStore } from '../../stores/members'
 import { useAuthStore } from '../../stores/auth'
 import { get, patch } from '../../stores/client'
-import type { Task, TaskStatus, TaskPriority, WorkspaceMember, Comment } from '../../types'
+import type { Task, TaskStatus, TaskPriority, WorkspaceMember } from '../../types'
+import DrawerComments from './DrawerComments.vue'
+import DrawerReviewLinks from './DrawerReviewLinks.vue'
 
 const props = defineProps<{
   task: Task | null
@@ -355,12 +276,7 @@ const editMode = ref(false)
 const saving = ref(false)
 const activeTab = ref<'description' | 'comments' | 'review'>('description')
 const showAssigneePicker = ref(false)
-const commentFocused = ref(false)
-
-const comments = ref<Comment[]>([])
-const newComment = ref('')
-const postingComment = ref(false)
-const loadingComments = ref(false)
+const commentCount = ref(0)
 
 const workspaceMembers = ref<WorkspaceMember[]>([])
 
@@ -458,17 +374,10 @@ function formatDateTime(d: string) {
   })
 }
 
-function timeAgo(d: string): string {
-  const diff = Date.now() - new Date(d).getTime()
-  const min = Math.floor(diff / 60000)
-  if (min < 1) return 'just now'
-  if (min < 60) return `${min}m ago`
-  const hr = Math.floor(min / 60)
-  if (hr < 24) return `${hr}h ago`
-  const day = Math.floor(hr / 24)
-  if (day < 7) return `${day}d ago`
-  return formatDate(d)
-}
+const reviewLinksCount = computed(() => {
+  const meta = props.task?.metadata_json as Record<string, any> | null
+  return (meta?.review_links as any[])?.length ?? 0
+})
 
 watch(
   () => props.task,
@@ -490,12 +399,6 @@ watch(
 )
 
 async function loadDrawerData(t: Task) {
-  loadingComments.value = true
-  try {
-    comments.value = await taskStore.fetchComments(t.id)
-  } catch { /* noop */ } finally {
-    loadingComments.value = false
-  }
   if (props.workspaceId) {
     try {
       workspaceMembers.value = await get<WorkspaceMember[]>(`/workspaces/${props.workspaceId}/members`)
@@ -555,79 +458,12 @@ async function handleDelete() {
   emit('deleted')
 }
 
-async function addComment() {
-  if (!newComment.value.trim() || !props.task) return
-  postingComment.value = true
-  try {
-    const c = await taskStore.createComment({ task_id: props.task.id, content: newComment.value.trim() })
-    comments.value.push(c)
-    newComment.value = ''
-  } catch (e) {
-    console.error(e)
-  } finally {
-    postingComment.value = false
-  }
-}
-
-async function handleDeleteComment(id: number) {
-  const ok = await confirm({
-    title: 'Delete comment?',
-    message: 'This comment will be permanently deleted.',
-    confirmLabel: 'Delete comment',
-    danger: true,
-  })
-  if (!ok) return
-  await taskStore.deleteComment(id)
-  comments.value = comments.value.filter((c) => c.id !== id)
-}
-
 onMounted(() => {
   const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') emit('close') }
   window.addEventListener('keydown', handler)
   return () => window.removeEventListener('keydown', handler)
 })
 
-// ── Review links ──────────────────────────────────────────
-interface ReviewLink { url: string; label: string; type: string }
-
-const newLink = reactive<ReviewLink>({ url: '', label: '', type: 'link' })
-const savingLinks = ref(false)
-
-const currentReviewLinks = computed<ReviewLink[]>(() => {
-  const meta = props.task?.metadata_json as Record<string, any> | null
-  return (meta?.review_links as ReviewLink[]) ?? []
-})
-
-function reviewLinkIcon(type: string): string[] {
-  if (type === 'repo') return ['fas', 'code-branch']
-  if (type === 'doc') return ['fas', 'file-lines']
-  if (type === 'design') return ['fas', 'pen-ruler']
-  return ['fas', 'link']
-}
-
-async function saveLinks(links: ReviewLink[]) {
-  if (!props.task) return
-  savingLinks.value = true
-  try {
-    const meta = { ...(props.task.metadata_json as Record<string, any> ?? {}), review_links: links }
-    const updated = await patch<Task>(`/tasks/${props.task.id}`, { metadata_json: meta })
-    emit('updated', updated)
-  } finally {
-    savingLinks.value = false
-  }
-}
-
-async function addReviewLink() {
-  if (!newLink.url.trim()) return
-  await saveLinks([...currentReviewLinks.value, { url: newLink.url.trim(), label: newLink.label.trim(), type: newLink.type }])
-  newLink.url = ''
-  newLink.label = ''
-  newLink.type = 'link'
-}
-
-async function removeReviewLink(index: number) {
-  await saveLinks(currentReviewLinks.value.filter((_, i) => i !== index))
-}
 </script>
 
 <style scoped>
@@ -1113,162 +949,6 @@ async function removeReviewLink(index: number) {
   font-style: italic;
 }
 
-/* ── Comment compose ── */
-.comment-compose {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
-  align-items: flex-start;
-}
-
-.compose-avatar {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-  font-weight: 800;
-  flex-shrink: 0;
-  margin-top: 2px;
-}
-
-.compose-field {
-  flex: 1;
-  border: 1.5px solid var(--border);
-  border-radius: 10px;
-  background: var(--bg);
-  overflow: hidden;
-  transition: border-color 0.15s, box-shadow 0.15s;
-}
-.compose-field--focused {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px var(--primary-muted);
-}
-
-.compose-textarea {
-  width: 100%;
-  padding: 10px 12px 6px;
-  border: none;
-  background: transparent;
-  font-size: 13.5px;
-  font-family: inherit;
-  color: var(--text);
-  resize: none;
-  display: block;
-  line-height: 1.6;
-}
-.compose-textarea:focus { outline: none; }
-.compose-textarea::placeholder { color: var(--text-light); }
-
-.compose-actions {
-  padding: 7px 10px;
-  display: flex;
-  justify-content: flex-end;
-  border-top: 1px solid var(--border);
-  background: var(--surface);
-}
-
-.btn-post {
-  display: inline-flex;
-  align-items: center;
-  padding: 5px 14px;
-  border-radius: 7px;
-  font-size: 12.5px;
-  font-weight: 700;
-  font-family: inherit;
-  background: var(--primary);
-  color: #fff;
-  border: none;
-  cursor: pointer;
-  transition: opacity 0.12s;
-}
-.btn-post:disabled { opacity: 0.4; cursor: not-allowed; }
-.btn-post:not(:disabled):hover { opacity: 0.88; }
-
-/* ── Comments feed ── */
-.feed-empty {
-  font-size: 13px;
-  color: var(--text-muted);
-  text-align: center;
-  padding: 20px 0;
-}
-
-.comments-feed {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.feed-item {
-  display: flex;
-  gap: 10px;
-  align-items: flex-start;
-}
-
-.feed-avatar {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-  font-weight: 800;
-  flex-shrink: 0;
-}
-
-.feed-body { flex: 1; min-width: 0; }
-
-.feed-meta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 4px;
-  flex-wrap: wrap;
-}
-
-.feed-author {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--text);
-}
-
-.feed-time {
-  font-size: 11.5px;
-  color: var(--text-light);
-  flex: 1;
-}
-
-.feed-delete {
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: var(--text-light);
-  padding: 2px;
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  opacity: 0;
-  transition: opacity 0.12s, color 0.12s;
-}
-.feed-item:hover .feed-delete { opacity: 1; }
-.feed-delete:hover { color: var(--danger, #EF4444); }
-
-.feed-text {
-  font-size: 13.5px;
-  line-height: 1.6;
-  color: var(--text);
-  word-break: break-word;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 10px 12px;
-}
-
 /* ── Dark mode ── */
 :global([data-theme="dark"]) .drawer {
   background: #1E2732;
@@ -1301,9 +981,6 @@ async function removeReviewLink(index: number) {
 :global([data-theme="dark"]) .prop-select { background: #253341; border-color: #38444D; color: var(--text); }
 :global([data-theme="dark"]) .title-textarea { background: #253341; border-color: var(--primary); color: var(--text); }
 :global([data-theme="dark"]) .desc-textarea { background: #253341; border-color: #38444D; color: var(--text); }
-:global([data-theme="dark"]) .compose-field { background: #1E2732; border-color: #38444D; }
-:global([data-theme="dark"]) .compose-actions { background: #15202B; border-top-color: #38444D; }
-:global([data-theme="dark"]) .feed-text { background: #15202B; border-color: #38444D; }
 :global([data-theme="dark"]) .picker-dropdown { background: #1E2732; border-color: #38444D; }
 :global([data-theme="dark"]) .picker-option:hover { background: #253341; }
 :global([data-theme="dark"]) .picker-trigger { background: #253341; border-color: #38444D; }
@@ -1327,162 +1004,4 @@ async function removeReviewLink(index: number) {
 :global([data-theme="dark"]) .pp-2 { background: rgba(255,179,0,0.15); color: #FFB300; border-color: rgba(255,179,0,0.3); }
 :global([data-theme="dark"]) .pp-3 { background: rgba(249,115,22,0.15); color: #FB923C; border-color: rgba(249,115,22,0.3); }
 :global([data-theme="dark"]) .pp-4 { background: rgba(255,107,120,0.15); color: #FF6B78; border-color: rgba(255,107,120,0.3); }
-
-/* ── Review Links tab ── */
-.tab-btn--review {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.rv-links-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 20px;
-}
-
-.rv-link-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border: 1.5px solid var(--border);
-  border-radius: 10px;
-  background: var(--bg);
-  transition: border-color 0.12s;
-}
-.rv-link-row:hover { border-color: var(--border-strong); }
-
-.rv-link-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 13px;
-  flex-shrink: 0;
-}
-.rvli-repo   { background: #F0FDF4; color: #16A34A; }
-.rvli-doc    { background: #EFF6FF; color: #2563EB; }
-.rvli-design { background: #FDF4FF; color: #9333EA; }
-.rvli-link   { background: #F8FAFC; color: #475569; }
-:global([data-theme="dark"]) .rvli-repo   { background: rgba(22,163,74,0.18); color: #4ADE80; }
-:global([data-theme="dark"]) .rvli-doc    { background: rgba(37,99,235,0.18); color: #60A5FA; }
-:global([data-theme="dark"]) .rvli-design { background: rgba(147,51,234,0.18); color: #C084FC; }
-:global([data-theme="dark"]) .rvli-link   { background: rgba(255,255,255,0.07); color: #8B98A5; }
-
-.rv-link-info {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.rv-link-label {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--primary);
-  text-decoration: none;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.rv-link-label:hover { text-decoration: underline; }
-
-.rv-link-url {
-  font-size: 11px;
-  color: var(--text-light);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.rv-link-del {
-  width: 26px;
-  height: 26px;
-  border: none;
-  background: none;
-  color: var(--text-light);
-  border-radius: 6px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  transition: background 0.12s, color 0.12s;
-  flex-shrink: 0;
-}
-.rv-link-del:hover { background: #FEE2E2; color: #DC2626; }
-:global([data-theme="dark"]) .rv-link-del:hover { background: rgba(220,38,38,0.18); color: #F87171; }
-
-.rv-add-form {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 16px;
-  background: var(--bg);
-  border: 1.5px solid var(--border);
-  border-radius: 12px;
-}
-
-.rv-add-title {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  margin: 0;
-}
-
-.rv-type-select {
-  padding: 8px 10px;
-  border: 1.5px solid var(--border);
-  border-radius: 8px;
-  font-size: 13px;
-  font-family: inherit;
-  background: var(--surface);
-  color: var(--text);
-  cursor: pointer;
-  outline: none;
-}
-.rv-type-select:focus { border-color: var(--primary); }
-
-.rv-input {
-  padding: 8px 12px;
-  border: 1.5px solid var(--border);
-  border-radius: 8px;
-  font-size: 13px;
-  font-family: inherit;
-  background: var(--surface);
-  color: var(--text);
-  outline: none;
-  transition: border-color 0.14s;
-}
-.rv-input:focus { border-color: var(--primary); }
-.rv-input::placeholder { color: var(--text-light); }
-:global([data-theme="dark"]) .rv-input { background: #253341; border-color: #38444D; }
-:global([data-theme="dark"]) .rv-type-select { background: #253341; border-color: #38444D; }
-
-.rv-add-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 9px 16px;
-  background: #1c1c1e;
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  font-family: inherit;
-  transition: opacity 0.14s;
-  align-self: flex-start;
-}
-.rv-add-btn:hover { opacity: 0.82; }
-.rv-add-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-:global([data-theme="dark"]) .rv-add-btn { background: #F7F9F9; color: #15202B; }
 </style>

@@ -130,11 +130,12 @@ async function handleRegister() {
   loading.value = true
   try {
     await auth.register({ username: username.value, email: email.value, password: password.value })
+    await auth.login(email.value, password.value)
     const next = route.query.next as string | undefined
     if (next && next.startsWith('/')) {
-      router.push(`/login?next=${encodeURIComponent(next)}`)
+      router.push(next)
     } else {
-      router.push('/login')
+      router.push('/')
     }
   } catch (e) {
     error.value = (e as Error).message
