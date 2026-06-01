@@ -20,6 +20,17 @@
         </div>
       </div>
 
+      <AiNudge
+        storage-key="team"
+        label="✨ AI can help you manage your team"
+        :prompts="[
+          'Who has the most tasks assigned to them?',
+          'Which team member has overdue tasks?',
+          'Reassign all tasks from one member to another',
+          'Show me all tasks with no assignee',
+        ]"
+      />
+
       <!-- Invite form -->
       <div v-if="showInviteForm" class="invite-form-card">
         <h3>Invite someone</h3>
@@ -121,6 +132,7 @@ import { useAuthStore } from '../stores/auth'
 import { useConfirm } from '../composables/useConfirm'
 import type { MemberRole } from '../types'
 import Loading from '../components/common/Loading.vue'
+import AiNudge from '../components/common/AiNudge.vue'
 
 const route = useRoute()
 const router = useRouter()

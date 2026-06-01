@@ -165,6 +165,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePlanStore } from '../stores/plans'
+import AiNudge from '../components/common/AiNudge.vue'
 import { useConfirm } from '../composables/useConfirm'
 
 const store = usePlanStore()

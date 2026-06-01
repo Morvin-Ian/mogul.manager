@@ -6,6 +6,7 @@ from pydantic import BaseModel
 class DocumentResponse(BaseModel):
     id: int
     uuid: str
+    project_id: int | None = None
     user_id: int
     title: str
     original_filename: str
@@ -44,3 +45,7 @@ class SearchHit(BaseModel):
 class SearchResponse(BaseModel):
     results: list[SearchHit]
     count: int
+
+
+class DocumentUpdate(BaseModel):
+    project_id: int | None = None  # Set to null to make general / detach from project

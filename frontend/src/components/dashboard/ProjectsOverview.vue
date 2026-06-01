@@ -82,7 +82,7 @@
         v-for="(p, idx) in projects.slice(0, 5)"
         :key="p.id"
         class="ov-proj-row"
-        @click="$router.push(`/projects/${p.id}`)"
+        @click="$router.push(`/projects/${p.uuid}`)"
       >
         <span class="ov-proj-dot" :style="{ background: PROJECT_COLORS[idx % PROJECT_COLORS.length] }"/>
         <span class="ov-proj-name">{{ p.title }}</span>

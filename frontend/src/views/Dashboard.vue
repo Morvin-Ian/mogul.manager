@@ -8,6 +8,7 @@
       </main>
     </div>
     <ConfirmDialog />
+    <AiFloatingButton />
   </div>
 </template>
 
@@ -18,6 +19,7 @@ import { useAuthStore } from '../stores/auth'
 import AppSidebar from '../components/layout/AppSidebar.vue'
 import AppHeader from '../components/layout/AppHeader.vue'
 import ConfirmDialog from '../components/common/ConfirmDialog.vue'
+import AiFloatingButton from '../components/common/AiFloatingButton.vue'
 
 const router = useRouter()
 const auth = useAuthStore()

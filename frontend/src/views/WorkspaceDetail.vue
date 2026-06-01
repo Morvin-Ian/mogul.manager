@@ -168,7 +168,49 @@
           <button v-if="isOwner" class="btn btn-sm btn-danger" @click="handleDelete">Delete</button>
         </div>
       </div>
+      <AiNudge
+        storage-key="workspace-detail"
+        label="✨ AI can act on this workspace right now"
+        :prompts="[
+          'What tasks are overdue in this workspace?',
+          `Summarize progress across all projects in ${currentWorkspace.title}`,
+          'Create a new project and add tasks to it',
+          'Which team member has the most tasks?',
+        ]"
+      />
       <ProjectList :workspace-id="currentWorkspace.id" />
+
+      <!-- Plans section -->
+      <div v-if="wsPlans.length" class="ws-section">
+        <div class="ws-section-header">
+          <div class="ws-section-title">
+            <font-awesome-icon :icon="['fas', 'list-check']" />
+            Plans
+            <span class="ws-section-count">{{ wsPlans.length }}</span>
+          </div>
+          <button class="btn btn-sm" @click="$router.push('/plans')">
+            View all
+          </button>
+        </div>
+        <div class="ws-items-grid">
+          <div
+            v-for="plan in wsPlans"
+            :key="plan.uuid"
+            class="ws-item-card"
+            @click="$router.push(`/plans/${plan.uuid}`)"
+          >
+            <div class="ws-item-top">
+              <span class="ws-item-status" :class="`ps-${plan.status}`">{{ plan.status }}</span>
+              <span class="ws-item-meta">{{ plan.steps.length }} steps</span>
+            </div>
+            <p class="ws-item-title">{{ plan.title }}</p>
+            <div class="ws-progress-bar">
+              <div class="ws-progress-fill" :style="{ width: planProgress(plan) + '%' }" />
+            </div>
+          </div>
+        </div>
+      </div>
+
     </template>
 
     <WorkspaceForm
@@ -177,6 +219,26 @@
       @close="closeForm"
       @saved="onSave"
     />
+
+    <!-- Post-creation: create first project journey -->
+    <Teleport to="body">
+      <div v-if="showPlanJourney" class="journey-overlay" @click.self="skipPlanJourney">
+        <div class="journey-card">
+          <div class="journey-icon">
+            <font-awesome-icon :icon="['fas', 'folder-plus']" />
+          </div>
+          <h3>Create your first project?</h3>
+          <p><strong>{{ journeyWsTitle }}</strong> is ready. Add a project — you can then create plans and upload documents to it.</p>
+          <div class="journey-actions">
+            <button class="btn" @click="skipPlanJourney">Skip for now</button>
+            <button class="btn btn-primary" @click="skipPlanJourney">
+              <font-awesome-icon :icon="['fas', 'arrow-right']" />
+              Got it
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -187,10 +249,13 @@ import { useWorkspaceStore } from '../stores/workspaces'
 import { useMembersStore } from '../stores/members'
 import { useAuthStore } from '../stores/auth'
 import { useConfirm } from '../composables/useConfirm'
-import type { Workspace } from '../types'
+import { usePlanStore } from '../stores/plans'
+import type { Workspace, Plan } from '../types'
+
 import WorkspaceCard from '../components/workspace/WorkspaceCard.vue'
 import WorkspaceForm from '../components/workspace/WorkspaceForm.vue'
 import ProjectList from '../components/project/ProjectList.vue'
+import AiNudge from '../components/common/AiNudge.vue'
 import Loading from '../components/common/Loading.vue'
 
 const route = useRoute()
@@ -214,8 +279,26 @@ function dismissExplainer() {
 
 onMounted(() => workspaceStore.fetchAll())
 
+const planStore = usePlanStore()
+
+const wsPlans = ref<Plan[]>([])
+
+function planProgress(plan: Plan): number {
+  if (!plan.steps.length) return 0
+  const done = plan.steps.filter(s => s.status === 'completed' || s.status === 'skipped').length
+  return Math.round((done / plan.steps.length) * 100)
+}
+
 const showForm = ref(false)
 const editingWorkspace = ref<Workspace | null>(null)
+
+// Post-creation journey: prompt to create first project
+const showPlanJourney = ref(false)
+const journeyWsTitle = ref('')
+
+function skipPlanJourney() {
+  showPlanJourney.value = false
+}
 const workspaceId = computed(() => {
   const id = route.params.id
   return id ? (id as string) : null
@@ -227,11 +310,16 @@ watch(workspaceId, async (id) => {
     try {
       await workspaceStore.fetchOne(id)
       await membersStore.fetchMyMembership(id)
+      const ws = workspaceStore.current
+      if (ws) {
+        wsPlans.value = await planStore.fetchByWorkspace(ws.id)
+      }
     } catch {
       router.push('/')
     }
   } else {
     workspaceStore.current = null
+    wsPlans.value = []
   }
 }, { immediate: true })
 
@@ -257,7 +345,12 @@ async function onSave(data: { title: string; description: string }) {
     await workspaceStore.update(currentWorkspace.value.uuid, data)
   } else {
     const ws = await workspaceStore.create(data)
+    closeForm()
     router.push(`/workspaces/${ws.uuid}`)
+    // Prompt to create first project
+    journeyWsTitle.value = ws.title
+    showPlanJourney.value = true
+    return
   }
   closeForm()
 }
@@ -591,6 +684,100 @@ async function handleDelete() {
   gap: 8px;
   flex-shrink: 0;
   align-items: center;
+}
+
+/* ── Workspace plans / documents sections ── */
+.ws-section {
+  margin-top: 36px;
+}
+.ws-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  padding-bottom: 10px;
+  border-bottom: 1.5px solid var(--border);
+}
+.ws-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+.ws-section-count {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-light);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  padding: 1px 7px;
+  border-radius: var(--radius-full);
+}
+.ws-items-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+}
+.ws-item-card {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: border-color 0.14s, box-shadow 0.12s, transform 0.12s;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ws-item-card:hover {
+  border-color: var(--border-strong);
+  box-shadow: 0 4px 14px rgba(10,11,13,0.07);
+  transform: translateY(-1px);
+}
+.ws-item-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+.ws-item-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.4;
+}
+.ws-item-meta {
+  font-size: 11.5px;
+  color: var(--text-light);
+}
+.ws-item-status {
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  text-transform: capitalize;
+}
+/* Plan statuses */
+.ps-active    { background: rgba(0,186,124,0.14); color: #00845A; }
+.ps-draft     { background: rgba(139,152,165,0.15); color: #536471; }
+.ps-completed { background: rgba(104,204,128,0.18); color: #1A5820; }
+.ps-cancelled { background: rgba(207,32,47,0.1); color: #CF202F; }
+
+
+.ws-progress-bar {
+  height: 3px;
+  background: var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+.ws-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #10B981, #059669);
+  border-radius: 999px;
+  transition: width 0.4s ease;
 }
 
 </style>

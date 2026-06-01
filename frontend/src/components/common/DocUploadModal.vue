@@ -30,7 +30,7 @@
         </template>
       </div>
 
-      <div class="modal-context-section">
+      <div v-if="!lockedProjectId" class="modal-context-section">
         <p class="modal-context-label">
           <svg viewBox="0 0 14 14" fill="none" width="12" height="12"><path d="M2 5v6a1 1 0 001 1h8a1 1 0 001-1V5.5a1 1 0 00-1-1H7L5.5 3H3a1 1 0 00-1 2z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
           Attach to (optional)
@@ -76,6 +76,7 @@ const props = defineProps<{
   projects: Project[]
   error: string | null
   uploading: boolean
+  lockedProjectId?: number | null  // when set, skip selectors and use this project
 }>()
 
 const emit = defineEmits<{
@@ -87,7 +88,7 @@ const emit = defineEmits<{
 const pendingFile = ref<File | null>(null)
 const modalDragging = ref(false)
 const workspaceId = ref<number | null>(null)
-const projectId = ref<number | null>(null)
+const projectId = ref<number | null>(props.lockedProjectId ?? null)
 
 function handleModalDrop(e: DragEvent) {
   modalDragging.value = false

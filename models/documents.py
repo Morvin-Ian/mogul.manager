@@ -11,6 +11,9 @@ from config import settings
 from database import Base
 from models.base import TimestampedModel
 
+if False:  # TYPE_CHECKING
+    from .projects import Project
+
 EMBEDDING_DIM = 384  # BAAI/bge-small-en-v1.5
 
 
@@ -33,6 +36,9 @@ class Document(TimestampedModel):
 
     user_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    project_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("projects.id", ondelete="CASCADE"), nullable=True, index=True
     )
     title: Mapped[str] = mapped_column(String(500), nullable=False)
     original_filename: Mapped[str] = mapped_column(String(500), nullable=False)
@@ -74,3 +80,7 @@ class DocumentChunk(Base):
     embedding: Mapped[list[float] | None] = mapped_column(Vector(EMBEDDING_DIM), nullable=True)
 
     document: Mapped[Document] = relationship("Document", back_populates="chunks")
+
+    @property
+    def project_uuid(self) -> str | None:
+        return None  # Loaded lazily; use selectinload in service

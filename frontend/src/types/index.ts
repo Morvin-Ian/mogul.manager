@@ -205,6 +205,8 @@ export interface PlanStep {
 export interface Plan {
   id: number
   uuid: string
+  project_id: number | null
+  project_title: string | null
   user_id: number
   workspace_id: number | null
   title: string
@@ -218,7 +220,12 @@ export interface Plan {
 export interface PlanCreate {
   title: string
   description?: string | null
+  project_id?: number | null
   workspace_id?: number | null
+}
+
+export interface DocumentUpdate {
+  project_id: number | null
 }
 
 // ── Documents ──────────────────────────────────────────────────
@@ -228,6 +235,7 @@ export type DocumentFileType = 'pdf' | 'docx' | 'txt' | 'csv'
 export interface Document {
   id: number
   uuid: string
+  project_id: number | null
   user_id: number
   title: string
   original_filename: string

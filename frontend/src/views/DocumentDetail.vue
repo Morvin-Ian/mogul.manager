@@ -21,7 +21,7 @@
           <font-awesome-icon :icon="['fas', 'rotate-right']" />
           {{ reprocessing ? 'Queued…' : 'Reprocess' }}
         </button>
-        <button class="btn btn-sm btn-danger" @click="handleDelete">Delete</button>
+        <button v-if="canDelete" class="btn btn-sm btn-danger" @click="handleDelete">Delete</button>
       </div>
     </div>
 
@@ -46,6 +46,30 @@
       <div class="stat-item" v-if="doc.processed_at">
         Processed {{ formatDate(doc.processed_at) }}
       </div>
+    </div>
+
+    <!-- Project assignment (visible to uploader or admin/owner) -->
+    <div v-if="canReassign" class="section">
+      <h3 class="section-title">Project</h3>
+      <div class="project-assign-row">
+        <select v-model="selectedProjectId" class="project-select" @change="reassignProject">
+          <option :value="null">General — not linked to a project</option>
+          <option v-for="p in accessibleProjects" :key="p.id" :value="p.id">{{ p.title }}</option>
+        </select>
+        <span v-if="reassigning" class="reassign-state">
+          <font-awesome-icon :icon="['fas', 'spinner']" spin /> Saving…
+        </span>
+        <span v-else-if="reassigned" class="reassign-state success">
+          <font-awesome-icon :icon="['fas', 'circle-check']" /> Saved
+        </span>
+      </div>
+    </div>
+    <div v-else-if="doc.project_id" class="section">
+      <h3 class="section-title">Project</h3>
+      <p class="project-label">
+        <font-awesome-icon :icon="['fas', 'folder']" />
+        {{ projectTitle }}
+      </p>
     </div>
 
     <!-- Error -->
@@ -121,8 +145,10 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import type { SearchHit } from '../types'
+import type { SearchHit, Project } from '../types'
 import { useDocumentStore } from '../stores/documents'
+import { useProjectStore } from '../stores/projects'
+import { useAuthStore } from '../stores/auth'
 import { useConfirm } from '../composables/useConfirm'
 
 const route = useRoute()
@@ -132,6 +158,43 @@ const { confirm } = useConfirm()
 
 const docId = computed(() => route.params.id as string)
 const doc = computed(() => store.current)
+const auth = useAuthStore()
+const projectStore = useProjectStore()
+
+// Rights: uploader can always delete/reassign; admin/owner via membership check
+const canDelete = computed(() => {
+  if (!doc.value) return false
+  return doc.value.user_id === auth.user?.id
+})
+
+const canReassign = computed(() => {
+  if (!doc.value) return false
+  return doc.value.user_id === auth.user?.id
+})
+
+// Project reassignment
+const accessibleProjects = ref<Project[]>([])
+const selectedProjectId = ref<number | null>(null)
+const reassigning = ref(false)
+const reassigned = ref(false)
+
+const projectTitle = computed(() => {
+  if (!doc.value?.project_id) return null
+  return accessibleProjects.value.find(p => p.id === doc.value!.project_id)?.title ?? `Project ${doc.value.project_id}`
+})
+
+async function reassignProject() {
+  if (!doc.value) return
+  reassigning.value = true
+  reassigned.value = false
+  try {
+    await store.updateProjectId(docId.value, selectedProjectId.value)
+    reassigned.value = true
+    setTimeout(() => { reassigned.value = false }, 2000)
+  } finally {
+    reassigning.value = false
+  }
+}
 
 const reprocessing = ref(false)
 const searchQuery = ref('')
@@ -146,6 +209,10 @@ onMounted(async () => {
   if (doc.value?.status === 'pending' || doc.value?.status === 'processing') {
     schedulePoll()
   }
+  // Load all accessible projects for reassignment dropdown
+  if (projectStore.projects.length === 0) await projectStore.fetchAll()
+  accessibleProjects.value = projectStore.projects
+  selectedProjectId.value = doc.value?.project_id ?? null
 })
 
 onUnmounted(() => { if (pollTimer) clearTimeout(pollTimer) })
@@ -335,6 +402,21 @@ function formatDate(iso: string): string {
 }
 .rag-hint p { font-size: 13px; line-height: 1.5; }
 .rag-link { color: var(--primary); font-weight: 600; text-decoration: underline; }
+
+/* Project assignment */
+.project-assign-row {
+  display: flex; align-items: center; gap: 10px;
+}
+.project-select {
+  flex: 1; padding: 8px 12px; border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm); font-size: 13.5px; font-family: inherit;
+  background: var(--bg); color: var(--text); outline: none;
+  transition: border-color 0.15s;
+}
+.project-select:focus { border-color: var(--primary); }
+.reassign-state { font-size: 12.5px; color: var(--text-muted); display: flex; align-items: center; gap: 5px; white-space: nowrap; }
+.reassign-state.success { color: var(--success); }
+.project-label { font-size: 13.5px; color: var(--text); display: flex; align-items: center; gap: 7px; }
 
 /* Loading */
 .loading-state { display: flex; justify-content: center; padding: 80px; }

@@ -1,8 +1,8 @@
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, BackgroundTasks, Depends, Form, HTTPException, Query, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
-from schemas.documents import DocumentResponse, SearchResponse, SearchHit
+from schemas.documents import DocumentResponse, DocumentUpdate, SearchResponse, SearchHit
 from services.auth import CurrentUser
 from services.documents import (
     ALLOWED_CONTENT_TYPES,
@@ -20,8 +20,15 @@ router = APIRouter(prefix="/api/documents", tags=["Documents"])
 async def list_documents(
     current_user: CurrentUser,
     db: AsyncSession = Depends(get_db),
+    project_id: int | None = Query(None),
+    workspace_id: int | None = Query(None),
 ):
-    return await DocumentService(db).list_documents(current_user.id)
+    svc = DocumentService(db)
+    if project_id is not None:
+        return await svc.list_by_project(project_id, current_user.id)
+    if workspace_id is not None:
+        return await svc.list_by_workspace(workspace_id, current_user.id)
+    return await svc.list_documents(current_user.id)
 
 
 @router.post("", response_model=DocumentResponse, status_code=201)
@@ -30,6 +37,7 @@ async def upload_document(
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     file: UploadFile = File(...),
+    project_id: int | None = Form(None),
 ):
     filename = file.filename or "document"
     ext = Path(filename).suffix.lower()
@@ -44,6 +52,7 @@ async def upload_document(
             filename=filename,
             content=content,
             content_type=file.content_type or "",
+            project_id=project_id,
         )
     except ValueError as exc:
         raise HTTPException(400, str(exc))
@@ -89,6 +98,48 @@ async def reprocess_document(
     if not doc:
         raise HTTPException(404, "Document not found")
     background_tasks.add_task(process_document_bg, doc.id)
+    return doc
+
+
+@router.patch("/{document_id}", response_model=DocumentResponse)
+async def update_document(
+    document_id: str,
+    body: DocumentUpdate,
+    current_user: CurrentUser,
+    db: AsyncSession = Depends(get_db),
+):
+    """Reassign a document to a different project (or make it general)."""
+    from sqlalchemy import select
+    svc = DocumentService(db)
+    doc = await svc.get_by_uuid(document_id, current_user.id)
+    if not doc:
+        raise HTTPException(404, "Document not found")
+
+    # Rights check: uploader can always reassign; others need admin/owner role
+    if doc.user_id != current_user.id:
+        check_project_id = doc.project_id or body.project_id
+        if not check_project_id:
+            raise HTTPException(403, "Only the document owner can modify this document")
+        proj_result = await db.execute(
+            select(models.Project).where(models.Project.id == check_project_id)
+        )
+        project = proj_result.scalars().first()
+        if not project:
+            raise HTTPException(404, "Project not found")
+        from models.collaboration import WorkspaceMember, MemberRole
+        member_result = await db.execute(
+            select(WorkspaceMember).where(
+                WorkspaceMember.workspace_id == project.workspace_id,
+                WorkspaceMember.user_id == current_user.id,
+            )
+        )
+        member = member_result.scalars().first()
+        if not member or member.role not in (MemberRole.admin, MemberRole.owner):
+            raise HTTPException(403, "Admin or owner role required to reassign this document")
+
+    doc.project_id = body.project_id
+    await db.commit()
+    await db.refresh(doc)
     return doc
 
 

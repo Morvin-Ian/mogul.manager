@@ -131,6 +131,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import AiNudge from '../components/common/AiNudge.vue'
 import { useRouter } from 'vue-router'
 import { useDocumentStore } from '../stores/documents'
 import { useWorkspaceStore } from '../stores/workspaces'

@@ -40,6 +40,8 @@ class PlanRead(BaseModel):
     uuid: str
     user_id: int
     workspace_id: int | None
+    project_id: int | None = None
+    project_title: str | None = None
     title: str
     description: str | None
     status: str
@@ -61,6 +63,7 @@ class PlanDetail(PlanRead):
 class PlanCreate(BaseModel):
     title: str = Field(min_length=1, max_length=255)
     description: str | None = None
+    project_id: int | None = None
     workspace_id: int | None = None
 
 
@@ -69,3 +72,4 @@ class PlanUpdate(BaseModel):
     description: str | None = None
     status: PlanStatusType | None = None
     workspace_id: int | None = None
+    project_id: int | None = None

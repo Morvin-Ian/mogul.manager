@@ -52,7 +52,7 @@
         :key="task.id"
         class="task-card"
         :class="`task-card-${task.status ?? 'todo'}`"
-        @click="$router.push(`/projects/${task.project_id}`)"
+        @click="$router.push(`/projects/${task.project_uuid ?? task.project_id}`)"
       >
         <div class="task-card-top">
           <div class="task-proj-chip" :class="`task-chip-${task.status ?? 'todo'}`">
@@ -170,7 +170,7 @@ function statusLabelFor(status: string | undefined): string {
 
 async function toggleTask(task: Task) {
   const newStatus = task.status === 'completed' ? 'todo' : 'completed'
-  const updated = await taskStore.update(task.id, { status: newStatus })
+  const updated = await taskStore.update(task.uuid, { status: newStatus })
   emit('task-updated', updated)
 }
 </script>

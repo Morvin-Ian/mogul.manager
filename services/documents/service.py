@@ -59,9 +59,68 @@ class DocumentService:
         self.db = db
 
     async def list_documents(self, user_id: int) -> list[Document]:
+        """
+        Return documents the user can see:
+        - Private docs (no project_id) they own
+        - Project docs from workspaces they are a member of (any role)
+        Project docs from workspaces they've left are not shown.
+        """
+        from sqlalchemy import or_, and_
+        from models.projects import Project
+        from models.collaboration import WorkspaceMember
+        accessible_project_ids = (
+            select(Project.id)
+            .join(WorkspaceMember, WorkspaceMember.workspace_id == Project.workspace_id)
+            .where(WorkspaceMember.user_id == user_id)
+        )
         result = await self.db.execute(
             select(Document)
-            .where(Document.user_id == user_id)
+            .where(
+                or_(
+                    # Private documents (no project) owned by the user
+                    and_(Document.user_id == user_id, Document.project_id.is_(None)),
+                    # Project documents in workspaces the user is a member of
+                    Document.project_id.in_(accessible_project_ids),
+                )
+            )
+            .order_by(Document.created_at.desc())
+        )
+        return list(result.scalars().all())
+
+    async def list_by_project(self, project_id: int, user_id: int) -> list[Document]:
+        """Documents attached to a specific project that the user can access."""
+        from models.collaboration import WorkspaceMember
+        from models.projects import Project
+        # Confirm user is a member of the project's workspace
+        is_member = await self.db.execute(
+            select(WorkspaceMember.id)
+            .join(Project, Project.workspace_id == WorkspaceMember.workspace_id)
+            .where(Project.id == project_id, WorkspaceMember.user_id == user_id)
+        )
+        if not is_member.scalars().first():
+            return []
+        result = await self.db.execute(
+            select(Document)
+            .where(Document.project_id == project_id)
+            .order_by(Document.created_at.desc())
+        )
+        return list(result.scalars().all())
+
+    async def list_by_workspace(self, workspace_id: int, user_id: int) -> list[Document]:
+        """All project documents in a workspace visible to the user."""
+        from models.collaboration import WorkspaceMember
+        from models.projects import Project
+        accessible_project_ids = (
+            select(Project.id)
+            .join(WorkspaceMember, WorkspaceMember.workspace_id == Project.workspace_id)
+            .where(
+                Project.workspace_id == workspace_id,
+                WorkspaceMember.user_id == user_id,
+            )
+        )
+        result = await self.db.execute(
+            select(Document)
+            .where(Document.project_id.in_(accessible_project_ids))
             .order_by(Document.created_at.desc())
         )
         return list(result.scalars().all())
@@ -103,6 +162,7 @@ class DocumentService:
         filename: str,
         content: bytes,
         content_type: str,
+        project_id: int | None = None,
     ) -> Document:
         ext = Path(filename).suffix.lower()
         file_type = ALLOWED_EXTENSIONS.get(ext) or ALLOWED_CONTENT_TYPES.get(
@@ -118,6 +178,7 @@ class DocumentService:
 
         doc = Document(
             user_id=user_id,
+            project_id=project_id,
             title=filename,
             original_filename=filename,
             file_type=file_type,

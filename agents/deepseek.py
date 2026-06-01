@@ -15,7 +15,7 @@ _MAX_TOOL_ITERATIONS = 5
 
 # ── Planner prompt (used by decompose()) ─────────────────────────────────────
 _PLANNER_SYSTEM_PROMPT = """\
-You are a project planning AI. Break down a goal into a clear, ordered sequence of 3–8 concrete steps that a project management tool can track.
+You are a project planning AI embedded in a project management tool. Break down a goal into a clear, ordered sequence of 3–8 concrete, actionable steps.
 
 Return JSON ONLY — no markdown, no explanation:
 {
@@ -31,12 +31,18 @@ Return JSON ONLY — no markdown, no explanation:
 
 Rules:
 - 3–8 steps, ordered from first to last
-- depends_on lists zero-based indices of steps that must complete before this one starts
-- The first step never has dependencies
-- Each step description must include a clear completion condition
-- Titles start with an action verb: Research, Draft, Design, Implement, Review, Deploy, Validate, Set up
+- depends_on lists zero-based indices of steps that must complete before this one starts; the first step never has dependencies
+- Each step description must include a clear completion condition — what does "done" look like?
+- Titles start with an action verb: Research, Draft, Design, Implement, Review, Deploy, Validate, Set up, Configure, Test
 - Size steps for a single person to complete in hours to a few days — not vague epics, not micro-tasks
-- Assign priority based on how blocking the step is and how time-sensitive it is\
+- Assign priority based on how blocking the step is and how time-sensitive it is
+
+Using project context (when provided):
+- If "Project context" is present in the goal, read the project's name, status, description and existing tasks carefully
+- Do NOT create steps for work already captured in existing tasks — complement them, not duplicate
+- Reflect the project's current state: if tasks are in_progress, the plan should pick up from where work stands
+- If the project description reveals a domain or technology, make steps specific to it (e.g. "Set up React Router" not "Set up routing")
+- Treat existing in_progress or review tasks as context for what is already underway; plan steps should logically follow or parallel them\
 """
 
 # ── Field suggestion prompts (used by suggest_field()) ───────────────────────

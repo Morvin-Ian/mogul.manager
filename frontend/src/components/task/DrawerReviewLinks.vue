@@ -65,7 +65,7 @@ async function saveLinks(links: ReviewLink[]) {
   saving.value = true
   try {
     const meta = { ...(props.task.metadata_json as Record<string, any> ?? {}), review_links: links }
-    const updated = await patch<Task>(`/tasks/${props.task.id}`, { metadata_json: meta })
+    const updated = await patch<Task>(`/tasks/${props.task.uuid}`, { metadata_json: meta })
     emit('updated', updated)
   } finally {
     saving.value = false

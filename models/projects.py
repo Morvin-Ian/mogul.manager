@@ -55,4 +55,20 @@ class Project(TimestampedModel):
 
     @property
     def workspace_uuid(self) -> str | None:
+        try:
+            from sqlalchemy import inspect as _i
+            if 'workspace' in _i(self).unloaded:
+                return None
+        except Exception:
+            pass
         return self.workspace.uuid if self.workspace else None
+
+    @property
+    def workspace_title(self) -> str | None:
+        try:
+            from sqlalchemy import inspect as _i
+            if 'workspace' in _i(self).unloaded:
+                return None
+        except Exception:
+            pass
+        return self.workspace.title if self.workspace else None

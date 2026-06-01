@@ -19,10 +19,10 @@ _ACTIVE_STATUSES = {
 }
 
 _TASK_DISPLAY_LIMIT = 12
-_PENDING_STEP_DISPLAY_LIMIT = 3
+_PENDING_STEP_LIMIT = 3
 _DOC_DISPLAY_LIMIT = 10
 _MEMORY_LIMIT = 15
-_PLAN_DISPLAY_LIMIT = 5
+_PLAN_DISPLAY_LIMIT = 6
 
 
 async def build_context(user_id: int, db: AsyncSession, query: str | None = None) -> str:
@@ -33,97 +33,140 @@ async def build_context(user_id: int, db: AsyncSession, query: str | None = None
         "(use this as user_id when calling workspace tools)"
     )
 
-    ws_svc = WorkspaceService(db)  # type: ignore[arg-type]
-    proj_svc = ProjectService(db)  # type: ignore[arg-type]
-    plan_svc = PlanService(db)  # type: ignore[arg-type]
-    mem_svc = MemoryService(db)  # type: ignore[arg-type]
-    doc_svc = DocumentService(db)  # type: ignore[arg-type]
+    ws_svc   = WorkspaceService(db)   # type: ignore[arg-type]
+    proj_svc = ProjectService(db)     # type: ignore[arg-type]
+    plan_svc = PlanService(db)        # type: ignore[arg-type]
+    mem_svc  = MemoryService(db)      # type: ignore[arg-type]
+    doc_svc  = DocumentService(db)    # type: ignore[arg-type]
 
-    # Run all independent top-level queries in parallel
     workspaces, active_tasks, plans, memories, documents = await asyncio.gather(
         ws_svc.list_by_user(user_id),
         _fetch_active_tasks(user_id, db),
-        plan_svc.list_by_user(user_id),
+        plan_svc.list_accessible(user_id),
         mem_svc.list_by_user(user_id, limit=_MEMORY_LIMIT),
         doc_svc.list_documents(user_id),
     )
 
-    # Workspaces — fetch all projects in parallel once workspace IDs are known
     active_workspaces = [ws for ws in workspaces if not ws.is_archived]
+
+    # ── Build lookup maps ──────────────────────────────────────────
+    workspace_map: dict[int, models.Workspace] = {}
+    project_map:   dict[int, models.Project]   = {}
+    project_lists_result: list[list[models.Project]] = []
+
     if active_workspaces:
-        project_lists = await asyncio.gather(
+        project_lists_result = await asyncio.gather(
             *[proj_svc.list_by_workspace(ws.id) for ws in active_workspaces]
         )
-        lines.append("\nUser's workspaces and projects:")
-        for ws, projects in zip(active_workspaces, project_lists):
-            lines.append(f"  Workspace: {ws.title!r} (id={ws.id})")
+        for ws, projects in zip(active_workspaces, project_lists_result):
+            workspace_map[ws.id] = ws
             for proj in projects:
-                if not proj.is_archived:
-                    lines.append(
-                        f"    Project: {proj.title!r} "
-                        f"(id={proj.id}, status={proj.status.value})"
-                    )
+                project_map[proj.id] = proj
+
+    # ── Group plans by workspace ───────────────────────────────────
+    ws_plans: dict[int | None, list] = {}
+    for plan in plans:
+        ws_plans.setdefault(plan.workspace_id, []).append(plan)
+
+    # ── Workspace + Project + Plan tree ───────────────────────────
+    if active_workspaces:
+        lines.append("\nWorkspaces, projects and plans:")
+        for ws, projects in zip(active_workspaces, project_lists_result):
+            active_projects = [p for p in projects if not p.is_archived]
+            lines.append(f"\n  Workspace: {ws.title!r}")
+            if ws.description:
+                lines.append(f"    Description: {ws.description}")
+
+            for proj in active_projects:
+                lines.append(f"    Project: {proj.title!r} (status: {proj.status.value})")
+                if proj.description:
+                    lines.append(f"      Description: {proj.description}")
+                if proj.ai_summary:
+                    lines.append(f"      AI summary: {proj.ai_summary}")
+
+            for plan in ws_plans.get(ws.id, [])[:_PLAN_DISPLAY_LIMIT]:
+                total = len(plan.steps)
+                done  = sum(1 for s in plan.steps if s.status.value in ("completed", "skipped"))
+                pct   = round(done / total * 100) if total else 0
+                lines.append(
+                    f"    Plan: {plan.title!r} "
+                    f"(status: {plan.status.value}, {done}/{total} steps done, {pct}% complete)"
+                )
+                if plan.description:
+                    lines.append(f"      Goal: {plan.description}")
+                running = [s for s in plan.steps if s.status.value == "running"]
+                pending = [s for s in plan.steps if s.status.value == "pending"]
+                for s in running:
+                    lines.append(f"      [running] {s.title!r}")
+                for s in pending[:_PENDING_STEP_LIMIT]:
+                    dep_note = " (blocked until dependencies complete)" if s.dependencies else ""
+                    lines.append(f"      [pending] {s.title!r} (priority: {s.priority.value}){dep_note}")
+                if len(pending) > _PENDING_STEP_LIMIT:
+                    lines.append(f"      ... {len(pending) - _PENDING_STEP_LIMIT} more pending steps")
     else:
         lines.append("\nThe user has no workspaces yet.")
 
-    # Active tasks
+    # Personal plans (not tied to a workspace)
+    personal_plans = ws_plans.get(None, [])
+    if personal_plans:
+        lines.append("\nPersonal plans (not linked to a workspace):")
+        for plan in personal_plans[:_PLAN_DISPLAY_LIMIT]:
+            total = len(plan.steps)
+            done  = sum(1 for s in plan.steps if s.status.value in ("completed", "skipped"))
+            lines.append(
+                f"  Plan: {plan.title!r} "
+                f"(status: {plan.status.value}, {done}/{total} steps done)"
+            )
+
+    # ── Active tasks ──────────────────────────────────────────────
     if active_tasks:
         lines.append("\nTasks currently in progress or needing attention:")
         for task in active_tasks[:_TASK_DISPLAY_LIMIT]:
-            due = f", due {task.due_date.date()}" if task.due_date else ""
+            proj     = project_map.get(task.project_id)
+            ws       = workspace_map.get(proj.workspace_id) if proj else None
+            proj_name = proj.title if proj else "unknown project"
+            ws_name   = f" [{ws.title}]" if ws else ""
+            due       = f", due {task.due_date.date()}" if task.due_date else ""
+            assignee  = f", assigned to: {task.assignee_name}" if task.assignee_name else ""
             lines.append(
                 f"  [{task.status.value}] {task.title!r} "
-                f"(project_id={task.project_id}{due})"
+                f"— {proj_name}{ws_name}{due}{assignee}"
             )
         if len(active_tasks) > _TASK_DISPLAY_LIMIT:
-            lines.append(
-                f"  (showing {_TASK_DISPLAY_LIMIT} of {len(active_tasks)} active tasks"
-                " — use list_tasks to see all)"
-            )
+            lines.append(f"  (showing {_TASK_DISPLAY_LIMIT} of {len(active_tasks)} active tasks)")
 
-    # Active plans
-    active_plans = [p for p in plans if p.status.value in ("active", "draft")]
-    if active_plans:
-        lines.append("\nActive plans:")
-        for plan in active_plans[:_PLAN_DISPLAY_LIMIT]:
-            total = len(plan.steps)
-            done = sum(1 for s in plan.steps if s.status.value in ("completed", "skipped"))
-            pending_steps = [s for s in plan.steps if s.status.value == "pending"]
-            running_steps = [s for s in plan.steps if s.status.value == "running"]
-            lines.append(f"  Plan: {plan.title!r} (id={plan.id}, {done}/{total} steps done)")
-            for s in running_steps:
-                lines.append(f"    [running] {s.title!r} (step_id={s.id})")
-            for s in pending_steps[:_PENDING_STEP_DISPLAY_LIMIT]:
-                lines.append(f"    [pending] {s.title!r} (step_id={s.id}, priority={s.priority.value})")
-            if len(pending_steps) > _PENDING_STEP_DISPLAY_LIMIT:
-                lines.append(
-                    f"    ({len(pending_steps) - _PENDING_STEP_DISPLAY_LIMIT} more pending steps"
-                    " — use get_plan to see all)"
-                )
-
-    # Memories
+    # ── Memories ──────────────────────────────────────────────────
     if memories:
         lines.append("\nWhat I know about this user:")
         for mem in memories:
             lines.append(f"  [{mem.memory_type}] {mem.content}")
 
-    # Documents
+    # ── Documents ─────────────────────────────────────────────────
     ready_docs = [d for d in documents if d.status == DocumentStatus.ready]
     if ready_docs:
-        lines.append("\nUploaded documents (use search_documents to query them):")
+        lines.append(
+            "\nUploaded documents in the AI knowledge base "
+            "(use search_documents to query their content):"
+        )
         for doc in ready_docs[:_DOC_DISPLAY_LIMIT]:
-            snippet = (doc.summary or "")[:150].replace("\n", " ")
+            proj = project_map.get(doc.project_id) if doc.project_id else None
+            ws   = workspace_map.get(proj.workspace_id) if proj else None
+            if proj and ws:
+                scope = f"Project: {proj.title!r} in Workspace: {ws.title!r}"
+            elif proj:
+                scope = f"Project: {proj.title!r}"
+            else:
+                scope = "General — not linked to any project"
+            snippet = (doc.summary or "")[:120].replace("\n", " ")
+            summary_note = f" — {snippet}" if snippet else ""
             lines.append(
-                f"  [{doc.id}] {doc.title!r} ({doc.file_type.value}, "
-                f"{doc.word_count or 0} words) — {snippet}"
+                f"  {doc.title!r} ({doc.file_type.value}, "
+                f"{doc.word_count or 0} words) | {scope}{summary_note}"
             )
         if len(ready_docs) > _DOC_DISPLAY_LIMIT:
-            lines.append(
-                f"  (showing {_DOC_DISPLAY_LIMIT} of {len(ready_docs)} documents"
-                " — use list_documents to see all)"
-            )
+            lines.append(f"  (showing {_DOC_DISPLAY_LIMIT} of {len(ready_docs)} ready documents)")
 
-    # RAG context (best-effort, never blocks chat)
+    # ── RAG context (semantic search over documents) ──────────────
     if query and ready_docs:
         try:
             rag_svc = RAGService(db)  # type: ignore[arg-type]
@@ -136,18 +179,27 @@ async def build_context(user_id: int, db: AsyncSession, query: str | None = None
     return "\n".join(lines)
 
 
-async def _fetch_active_tasks(
-    user_id: int, db: AsyncSession
-) -> list[models.Task]:
+async def _fetch_active_tasks(user_id: int, db: AsyncSession) -> list[models.Task]:
+    """
+    Fetch in-progress / blocked / review tasks from ALL workspaces the user
+    is a member of (not just workspaces they own).
+    """
+    from models.collaboration import WorkspaceMember
+    from sqlalchemy.orm import selectinload
+
+    accessible_ws_ids = (
+        select(WorkspaceMember.workspace_id)
+        .where(WorkspaceMember.user_id == user_id)
+    )
     result = await db.execute(
         select(models.Task)
         .join(models.Project, models.Task.project_id == models.Project.id)
-        .join(models.Workspace, models.Project.workspace_id == models.Workspace.id)
+        .options(selectinload(models.Task.assignee))
         .where(
-            models.Workspace.user_id == user_id,
+            models.Project.workspace_id.in_(accessible_ws_ids),
             models.Task.status.in_(_ACTIVE_STATUSES),
         )
         .order_by(models.Task.due_date.asc().nulls_last())
         .limit(20)
     )
-    return list(result.scalars().all())
+    return list(result.unique().scalars().all())

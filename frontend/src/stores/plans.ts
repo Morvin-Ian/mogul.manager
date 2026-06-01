@@ -9,6 +9,22 @@ export const usePlanStore = defineStore('plans', () => {
   const loading = ref(false)
   const error = ref<string | null>(null)
 
+  async function fetchByProject(projectId: number): Promise<Plan[]> {
+    try {
+      return await get<Plan[]>(`/plans?project_id=${projectId}`)
+    } catch {
+      return []
+    }
+  }
+
+  async function fetchByWorkspace(workspaceId: number): Promise<Plan[]> {
+    try {
+      return await get<Plan[]>(`/plans?workspace_id=${workspaceId}`)
+    } catch {
+      return []
+    }
+  }
+
   async function fetchAll() {
     loading.value = true
     try {
@@ -67,5 +83,5 @@ export const usePlanStore = defineStore('plans', () => {
     return Math.round((done / plan.steps.length) * 100)
   }
 
-  return { plans, current, loading, error, fetchAll, fetchOne, create, remove, updateStep, progress }
+  return { plans, current, loading, error, fetchAll, fetchByProject, fetchByWorkspace, fetchOne, create, remove, updateStep, progress }
 })

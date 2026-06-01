@@ -75,4 +75,10 @@ class Task(TimestampedModel):
 
     @property
     def project_uuid(self) -> str | None:
+        try:
+            from sqlalchemy import inspect as _i
+            if 'project' in _i(self).unloaded:
+                return None
+        except Exception:
+            pass
         return self.project.uuid if self.project else None

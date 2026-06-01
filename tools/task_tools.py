@@ -1,10 +1,26 @@
 import json
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload, selectinload
 
 import models
+from models.projects import Project as _Project  # noqa: F401 — used in _load_task_full selectinload
 from schemas.project.tasks import TaskCreate, TaskRead, TaskUpdate
 from services.project.tasks import TaskService
+
+
+async def _load_task_full(task_id: int, db: AsyncSession) -> models.Task | None:
+    """Fetch a task with project+workspace loaded so project_uuid serializes safely."""
+    result = await db.execute(
+        select(models.Task)
+        .options(
+            joinedload(models.Task.assignee),
+            selectinload(models.Task.project).selectinload(models.Project.workspace),
+        )
+        .where(models.Task.id == task_id)
+    )
+    return result.unique().scalars().first()
 
 TASK_TOOLS = [
     {
@@ -123,6 +139,7 @@ async def handle(name: str, args: dict, db: AsyncSession) -> str:
     if name == "create_task":
         inp = TaskCreate(**_coerce_priority(args))
         task = await svc.create(inp.model_dump(exclude_none=True))
+        task = await _load_task_full(task.id, db) or task
         return json.dumps({"success": True, "task": _serialize(task)})
 
     if name == "update_task":
@@ -132,6 +149,7 @@ async def handle(name: str, args: dict, db: AsyncSession) -> str:
             return json.dumps({"error": f"Task {task_id} not found"})
         inp = TaskUpdate(**_coerce_priority(args))
         task = await svc.update(task, inp.model_dump(exclude_unset=True))
+        task = await _load_task_full(task.id, db) or task
         return json.dumps({"success": True, "task": _serialize(task)})
 
     if name == "list_tasks":
@@ -139,7 +157,7 @@ async def handle(name: str, args: dict, db: AsyncSession) -> str:
         return json.dumps({"tasks": [_serialize(t) for t in tasks]})
 
     if name == "get_task":
-        task = await svc.get_by_id(args["task_id"])
+        task = await _load_task_full(args["task_id"], db)
         if not task:
             return json.dumps({"error": f"Task {args['task_id']} not found"})
         return json.dumps({"task": _serialize(task)})

@@ -222,33 +222,28 @@
 
                 <div v-else class="chat-empty-state">
                     <div class="empty-inner">
-                        <div class="empty-icon">
-                            <span class="wlc-wordmark"
-                                >mogul<span class="wlc-dot">.</span></span
-                            >
+                        <div class="empty-logo">
+                            <span class="wlc-wordmark">mogul<span class="wlc-dot">.</span></span>
                             <span class="wlc-sub">manager</span>
                         </div>
-                        <p>
-                            Your intelligent project assistant. Select a
-                            conversation or start a new one.
-                        </p>
-                        <button
-                            class="btn btn-primary"
-                            @click="handleNewConversation"
-                        >
-                            <svg
-                                viewBox="0 0 14 14"
-                                fill="none"
-                                width="13"
-                                height="13"
-                            >
-                                <path
-                                    d="M7 2v10M2 7h10"
-                                    stroke="currentColor"
-                                    stroke-width="1.8"
-                                    stroke-linecap="round"
-                                />
-                            </svg>
+                        <p class="empty-tagline">Your AI that <em>acts</em> — not just answers.</p>
+
+                        <div class="cap-grid">
+                            <div class="cap-card" v-for="cat in capabilities" :key="cat.title">
+                                <div class="cap-icon" :style="{ background: cat.bg, color: cat.color }">
+                                    <font-awesome-icon :icon="cat.icon" />
+                                </div>
+                                <div>
+                                    <p class="cap-title">{{ cat.title }}</p>
+                                    <ul class="cap-examples">
+                                        <li v-for="ex in cat.examples" :key="ex" @click="startWithPrompt(ex)">{{ ex }}</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button class="btn btn-primary empty-cta" @click="handleNewConversation">
+                            <font-awesome-icon :icon="['fas', 'plus']" />
                             Start new chat
                         </button>
                     </div>
@@ -267,6 +262,66 @@ import ChatConversations from "../components/chat/ChatConversations.vue";
 import ChatInput from "../components/chat/ChatInput.vue";
 
 const chatStore = useChatStore();
+
+const capabilities = [
+    {
+        title: 'Create & manage',
+        icon: ['fas', 'bolt'],
+        bg: 'rgba(0,82,255,0.1)',
+        color: 'var(--primary)',
+        examples: [
+            'Create 5 tasks for the landing page redesign',
+            'Move all overdue tasks to In Revision',
+            'Assign the login bug task to me',
+        ],
+    },
+    {
+        title: 'Plan & decompose',
+        icon: ['fas', 'list-check'],
+        bg: 'rgba(104,204,128,0.15)',
+        color: '#1A7A38',
+        examples: [
+            'Build a launch plan for our mobile app',
+            'Break "Redesign onboarding" into tasks',
+            'What are the next steps for my active plan?',
+        ],
+    },
+    {
+        title: 'Analyze & report',
+        icon: ['fas', 'chart-bar'],
+        bg: 'rgba(255,179,0,0.12)',
+        color: '#A87800',
+        examples: [
+            'What\'s blocking my team right now?',
+            'Which project has the most overdue tasks?',
+            'Summarize progress across all workspaces',
+        ],
+    },
+    {
+        title: 'Search & recall',
+        icon: ['fas', 'magnifying-glass'],
+        bg: 'rgba(168,160,248,0.15)',
+        color: '#5248C8',
+        examples: [
+            'Find all tasks assigned to me',
+            'What documents did I upload last week?',
+            'List all completed projects',
+        ],
+    },
+]
+
+async function startWithPrompt(text: string) {
+    if (!chatStore.current && chatStore.conversations.length) {
+        await chatStore.fetchConversation(chatStore.conversations[0].id)
+    } else if (!chatStore.current) {
+        const conv = await chatStore.createConversation()
+        await chatStore.fetchConversation(conv.id)
+    }
+    if (chatStore.current) {
+        await chatStore.sendMessage(chatStore.current.id, text)
+    }
+}
+
 const { confirm } = useConfirm();
 const input = ref("");
 const messagesRef = ref<HTMLElement | null>(null);
@@ -338,14 +393,39 @@ const placeholderIndex = ref(0);
 const currentPlaceholder = computed(() => placeholders[placeholderIndex.value]);
 let placeholderTimer: ReturnType<typeof setInterval> | null = null;
 
-onMounted(() => {
-    chatStore.fetchConversations();
+// ── Shared handler: send a pending message from FAB / nudge ──────
+async function dispatchPendingMessage(msg: string) {
+    chatStore.pendingMessage = null
+    if (!chatStore.current) {
+        if (chatStore.conversations.length) {
+            await chatStore.fetchConversation(chatStore.conversations[0].id)
+        } else {
+            const conv = await chatStore.createConversation()
+            await chatStore.fetchConversation(conv.id)
+        }
+    }
+    if (chatStore.current) {
+        await chatStore.sendMessage(chatStore.current.id, msg)
+    }
+}
+
+onMounted(async () => {
+    await chatStore.fetchConversations();
     placeholderTimer = setInterval(() => {
         if (!input.value) {
             placeholderIndex.value =
                 (placeholderIndex.value + 1) % placeholders.length;
         }
     }, 3500);
+    // If a message was queued before navigation, send it now
+    if (chatStore.pendingMessage) {
+        await dispatchPendingMessage(chatStore.pendingMessage)
+    }
+});
+
+// Handle prompts fired while the chat page is already open
+watch(() => chatStore.pendingMessage, async (msg) => {
+    if (msg) await dispatchPendingMessage(msg)
 });
 
 onUnmounted(() => {
@@ -712,30 +792,66 @@ function formatToolName(name: string) {
 
 .empty-inner {
     text-align: center;
-    max-width: 360px;
+    max-width: 680px;
+    width: 100%;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 12px;
+    gap: 20px;
+    padding: 20px;
 }
+
+.empty-logo { display: flex; align-items: baseline; gap: 3px; }
+
+.empty-tagline {
+    font-size: 16px; color: var(--text-muted); line-height: 1.5; margin: 0;
+}
+.empty-tagline em { font-style: normal; color: var(--primary); font-weight: 700; }
+
+.empty-cta { margin-top: 4px; }
+
+/* Capabilities grid */
+.cap-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    width: 100%;
+    text-align: left;
+}
+.cap-card {
+    background: var(--surface); border: 1.5px solid var(--border);
+    border-radius: var(--radius-lg); padding: 14px 16px;
+    display: flex; gap: 12px; align-items: flex-start;
+}
+.cap-icon {
+    width: 34px; height: 34px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; flex-shrink: 0;
+}
+.cap-title {
+    font-size: 12.5px; font-weight: 700; color: var(--text);
+    text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 7px;
+}
+.cap-examples {
+    list-style: none; padding: 0; margin: 0;
+    display: flex; flex-direction: column; gap: 4px;
+}
+.cap-examples li {
+    font-size: 12.5px; color: var(--text-muted); cursor: pointer;
+    padding: 3px 7px; border-radius: 5px;
+    transition: background 0.12s, color 0.12s;
+    border: 1px solid transparent;
+}
+.cap-examples li:hover {
+    background: var(--primary-light); color: var(--primary);
+    border-color: var(--primary-border);
+}
+.cap-examples li::before { content: "→ "; color: var(--text-light); }
 
 .empty-icon {
     display: flex;
     align-items: baseline;
     gap: 3px;
-}
-
-.empty-inner h2 {
-    font-size: 22px;
-    font-weight: 800;
-    color: var(--text);
-    letter-spacing: -0.4px;
-}
-
-.empty-inner p {
-    color: var(--text-muted);
-    font-size: 14px;
-    line-height: 1.6;
 }
 
 .tool-activity {

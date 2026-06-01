@@ -85,22 +85,95 @@
       @close="showForm = false"
       @saved="onProjectSaved"
     />
+
+    <!-- Post-creation: document upload journey -->
+    <Teleport to="body">
+      <div v-if="showDocJourney" class="journey-overlay" @click.self="skipDocJourney">
+        <div class="journey-card">
+          <div class="journey-icon journey-icon--doc">
+            <font-awesome-icon :icon="['fas', 'file-arrow-up']" />
+          </div>
+          <h3>Add a document?</h3>
+          <p>Upload a file to give your team context for <strong>{{ journeyProjectTitle }}</strong>. It becomes searchable in AI Chat.</p>
+          <div v-if="!docUploading && !docUploaded" class="journey-upload-area">
+            <label class="upload-label">
+              <input type="file" accept=".pdf,.docx,.txt,.csv" hidden @change="onDocFileChange" />
+              <font-awesome-icon :icon="['fas', 'cloud-arrow-up']" class="upload-icon" />
+              <span>Click to choose a PDF, DOCX, TXT, or CSV</span>
+            </label>
+          </div>
+          <div v-else-if="docUploading" class="journey-upload-state">
+            <font-awesome-icon :icon="['fas', 'spinner']" spin />
+            Uploading {{ docFileName }}…
+          </div>
+          <div v-else-if="docUploaded" class="journey-upload-state success">
+            <font-awesome-icon :icon="['fas', 'circle-check']" />
+            {{ docFileName }} uploaded successfully!
+          </div>
+          <div class="journey-actions">
+            <button class="btn" @click="skipDocJourney">{{ docUploaded ? 'Done' : 'Skip for now' }}</button>
+            <button v-if="docUploaded" class="btn btn-primary" @click="goToProject">
+              <font-awesome-icon :icon="['fas', 'arrow-right']" />
+              Open project
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { useProjectStore } from '../../stores/projects'
 import { useMembersStore } from '../../stores/members'
+import { useDocumentStore } from '../../stores/documents'
 import type { ProjectStatus } from '../../types'
 import ProjectForm from './ProjectForm.vue'
 import SkeletonCard from '../common/SkeletonCard.vue'
 
 const props = defineProps<{ workspaceId: number }>()
 
+const router = useRouter()
 const projectStore = useProjectStore()
 const membersStore = useMembersStore()
+const docStore = useDocumentStore()
 const showForm = ref(false)
+
+// Post-creation journey: document upload
+const showDocJourney = ref(false)
+const journeyProjectTitle = ref('')
+const journeyProjectId = ref<number | null>(null)
+const journeyProjectUuid = ref<string | null>(null)
+const docUploading = ref(false)
+const docUploaded = ref(false)
+const docFileName = ref('')
+
+async function onDocFileChange(e: Event) {
+  const file = (e.target as HTMLInputElement).files?.[0]
+  if (!file || !journeyProjectId.value) return
+  docFileName.value = file.name
+  docUploading.value = true
+  try {
+    await docStore.upload(file, { project_id: journeyProjectId.value })
+    docUploaded.value = true
+  } finally {
+    docUploading.value = false
+  }
+}
+
+function skipDocJourney() {
+  showDocJourney.value = false
+  docUploaded.value = false
+  docFileName.value = ''
+  if (journeyProjectUuid.value) router.push(`/projects/${journeyProjectUuid.value}`)
+}
+
+function goToProject() {
+  showDocJourney.value = false
+  if (journeyProjectUuid.value) router.push(`/projects/${journeyProjectUuid.value}`)
+}
 const loading = ref(false)
 const projects = computed(() => projectStore.projects)
 
@@ -147,8 +220,13 @@ function timeAgo(d: string) {
 }
 
 async function onProjectSaved(data: Record<string, any>) {
-  await projectStore.create({ ...data, workspace_id: data.workspace_id ?? props.workspaceId } as any)
+  const project = await projectStore.create({ ...data, workspace_id: data.workspace_id ?? props.workspaceId } as any)
   showForm.value = false
+  // Trigger document upload journey
+  journeyProjectTitle.value = project.title
+  journeyProjectId.value = project.id
+  journeyProjectUuid.value = project.uuid
+  showDocJourney.value = true
 }
 </script>
 

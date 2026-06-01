@@ -76,7 +76,86 @@
         </div>
       </div>
 
+      <AiNudge
+        storage-key="project-detail"
+        label="✨ AI can manage this project for you"
+        :prompts="[
+          `Create tasks for ${project.title}`,
+          `What is blocking ${project.title}?`,
+          `Build a plan for ${project.title}`,
+          'Move all overdue tasks to In Revision',
+        ]"
+      />
       <TaskBoard :project-id="project.id" :workspace-id="project.workspace_uuid" />
+
+      <!-- Project plans -->
+      <div class="proj-plans-section">
+        <div class="proj-section-header">
+          <div class="proj-section-title">
+            <font-awesome-icon :icon="['fas', 'list-check']" />
+            Plans
+            <span class="proj-section-count">{{ projectPlans.length }}</span>
+          </div>
+          <button class="btn btn-sm" @click="showPlanJourney = true">
+            <font-awesome-icon :icon="['fas', 'plus']" />
+            New plan
+          </button>
+        </div>
+        <div v-if="projectPlans.length" class="proj-plans-grid">
+          <div
+            v-for="plan in projectPlans"
+            :key="plan.uuid"
+            class="proj-plan-card"
+            @click="$router.push(`/plans/${plan.uuid}`)"
+          >
+            <div class="plan-card-top">
+              <span class="plan-status" :class="`ps-${plan.status}`">{{ plan.status }}</span>
+              <span class="plan-meta">{{ plan.steps.length }} steps · {{ planPct(plan) }}%</span>
+            </div>
+            <p class="plan-title">{{ plan.title }}</p>
+            <div class="plan-progress-bar">
+              <div class="plan-progress-fill" :style="{ width: planPct(plan) + '%' }" />
+            </div>
+          </div>
+        </div>
+        <p v-else class="proj-empty-hint">No plans yet. Create one to break the project into AI-generated steps.</p>
+      </div>
+
+      <!-- Project documents -->
+      <div class="proj-docs-section">
+        <div class="proj-docs-header">
+          <div class="proj-docs-title">
+            <font-awesome-icon :icon="['fas', 'file-lines']" />
+            Documents
+            <span class="proj-docs-count">{{ projectDocs.length }}</span>
+          </div>
+          <div class="proj-docs-actions">
+            <button class="btn btn-sm" @click="showDocUpload = true">
+              <font-awesome-icon :icon="['fas', 'upload']" />
+              Upload
+            </button>
+            <button class="btn btn-sm" @click="$router.push('/documents')">
+              <font-awesome-icon :icon="['fas', 'arrow-up-right-from-square']" />
+              All docs
+            </button>
+          </div>
+        </div>
+        <div class="proj-docs-grid">
+          <div
+            v-for="doc in projectDocs"
+            :key="doc.uuid"
+            class="proj-doc-card"
+            @click="$router.push(`/documents/${doc.uuid}`)"
+          >
+            <span class="proj-doc-badge" :class="`ftype-${doc.file_type}`">{{ doc.file_type.toUpperCase() }}</span>
+            <p class="proj-doc-title">{{ doc.title }}</p>
+            <div class="proj-doc-meta">
+              <span class="proj-doc-status" :class="`ds-${doc.status}`">{{ doc.status }}</span>
+              <span>{{ formatDocSize(doc.file_size) }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <ProjectForm
         v-if="showForm"
@@ -85,13 +164,62 @@
         @close="closeForm"
         @saved="onSave"
       />
+
+      <!-- Document upload modal -->
+      <DocUploadModal
+        v-if="showDocUpload"
+        :workspaces="[]"
+        :projects="[]"
+        :error="docUploadError"
+        :uploading="docUploading"
+        :locked-project-id="project.id"
+        @close="showDocUpload = false"
+        @upload="onDocUpload"
+      />
     </template>
+
+    <!-- Plan creation journey -->
+    <Teleport to="body">
+      <div v-if="showPlanJourney" class="journey-overlay" @click.self="showPlanJourney = false">
+        <div class="journey-card">
+          <div class="journey-icon">
+            <font-awesome-icon :icon="['fas', 'list-check']" />
+          </div>
+          <h3>Create a plan</h3>
+          <p>Describe the goal and AI will break it into steps — aware of this project's existing tasks.</p>
+          <div class="journey-input-row">
+            <input
+              v-model="newPlanTitle"
+              class="journey-input"
+              placeholder="e.g. Build user auth, Redesign landing page…"
+              @keydown.enter="createPlan"
+              autofocus
+            />
+          </div>
+          <div class="journey-actions">
+            <button class="btn" @click="showPlanJourney = false">Cancel</button>
+            <button
+              class="btn btn-primary"
+              :disabled="!newPlanTitle.trim() || planCreating"
+              @click="createPlan"
+            >
+              <font-awesome-icon v-if="planCreating" :icon="['fas', 'spinner']" spin />
+              {{ planCreating ? 'Creating…' : 'Create plan' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useDocumentStore } from '../stores/documents'
+import { usePlanStore } from '../stores/plans'
+import type { Document, Plan } from '../types'
+import DocUploadModal from '../components/common/DocUploadModal.vue'
 import { useProjectStore } from '../stores/projects'
 import { useMembersStore } from '../stores/members'
 import { useAuthStore } from '../stores/auth'
@@ -99,6 +227,7 @@ import { useTaskStore } from '../stores/tasks'
 import { useConfirm } from '../composables/useConfirm'
 import type { Project, ProjectStatus } from '../types'
 import TaskBoard from '../components/task/TaskBoard.vue'
+import AiNudge from '../components/common/AiNudge.vue'
 import ProjectForm from '../components/project/ProjectForm.vue'
 import Loading from '../components/common/Loading.vue'
 
@@ -114,7 +243,62 @@ const projectStore = useProjectStore()
 const membersStore = useMembersStore()
 const auth = useAuthStore()
 const taskStore = useTaskStore()
+const docStore = useDocumentStore()
+const planStore = usePlanStore()
 const { confirm } = useConfirm()
+
+const projectDocs = ref<Document[]>([])
+const projectPlans = ref<Plan[]>([])
+
+// Plan creation
+const showPlanJourney = ref(false)
+const newPlanTitle = ref('')
+const planCreating = ref(false)
+
+async function createPlan() {
+  if (!newPlanTitle.value.trim() || !project.value) return
+  planCreating.value = true
+  try {
+    const plan = await planStore.create({ title: newPlanTitle.value.trim(), project_id: project.value.id })
+    showPlanJourney.value = false
+    newPlanTitle.value = ''
+    projectPlans.value = await planStore.fetchByProject(project.value.id)
+    router.push(`/plans/${plan.uuid}`)
+  } finally {
+    planCreating.value = false
+  }
+}
+
+function planPct(plan: Plan): number {
+  if (!plan.steps.length) return 0
+  const done = plan.steps.filter(s => s.status === 'completed' || s.status === 'skipped').length
+  return Math.round((done / plan.steps.length) * 100)
+}
+
+// Document upload
+const showDocUpload = ref(false)
+const docUploading = ref(false)
+const docUploadError = ref<string | null>(null)
+
+async function onDocUpload(file: File) {
+  if (!project.value) return
+  docUploading.value = true
+  docUploadError.value = null
+  try {
+    await docStore.upload(file, { project_id: project.value.id })
+    showDocUpload.value = false
+    projectDocs.value = await docStore.fetchByProject(project.value.id)
+  } catch (e: any) {
+    docUploadError.value = e.message
+  } finally {
+    docUploading.value = false
+  }
+}
+
+function formatDocSize(bytes: number): string {
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
 
 const taskStats = computed(() => {
   const tasks = taskStore.tasks
@@ -142,7 +326,12 @@ watch(projectId, async (id) => {
     try {
       await projectStore.fetchOne(id)
       if (projectStore.current) {
-        await membersStore.fetchMyMembership(projectStore.current.workspace_uuid ?? String(projectStore.current.workspace_id))
+        const p = projectStore.current
+        await membersStore.fetchMyMembership(p.workspace_uuid ?? String(p.workspace_id))
+        ;[projectDocs.value, projectPlans.value] = await Promise.all([
+          docStore.fetchByProject(p.id),
+          planStore.fetchByProject(p.id),
+        ])
       }
     } catch {
       router.push('/')
@@ -377,4 +566,124 @@ async function handleDelete() {
 :global([data-theme="dark"]) .progress-bar-track {
   background: #38444D;
 }
+
+/* ── Shared section styles ── */
+.proj-section-header, .proj-docs-header {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;
+}
+.proj-section-title, .proj-docs-title {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 14px; font-weight: 700; color: var(--text);
+}
+.proj-section-count, .proj-docs-count {
+  font-size: 11px; font-weight: 600; color: var(--text-light);
+  background: var(--bg); border: 1px solid var(--border);
+  padding: 1px 7px; border-radius: var(--radius-full);
+}
+.proj-docs-actions { display: flex; gap: 8px; }
+
+/* ── Project plans section ── */
+.proj-plans-section {
+  margin-top: 32px;
+  padding-top: 28px;
+  border-top: 1.5px solid var(--border);
+}
+.proj-plans-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+}
+.proj-plan-card {
+  background: var(--surface); border: 1.5px solid var(--border);
+  border-radius: var(--radius-lg); padding: 14px 16px;
+  cursor: pointer; transition: border-color 0.13s, box-shadow 0.13s, transform 0.1s;
+  display: flex; flex-direction: column; gap: 7px;
+}
+.proj-plan-card:hover {
+  border-color: var(--border-strong);
+  box-shadow: 0 3px 12px rgba(10,11,13,0.07);
+  transform: translateY(-1px);
+}
+.plan-card-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.plan-title { font-size: 13px; font-weight: 600; color: var(--text); line-height: 1.35; }
+.plan-meta { font-size: 11px; color: var(--text-light); }
+.plan-status {
+  font-size: 10.5px; font-weight: 700; padding: 2px 8px;
+  border-radius: var(--radius-full); text-transform: capitalize;
+}
+.ps-active    { background: rgba(0,186,124,0.14); color: #00845A; }
+.ps-draft     { background: rgba(139,152,165,0.15); color: #536471; }
+.ps-completed { background: rgba(104,204,128,0.18); color: #1A5820; }
+.ps-cancelled { background: rgba(207,32,47,0.1); color: #CF202F; }
+.plan-progress-bar {
+  height: 3px; background: var(--border); border-radius: 999px; overflow: hidden;
+}
+.plan-progress-fill {
+  height: 100%; background: linear-gradient(90deg, #10B981, #059669);
+  border-radius: 999px; transition: width 0.3s;
+}
+.proj-empty-hint { font-size: 13px; color: var(--text-muted); font-style: italic; }
+
+/* ── Project documents section ── */
+.proj-docs-section {
+  margin-top: 32px;
+  padding-top: 28px;
+  border-top: 1.5px solid var(--border);
+}
+.proj-docs-header {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;
+}
+.proj-docs-title {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 14px; font-weight: 700; color: var(--text);
+}
+.proj-docs-count {
+  font-size: 11px; font-weight: 600; color: var(--text-light);
+  background: var(--bg); border: 1px solid var(--border);
+  padding: 1px 7px; border-radius: var(--radius-full);
+}
+.proj-docs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+}
+.proj-doc-card {
+  background: var(--surface); border: 1.5px solid var(--border);
+  border-radius: var(--radius-lg); padding: 12px 14px;
+  cursor: pointer; transition: border-color 0.13s, box-shadow 0.13s, transform 0.1s;
+  display: flex; flex-direction: column; gap: 5px;
+}
+.proj-doc-card:hover {
+  border-color: var(--border-strong);
+  box-shadow: 0 3px 12px rgba(10,11,13,0.07);
+  transform: translateY(-1px);
+}
+.proj-doc-badge {
+  align-self: flex-start;
+  font-size: 9.5px; font-weight: 800; letter-spacing: 0.5px;
+  padding: 2px 7px; border-radius: var(--radius-full); border: 1px solid;
+}
+.ftype-pdf  { background: #FFF1F2; color: #BE123C; border-color: #FECDD3; }
+.ftype-docx { background: #EFF6FF; color: #1D4ED8; border-color: #BFDBFE; }
+.ftype-txt  { background: var(--bg); color: var(--text-light); border-color: var(--border); }
+.ftype-csv  { background: #F0FDF4; color: #15803D; border-color: #BBF7D0; }
+.proj-doc-title {
+  font-size: 13px; font-weight: 600; color: var(--text); line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-word;
+}
+.proj-doc-meta {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 11.5px; color: var(--text-light);
+}
+.proj-doc-status {
+  font-size: 10.5px; font-weight: 700; padding: 1px 7px;
+  border-radius: var(--radius-full); text-transform: capitalize;
+}
+.ds-ready      { background: rgba(0,186,124,0.14); color: #00845A; }
+.ds-processing,.ds-pending { background: rgba(0,82,255,0.1); color: var(--primary); }
+.ds-failed     { background: rgba(207,32,47,0.1); color: #CF202F; }
 </style>

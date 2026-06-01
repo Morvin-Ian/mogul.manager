@@ -112,6 +112,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
+import AiNudge from '../components/common/AiNudge.vue'
 import { useWorkspaceStore } from '../stores/workspaces'
 import { useProjectStore } from '../stores/projects'
 import { useTaskStore } from '../stores/tasks'

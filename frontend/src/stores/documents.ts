@@ -1,13 +1,29 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { Document, SearchHit } from '../types'
-import { get, del, postFile, post } from './client'
+import { get, del, patch, postFile, post } from './client'
 
 export const useDocumentStore = defineStore('documents', () => {
   const documents = ref<Document[]>([])
   const current = ref<Document | null>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)
+
+  async function fetchByWorkspace(workspaceId: number): Promise<Document[]> {
+    try {
+      return await get<Document[]>(`/documents?workspace_id=${workspaceId}`)
+    } catch {
+      return []
+    }
+  }
+
+  async function fetchByProject(projectId: number): Promise<Document[]> {
+    try {
+      return await get<Document[]>(`/documents?project_id=${projectId}`)
+    } catch {
+      return []
+    }
+  }
 
   async function fetchAll() {
     loading.value = true
@@ -45,6 +61,12 @@ export const useDocumentStore = defineStore('documents', () => {
     const doc = await postFile<Document>('/documents', fd)
     documents.value.unshift(doc)
     _pollStatus(doc.uuid)
+    return doc
+  }
+
+  async function updateProjectId(uuid: string, projectId: number | null): Promise<Document> {
+    const doc = await patch<Document>(`/documents/${uuid}`, { project_id: projectId })
+    _sync(doc)
     return doc
   }
 
@@ -92,5 +114,5 @@ export const useDocumentStore = defineStore('documents', () => {
     }
   }
 
-  return { documents, current, loading, error, fetchAll, fetchOne, upload, remove, reprocess, search }
+  return { documents, current, loading, error, fetchAll, fetchByWorkspace, fetchByProject, updateProjectId, fetchOne, upload, remove, reprocess, search }
 })

@@ -28,8 +28,13 @@ class ProjectService:
         project = models.Project(**project_data)
         self.db.add(project)
         await self.db.commit()
-        await self.db.refresh(project)
-        return project
+        # Reload with workspace so workspace_uuid/workspace_title are available
+        result = await self.db.execute(
+            select(models.Project)
+            .options(selectinload(models.Project.workspace))
+            .where(models.Project.id == project.id)
+        )
+        return result.scalars().first() or project
 
     async def get_by_id(self, project_id: int) -> models.Project | None:
         result = await self.db.execute(
@@ -56,8 +61,12 @@ class ProjectService:
             if value is not None:
                 setattr(project, key, value)
         await self.db.commit()
-        await self.db.refresh(project)
-        return project
+        result = await self.db.execute(
+            select(models.Project)
+            .options(selectinload(models.Project.workspace))
+            .where(models.Project.id == project.id)
+        )
+        return result.scalars().first() or project
 
     async def delete(self, project: models.Project) -> None:
         await self.db.delete(project)
@@ -72,3 +81,22 @@ class ProjectService:
             .where(models.Project.uuid == uuid)
         )
         return result.scalars().first()
+
+    async def list_all_accessible(
+        self, user_id: int, skip: int = 0, limit: int = 500
+    ) -> list[models.Project]:
+        from sqlalchemy import or_
+        from models.collaboration import WorkspaceMember
+        accessible_ws_ids = (
+            select(WorkspaceMember.workspace_id)
+            .where(WorkspaceMember.user_id == user_id)
+        )
+        result = await self.db.execute(
+            select(models.Project)
+            .options(selectinload(models.Project.workspace))
+            .where(models.Project.workspace_id.in_(accessible_ws_ids))
+            .order_by(models.Project.created_at.desc())
+            .offset(skip)
+            .limit(limit)
+        )
+        return list(result.scalars().all())

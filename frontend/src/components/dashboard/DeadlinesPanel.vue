@@ -25,7 +25,7 @@
         :key="item.id"
         class="deadline-row"
         :class="`urgency-${item.urgency}`"
-        @click="$router.push(`/projects/${item.projectId}`)"
+        @click="$router.push(`/projects/${item.projectUuid ?? item.projectId}`)"
       >
         <span class="deadline-badge" :class="`dl-badge-${item.urgency}`">
           {{ item.label }}
@@ -109,6 +109,7 @@ const upcomingDeadlines = computed(() => {
         dueDate: d,
         formattedDate: fmt(d),
         projectId: t.project_id,
+        projectUuid: t.project_uuid ?? null,
         label,
         urgency,
       }

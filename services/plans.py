@@ -42,7 +42,8 @@ class PlanService:
             select(models.Plan)
             .options(
                 selectinload(models.Plan.steps)
-                .selectinload(models.PlanStep.linked_task)
+                .selectinload(models.PlanStep.linked_task),
+                selectinload(models.Plan.project),
             )
             .where(models.Plan.id == plan_id)
         )
@@ -53,7 +54,8 @@ class PlanService:
             select(models.Plan)
             .options(
                 selectinload(models.Plan.steps)
-                .selectinload(models.PlanStep.linked_task)
+                .selectinload(models.PlanStep.linked_task),
+                selectinload(models.Plan.project),
             )
             .where(models.Plan.user_id == user_id)
             .order_by(models.Plan.updated_at.desc())
@@ -118,7 +120,8 @@ class PlanService:
             select(models.Plan)
             .options(
                 selectinload(models.Plan.steps)
-                .selectinload(models.PlanStep.linked_task)
+                .selectinload(models.PlanStep.linked_task),
+                selectinload(models.Plan.project),
             )
             .where(models.Plan.uuid == uuid)
         )
@@ -129,3 +132,95 @@ class PlanService:
             select(models.PlanStep).where(models.PlanStep.uuid == uuid)
         )
         return result.scalars().first()
+
+    async def list_by_project(self, project_id: int, user_id: int) -> list[models.Plan]:
+        """Plans for a specific project, accessible to workspace members."""
+        from sqlalchemy import and_
+        from models.collaboration import WorkspaceMember
+        from models.projects import Project
+        # Check membership via project's workspace
+        member_check = await self.db.execute(
+            select(WorkspaceMember.id)
+            .join(Project, Project.workspace_id == WorkspaceMember.workspace_id)
+            .where(Project.id == project_id, WorkspaceMember.user_id == user_id)
+        )
+        if not member_check.scalars().first():
+            return []
+        result = await self.db.execute(
+            select(models.Plan)
+            .options(
+                selectinload(models.Plan.steps)
+                .selectinload(models.PlanStep.linked_task),
+                selectinload(models.Plan.project),
+            )
+            .where(models.Plan.project_id == project_id)
+            .order_by(models.Plan.updated_at.desc())
+        )
+        return list(result.scalars().all())
+
+    async def list_by_workspace(self, workspace_id: int, user_id: int) -> list[models.Plan]:
+        """Plans for a specific workspace visible to the user (member check)."""
+        from sqlalchemy import and_
+        from models.collaboration import WorkspaceMember
+        is_member = await self.db.execute(
+            select(WorkspaceMember.id).where(
+                WorkspaceMember.workspace_id == workspace_id,
+                WorkspaceMember.user_id == user_id,
+            )
+        )
+        if not is_member.scalars().first():
+            return []
+        result = await self.db.execute(
+            select(models.Plan)
+            .options(
+                selectinload(models.Plan.steps)
+                .selectinload(models.PlanStep.linked_task),
+                selectinload(models.Plan.project),
+            )
+            .where(models.Plan.workspace_id == workspace_id)
+            .order_by(models.Plan.updated_at.desc())
+        )
+        return list(result.scalars().all())
+
+    async def list_accessible(self, user_id: int) -> list[models.Plan]:
+        """Return plans owned by user + workspace plans where user is a member."""
+        from sqlalchemy import or_, and_
+        from models.collaboration import WorkspaceMember
+        member_ws_ids = (
+            select(models.Plan.workspace_id)
+            .join(
+                WorkspaceMember,
+                and_(
+                    WorkspaceMember.workspace_id == models.Plan.workspace_id,
+                    WorkspaceMember.user_id == user_id,
+                )
+            )
+            .where(models.Plan.workspace_id.isnot(None))
+        )
+        result = await self.db.execute(
+            select(models.Plan)
+            .options(
+                selectinload(models.Plan.steps)
+                .selectinload(models.PlanStep.linked_task),
+                selectinload(models.Plan.project),
+            )
+            .where(
+                or_(
+                    models.Plan.user_id == user_id,
+                    models.Plan.project_id.isnot(None),  # project plans via membership below
+                    models.Plan.id.in_(
+                        select(models.Plan.id)
+                        .join(
+                            WorkspaceMember,
+                            and_(
+                                WorkspaceMember.workspace_id == models.Plan.workspace_id,
+                                WorkspaceMember.user_id == user_id,
+                            )
+                        )
+                        .where(models.Plan.workspace_id.isnot(None))
+                    ),
+                )
+            )
+            .order_by(models.Plan.updated_at.desc())
+        )
+        return list(result.scalars().all())

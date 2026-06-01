@@ -9,6 +9,17 @@ export const useProjectStore = defineStore('projects', () => {
   const loading = ref(false)
   const error = ref<string | null>(null)
 
+  async function fetchAll() {
+    loading.value = true
+    try {
+      projects.value = await get<Project[]>('/projects')
+    } catch (e) {
+      error.value = (e as Error).message
+    } finally {
+      loading.value = false
+    }
+  }
+
   async function fetchByWorkspace(workspaceId: number) {
     loading.value = true
     try {
@@ -53,5 +64,5 @@ export const useProjectStore = defineStore('projects', () => {
     if (current.value?.uuid === uuid) current.value = null
   }
 
-  return { projects, current, loading, error, fetchByWorkspace, fetchOne, create, update, remove }
+  return { projects, current, loading, error, fetchAll, fetchByWorkspace, fetchOne, create, update, remove }
 })

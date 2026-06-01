@@ -26,6 +26,7 @@ const THINKING_PHRASES = [
 export const useChatStore = defineStore('chat', () => {
   const conversations = ref<Conversation[]>([])
   const current = ref<ConversationDetail | null>(null)
+  const pendingMessage = ref<string | null>(null)  // set by FAB to auto-send on chat open
   const streaming = ref(false)
   const streamContent = ref('')
   const toolActivity = ref<string | null>(null)
@@ -180,7 +181,7 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   return {
-    conversations, current, streaming, streamContent, toolActivity, thinkingStatus, loading, error,
+    conversations, current, pendingMessage, streaming, streamContent, toolActivity, thinkingStatus, loading, error,
     fetchConversations, fetchConversation, createConversation,
     updateConversation, removeConversation, sendMessage,
   }

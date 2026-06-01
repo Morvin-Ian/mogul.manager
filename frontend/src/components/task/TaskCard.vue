@@ -236,7 +236,7 @@ function onDragStart() {
 
 /* ── Dark mode ── */
 :global([data-theme="dark"]) .task-card {
-  background: #1C3454;
+  background: #1A2D42;
   border-color: rgba(91, 155, 255, 0.20);
   box-shadow: 0 2px 10px rgba(0,0,0,0.5), 0 1px 4px rgba(0,0,0,0.3),
               inset 0 1px 0 rgba(255,255,255,0.06);
@@ -256,7 +256,7 @@ function onDragStart() {
 :global([data-theme="dark"]) .card-due     { color: #8BAFC8; }
 :global([data-theme="dark"]) .est-hours    { color: #8BAFC8; }
 :global([data-theme="dark"]) .card-divider { background: rgba(91,155,255,0.12); }
-:global([data-theme="dark"]) .avatar-chip  { border-color: #1C3454; }
+:global([data-theme="dark"]) .avatar-chip  { border-color: #1A2D42; }
 
 :global([data-theme="dark"]) .pb-1 { background: rgba(22,163,74,0.22);  color: #4ADE80; }
 :global([data-theme="dark"]) .pb-2 { background: rgba(217,119,6,0.22);  color: #FBB040; }

@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 import models
 from agents.deepseek import DeepSeekAgent as PlannerAgent
@@ -16,8 +16,15 @@ router = APIRouter(prefix="/api/plans", tags=["Plans"])
 async def list_plans(
     current_user: CurrentUser,
     svc: Annotated[PlanService, Depends()],
+    workspace_id: int | None = Query(None),
+    project_id: int | None = Query(None),
 ):
-    plans = await svc.list_by_user(current_user.id)
+    if workspace_id is not None:
+        plans = await svc.list_by_workspace(workspace_id, current_user.id)
+    elif project_id is not None:
+        plans = await svc.list_by_project(project_id, current_user.id)
+    else:
+        plans = await svc.list_accessible(current_user.id)
     return [PlanDetail.model_validate(p) for p in plans]
 
 
@@ -27,15 +34,51 @@ async def create_plan(
     current_user: CurrentUser,
     svc: Annotated[PlanService, Depends()],
 ):
+    # Resolve workspace_id: prefer project's workspace if project_id given
+    resolved_workspace_id = data.workspace_id
+    project_obj = None
+    if data.project_id:
+        from sqlalchemy import select as sa_select
+        from sqlalchemy.ext.asyncio import AsyncSession
+        from database import get_db
+        proj_result = await svc.db.execute(
+            sa_select(models.Project)
+            .where(models.Project.id == data.project_id)
+        )
+        project_obj = proj_result.scalars().first()
+        if project_obj:
+            resolved_workspace_id = project_obj.workspace_id
+
     plan = await svc.create(current_user.id, {
         "title": data.title,
         "description": data.description,
-        "workspace_id": data.workspace_id,
+        "workspace_id": resolved_workspace_id,
+        "project_id": data.project_id,
         "status": models.PlanStatus.ACTIVE,
     })
 
+    # Build rich goal context: include project tasks if available
+    goal = f"{data.title}. {data.description or ''}".strip()
+    if project_obj:
+        from sqlalchemy import select as sa_select2
+        task_result = await svc.db.execute(
+            sa_select2(models.Task)
+            .where(models.Task.project_id == project_obj.id)
+            .limit(30)
+        )
+        tasks = list(task_result.scalars().all())
+        task_lines = "\n".join(
+            f"  - {t.title} [{t.status.value}]" for t in tasks
+        ) if tasks else "  (no tasks yet)"
+        goal += (
+            f"\n\nProject context: {project_obj.title}"
+            f"\nProject status: {project_obj.status.value}"
+            + (f"\nProject description: {project_obj.description}" if project_obj.description else "")
+            + f"\nExisting tasks:\n{task_lines}"
+        )
+
     planner = PlannerAgent()
-    raw_steps = await planner.decompose(f"{data.title}. {data.description or ''}".strip())
+    raw_steps = await planner.decompose(goal)
 
     saved: list[models.PlanStep] = []
     for i, raw in enumerate(raw_steps):

@@ -34,6 +34,7 @@ class ProjectRead(ProjectBase):
     id: int
     uuid: str
     workspace_uuid: str | None = None
+    workspace_title: str | None = None
     workspace_id: int
     created_by_id: int | None
     ai_summary: str | None

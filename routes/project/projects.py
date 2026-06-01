@@ -56,10 +56,12 @@ async def list_projects(
     current_user: CurrentUser,
     service: Annotated[ProjectService, Depends()],
     collab: Annotated[CollaborationService, Depends()],
-    workspace_id: int = Query(...),
+    workspace_id: int | None = Query(None),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500),
 ):
+    if workspace_id is None:
+        return await service.list_all_accessible(current_user.id, skip=skip, limit=limit)
     await _require_workspace_member(workspace_id, current_user, collab, min_role="member")
     return await service.list_by_workspace(workspace_id, skip=skip, limit=limit)
 
