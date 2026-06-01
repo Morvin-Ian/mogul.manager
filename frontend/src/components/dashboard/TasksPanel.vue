@@ -103,10 +103,10 @@ watch(() => props.searchQuery, (val) => {
 
 const statusOptions = [
   { value: null,          label: 'All Tasks',    color: '#8880C0' },
-  { value: 'todo',        label: 'To Do',        color: '#5250C0' },
+  { value: 'todo',        label: 'Pending',       color: '#5250C0' },
   { value: 'in_progress', label: 'In Progress',  color: '#B06030' },
   { value: 'review',      label: 'In Review',    color: '#1A8878' },
-  { value: 'blocked',     label: 'Blocked',      color: '#C04040' },
+  { value: 'blocked',     label: 'In Revision', color: '#C04040' },
   { value: 'completed',   label: 'Completed',    color: '#28A048' },
 ]
 
@@ -159,13 +159,13 @@ function taskInitials(title: string): string {
 
 function statusLabelFor(status: string | undefined): string {
   const map: Record<string, string> = {
-    todo: 'To Do',
+    todo: 'Pending',
     in_progress: 'In Progress',
     review: 'In Review',
-    blocked: 'Blocked',
-    completed: 'Done',
+    blocked: 'In Revision',
+    completed: 'Completed',
   }
-  return map[status ?? 'todo'] ?? 'To Do'
+  return map[status ?? 'todo'] ?? 'Pending'
 }
 
 async function toggleTask(task: Task) {

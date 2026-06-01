@@ -13,17 +13,35 @@
           <input id="t-title" v-model="form.title" required maxlength="255" />
         </div>
         <div class="form-group">
-          <label for="t-desc">Description</label>
-          <textarea id="t-desc" v-model="form.description" rows="3"></textarea>
+          <div class="label-row">
+            <label for="t-desc">Description</label>
+            <button
+              type="button"
+              class="ai-btn"
+              :disabled="!form.title.trim() || aiLoading"
+              :title="!form.title.trim() ? 'Enter a title first' : 'Generate a description with AI'"
+              @click="suggestDescription"
+            >
+              <span v-if="aiLoading" class="ai-spinner" />
+              <template v-else>
+                <svg viewBox="0 0 16 16" fill="none" width="12" height="12" aria-hidden="true">
+                  <path d="M8 1.5l1.4 4.1L13.5 7l-4.1 1.4L8 12.5 6.6 8.4 2.5 7l4.1-1.4L8 1.5z" fill="currentColor"/>
+                  <path d="M13 10.5l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8.8-2z" fill="currentColor" opacity="0.55"/>
+                </svg>
+                AI
+              </template>
+            </button>
+          </div>
+          <textarea id="t-desc" v-model="form.description" rows="3" placeholder="What needs to be done?"></textarea>
         </div>
         <div class="form-row">
           <div class="form-group">
             <label for="t-status">Status</label>
             <select id="t-status" v-model="form.status">
-              <option value="todo">To Do</option>
+              <option value="todo">Pending</option>
               <option value="in_progress">In Progress</option>
               <option value="review">Review</option>
-              <option value="blocked">Blocked</option>
+              <option value="blocked">In Revision</option>
               <option value="completed">Completed</option>
             </select>
           </div>
@@ -125,6 +143,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, watch, onMounted } from 'vue'
 import type { Task, TaskPriority, TaskStatus, WorkspaceMember } from '../../types'
+import { useAiSuggest } from '../../composables/useAiSuggest'
 import { get } from '../../stores/client'
 import { useAuthStore } from '../../stores/auth'
 
@@ -162,6 +181,12 @@ const members = ref<WorkspaceMember[]>([])
 const saving = ref(false)
 const error = ref<string | null>(null)
 const showAssigneePicker = ref(false)
+const { suggest, loading: aiLoading } = useAiSuggest()
+
+async function suggestDescription() {
+  const result = await suggest('task', form.title)
+  if (result) form.description = result
+}
 
 // Team mode: workspace has more than just the owner
 const isTeamMode = computed(() => members.value.length > 1)

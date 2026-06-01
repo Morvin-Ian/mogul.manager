@@ -51,14 +51,14 @@
           <div class="ws-card-actions">
             <button
               class="btn btn-sm"
-              @click="$router.push(`/workspaces/${ws.id}`)"
+              @click="$router.push(`/workspaces/${ws.uuid}`)"
               title="Open workspace"
             >
               Open
             </button>
             <button
               class="btn btn-sm btn-primary"
-              @click="$router.push(`/team/${ws.id}`)"
+              @click="$router.push(`/team/${ws.uuid}`)"
               title="Manage team"
             >
               <font-awesome-icon :icon="['fas', 'users']" />
@@ -126,8 +126,7 @@ function formatDate(d: string) {
 
 <style scoped>
 .team-hub {
-  padding: 36px 36px 80px;
-  max-width: 860px;
+  padding: 36px 40px 80px;
 }
 
 .page-head {

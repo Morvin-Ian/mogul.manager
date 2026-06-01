@@ -241,8 +241,7 @@ onMounted(async () => {
 
 <style scoped>
 .review-page {
-  padding: 36px 36px 80px;
-  max-width: 1100px;
+  padding: 36px 40px 80px;
 }
 
 .review-head {

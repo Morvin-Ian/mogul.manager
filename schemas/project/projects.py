@@ -32,6 +32,8 @@ class ProjectRead(ProjectBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    uuid: str
+    workspace_uuid: str | None = None
     workspace_id: int
     created_by_id: int | None
     ai_summary: str | None

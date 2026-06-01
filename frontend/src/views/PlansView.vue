@@ -81,12 +81,12 @@
         v-for="plan in store.plans"
         :key="plan.id"
         class="plan-card"
-        @click="router.push(`/plans/${plan.id}`)"
+        @click="router.push(`/plans/${plan.uuid}`)"
       >
         <div class="plan-card-head">
           <span class="status-dot" :class="`dot-${plan.status}`"></span>
           <span class="plan-status-label">{{ plan.status }}</span>
-          <button class="plan-delete" @click.stop="handleDelete(plan.id)" title="Delete plan">
+          <button class="plan-delete" @click.stop="handleDelete(plan.uuid)" title="Delete plan">
             <svg viewBox="0 0 12 12" fill="none" width="12" height="12">
               <path d="M1.5 3h9M4.5 3V2a.5.5 0 01.5-.5h1a.5.5 0 01.5.5v1M3 3l.5 6.5a.5.5 0 00.5.5h4a.5.5 0 00.5-.5L9 3" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
@@ -194,7 +194,7 @@ async function handleCreate() {
     })
     showCreate.value = false
     form.value = { title: '', description: '' }
-    router.push(`/plans/${plan.id}`)
+    router.push(`/plans/${plan.uuid}`)
   } catch (e) {
     createError.value = (e as Error).message
   } finally {
@@ -202,7 +202,7 @@ async function handleCreate() {
   }
 }
 
-async function handleDelete(id: number) {
+async function handleDelete(uuid: string) {
   const plan = store.plans.find((p) => p.id === id)
   const ok = await confirm({
     title: 'Delete plan?',
@@ -212,14 +212,13 @@ async function handleDelete(id: number) {
     danger: true,
   })
   if (!ok) return
-  await store.remove(id)
+  await store.remove(uuid)
 }
 </script>
 
 <style scoped>
 .plans-page {
-  padding: 36px 32px 80px;
-  max-width: 960px;
+  padding: 36px 40px 80px;
 }
 
 .plans-grid {

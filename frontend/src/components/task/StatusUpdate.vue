@@ -53,15 +53,16 @@ const emit = defineEmits<{ updated: [] }>()
 const updating = ref(false)
 
 const MEMBER_ALLOWED: Record<string, TaskStatus[]> = {
-  todo: ['in_progress'],
+  todo:        ['in_progress'],
   in_progress: ['review'],
+  blocked:     ['todo', 'in_progress', 'review'],
 }
 
 const allStatuses: { value: TaskStatus; label: string }[] = [
-  { value: 'todo',        label: 'To Do' },
+  { value: 'todo',        label: 'Pending' },
   { value: 'in_progress', label: 'In Progress' },
   { value: 'review',      label: 'Review' },
-  { value: 'blocked',     label: 'Blocked' },
+  { value: 'blocked',     label: 'In Revision' },
   { value: 'completed',   label: 'Completed' },
 ]
 
@@ -100,7 +101,7 @@ const allowedStatuses = computed(() => {
 async function updateStatus(status: TaskStatus) {
   updating.value = true
   try {
-    await patch(`/tasks/${props.task.id}`, { status })
+    await patch(`/tasks/${props.task.uuid}`, { status })
     emit('updated')
   } catch (e) {
     console.error(e)

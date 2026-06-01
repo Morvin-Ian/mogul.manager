@@ -29,7 +29,25 @@
         </div>
 
         <div class="form-group">
-          <label for="p-desc">Description</label>
+          <div class="label-row">
+            <label for="p-desc">Description</label>
+            <button
+              type="button"
+              class="ai-btn"
+              :disabled="!form.title.trim() || aiLoading"
+              :title="!form.title.trim() ? 'Enter a title first' : 'Generate a description with AI'"
+              @click="suggestDescription"
+            >
+              <span v-if="aiLoading" class="ai-spinner" />
+              <template v-else>
+                <svg viewBox="0 0 16 16" fill="none" width="12" height="12" aria-hidden="true">
+                  <path d="M8 1.5l1.4 4.1L13.5 7l-4.1 1.4L8 12.5 6.6 8.4 2.5 7l4.1-1.4L8 1.5z" fill="currentColor"/>
+                  <path d="M13 10.5l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8.8-2z" fill="currentColor" opacity="0.55"/>
+                </svg>
+                AI
+              </template>
+            </button>
+          </div>
           <textarea id="p-desc" v-model="form.description" rows="3" placeholder="What is this project about?"></textarea>
         </div>
 
@@ -67,6 +85,7 @@
 import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { useWorkspaceStore } from '../../stores/workspaces'
 import type { Project } from '../../types'
+import { useAiSuggest } from '../../composables/useAiSuggest'
 
 const props = defineProps<{
   project?: Project | null
@@ -96,6 +115,12 @@ const form = reactive({
 
 const saving = ref(false)
 const error = ref<string | null>(null)
+const { suggest, loading: aiLoading } = useAiSuggest()
+
+async function suggestDescription() {
+  const result = await suggest('project', form.title)
+  if (result) form.description = result
+}
 
 onMounted(async () => {
   if (workspaces.value.length === 0) {

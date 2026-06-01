@@ -6,6 +6,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 import models
+import uuid as _uuid_mod
+
+
+def _is_valid_uuid(v: str) -> bool:
+    try:
+        _uuid_mod.UUID(v)
+        return True
+    except ValueError:
+        return False
+
+
 from database import get_db
 
 
@@ -29,7 +40,10 @@ class PlanService:
     async def get_detail(self, plan_id: int) -> models.Plan | None:
         result = await self.db.execute(
             select(models.Plan)
-            .options(selectinload(models.Plan.steps))
+            .options(
+                selectinload(models.Plan.steps)
+                .selectinload(models.PlanStep.linked_task)
+            )
             .where(models.Plan.id == plan_id)
         )
         return result.scalars().first()
@@ -37,7 +51,10 @@ class PlanService:
     async def list_by_user(self, user_id: int) -> list[models.Plan]:
         result = await self.db.execute(
             select(models.Plan)
-            .options(selectinload(models.Plan.steps))
+            .options(
+                selectinload(models.Plan.steps)
+                .selectinload(models.PlanStep.linked_task)
+            )
             .where(models.Plan.user_id == user_id)
             .order_by(models.Plan.updated_at.desc())
         )
@@ -87,3 +104,28 @@ class PlanService:
         elif any(s.status == models.StepStatus.RUNNING for s in plan.steps):
             plan.status = models.PlanStatus.ACTIVE
         await self.db.commit()
+
+    async def get_by_uuid(self, uuid: str) -> models.Plan | None:
+        if not _is_valid_uuid(uuid):
+            return None
+        result = await self.db.execute(
+            select(models.Plan).where(models.Plan.uuid == uuid)
+        )
+        return result.scalars().first()
+
+    async def get_detail_by_uuid(self, uuid: str) -> models.Plan | None:
+        result = await self.db.execute(
+            select(models.Plan)
+            .options(
+                selectinload(models.Plan.steps)
+                .selectinload(models.PlanStep.linked_task)
+            )
+            .where(models.Plan.uuid == uuid)
+        )
+        return result.scalars().first()
+
+    async def get_step_by_uuid(self, uuid: str) -> models.PlanStep | None:
+        result = await self.db.execute(
+            select(models.PlanStep).where(models.PlanStep.uuid == uuid)
+        )
+        return result.scalars().first()

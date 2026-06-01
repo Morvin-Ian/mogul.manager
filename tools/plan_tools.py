@@ -3,7 +3,6 @@ import json
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import models
-from agents.planner import PlannerAgent
 from schemas.plans import PlanStepRead
 from services.plans import PlanService
 
@@ -183,8 +182,9 @@ async def handle(name: str, args: dict, db: AsyncSession) -> str:
             },
         )
 
-        # Decompose goal into steps
-        planner = PlannerAgent()
+        # Decompose goal into steps (lazy import breaks circular dependency)
+        from agents.deepseek import DeepSeekAgent
+        planner = DeepSeekAgent()
         raw_steps = await planner.decompose(f"{title}. {description or ''}".strip())
 
         # Save steps — first pass (collect IDs by index)

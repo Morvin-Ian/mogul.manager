@@ -54,11 +54,11 @@ async def upload_document(
 
 @router.get("/{document_id}", response_model=DocumentResponse)
 async def get_document(
-    document_id: int,
+    document_id: str,
     current_user: CurrentUser,
     db: AsyncSession = Depends(get_db),
 ):
-    doc = await DocumentService(db).get_document(document_id, current_user.id)
+    doc = await DocumentService(db).get_by_uuid(document_id, current_user.id)
     if not doc:
         raise HTTPException(404, "Document not found")
     return doc
@@ -66,23 +66,26 @@ async def get_document(
 
 @router.delete("/{document_id}", status_code=204)
 async def delete_document(
-    document_id: int,
+    document_id: str,
     current_user: CurrentUser,
     db: AsyncSession = Depends(get_db),
 ):
-    ok = await DocumentService(db).delete_document(document_id, current_user.id)
+    doc_obj = await DocumentService(db).get_by_uuid(document_id, current_user.id)
+    if not doc_obj:
+        raise HTTPException(404, "Document not found")
+    ok = await DocumentService(db).delete_document(doc_obj.id, current_user.id)
     if not ok:
         raise HTTPException(404, "Document not found")
 
 
 @router.post("/{document_id}/reprocess", response_model=DocumentResponse)
 async def reprocess_document(
-    document_id: int,
+    document_id: str,
     background_tasks: BackgroundTasks,
     current_user: CurrentUser,
     db: AsyncSession = Depends(get_db),
 ):
-    doc = await DocumentService(db).get_document(document_id, current_user.id)
+    doc = await DocumentService(db).get_by_uuid(document_id, current_user.id)
     if not doc:
         raise HTTPException(404, "Document not found")
     background_tasks.add_task(process_document_bg, doc.id)

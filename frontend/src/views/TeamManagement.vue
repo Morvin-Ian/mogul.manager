@@ -3,9 +3,10 @@
     <Loading v-if="loading" label="Loading team…" />
 
     <template v-else-if="workspace">
+      <div class="team-content">
       <div class="page-head">
         <div>
-          <button class="back-pill" @click="$router.push(`/workspaces/${workspace.id}`)">
+          <button class="back-pill" @click="$router.push(`/workspaces/${workspace.uuid}`)">
             <font-awesome-icon :icon="['fas', 'chevron-left']" />
             {{ workspace.title }}
           </button>
@@ -106,6 +107,7 @@
           </div>
         </div>
       </section>
+      </div><!-- /.team-content -->
     </template>
   </div>
 </template>
@@ -127,7 +129,7 @@ const membersStore = useMembersStore()
 const auth = useAuthStore()
 const { confirm } = useConfirm()
 
-const workspaceId = computed(() => Number(route.params.id))
+const workspaceId = computed(() => route.params.id as string)
 const workspace = computed(() => workspaceStore.current)
 const members = computed(() => membersStore.members)
 const invitations = computed(() => membersStore.invitations)
@@ -233,8 +235,11 @@ async function handleRevoke(invitationId: number) {
 
 <style scoped>
 .team-page {
-  padding: 36px 36px 80px;
-  max-width: 800px;
+  padding: 36px 40px 80px;
+}
+
+.team-content {
+  max-width: 900px;
 }
 
 .page-head {

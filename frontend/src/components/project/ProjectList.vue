@@ -45,7 +45,7 @@
         v-for="project in projects"
         :key="project.id"
         class="project-card"
-        @click="$router.push(`/projects/${project.id}`)"
+        @click="$router.push(`/projects/${project.uuid}`)"
       >
         <div class="proj-inner">
           <!-- Top: status chip + menu -->

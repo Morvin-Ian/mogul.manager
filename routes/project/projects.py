@@ -28,9 +28,9 @@ async def _require_workspace_member(
 
 
 async def _get_project_or_404(
-    project_id: int, service: ProjectService
+    project_id: str, service: ProjectService
 ) -> models.Project:
-    project = await service.get_by_id(project_id)
+    project = await service.get_by_uuid(project_id)
     if not project:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
@@ -66,7 +66,7 @@ async def list_projects(
 
 @router.get("/{project_id}", response_model=ProjectRead)
 async def get_project(
-    project_id: int,
+    project_id: str,
     current_user: CurrentUser,
     service: Annotated[ProjectService, Depends()],
     collab: Annotated[CollaborationService, Depends()],
@@ -78,7 +78,7 @@ async def get_project(
 
 @router.patch("/{project_id}", response_model=ProjectRead)
 async def update_project(
-    project_id: int,
+    project_id: str,
     project_update: ProjectUpdate,
     current_user: CurrentUser,
     service: Annotated[ProjectService, Depends()],
@@ -99,7 +99,7 @@ async def update_project(
 
 @router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_project(
-    project_id: int,
+    project_id: str,
     current_user: CurrentUser,
     service: Annotated[ProjectService, Depends()],
     collab: Annotated[CollaborationService, Depends()],

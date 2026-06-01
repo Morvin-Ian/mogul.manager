@@ -20,10 +20,10 @@ export const useProjectStore = defineStore('projects', () => {
     }
   }
 
-  async function fetchOne(id: number) {
+  async function fetchOne(uuid: string) {
     loading.value = true
     try {
-      current.value = await get<Project>(`/projects/${id}`)
+      current.value = await get<Project>(`/projects/${uuid}`)
       return current.value
     } catch (e) {
       error.value = (e as Error).message
@@ -39,18 +39,18 @@ export const useProjectStore = defineStore('projects', () => {
     return p
   }
 
-  async function update(id: number, data: ProjectUpdate) {
-    const p = await patch<Project>(`/projects/${id}`, data)
-    const idx = projects.value.findIndex((pr) => pr.id === id)
+  async function update(uuid: string, data: ProjectUpdate) {
+    const p = await patch<Project>(`/projects/${uuid}`, data)
+    const idx = projects.value.findIndex((pr) => pr.uuid === uuid)
     if (idx !== -1) projects.value[idx] = p
-    if (current.value?.id === id) current.value = p
+    if (current.value?.uuid === uuid) current.value = p
     return p
   }
 
-  async function remove(id: number) {
-    await del(`/projects/${id}`)
-    projects.value = projects.value.filter((p) => p.id !== id)
-    if (current.value?.id === id) current.value = null
+  async function remove(uuid: string) {
+    await del(`/projects/${uuid}`)
+    projects.value = projects.value.filter((p) => p.uuid !== uuid)
+    if (current.value?.uuid === uuid) current.value = null
   }
 
   return { projects, current, loading, error, fetchByWorkspace, fetchOne, create, update, remove }

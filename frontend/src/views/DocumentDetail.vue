@@ -4,9 +4,7 @@
     <div class="detail-header">
       <div class="detail-header-left">
         <button class="btn btn-sm btn-ghost back-btn" @click="router.push('/documents')">
-          <svg viewBox="0 0 14 14" fill="none" width="13" height="13">
-            <path d="M8.5 2.5L4 7l4.5 4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
+          <font-awesome-icon :icon="['fas', 'chevron-left']" />
           Documents
         </button>
         <div class="doc-title-row">
@@ -20,7 +18,7 @@
       </div>
       <div class="detail-actions">
         <button class="btn btn-sm" @click="handleReprocess" :disabled="reprocessing">
-          <svg viewBox="0 0 14 14" fill="none" width="12" height="12"><path d="M2 7A5 5 0 0112 7M12 4v3h-3M2 10v-3h3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <font-awesome-icon :icon="['fas', 'rotate-right']" />
           {{ reprocessing ? 'Queued…' : 'Reprocess' }}
         </button>
         <button class="btn btn-sm btn-danger" @click="handleDelete">Delete</button>
@@ -30,19 +28,19 @@
     <!-- Stats bar -->
     <div class="stats-bar">
       <div class="stat-item" v-if="doc.word_count">
-        <svg viewBox="0 0 14 14" fill="none" width="12" height="12"><path d="M2 4h10M2 7h7M2 10h5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        <font-awesome-icon :icon="['fas', 'align-left']" />
         {{ doc.word_count.toLocaleString() }} words
       </div>
       <div class="stat-item" v-if="doc.page_count">
-        <svg viewBox="0 0 14 14" fill="none" width="12" height="12"><path d="M3 2h8l1 1v9H3V2zM5 5h4M5 7.5h4M5 10h2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+        <font-awesome-icon :icon="['far', 'file']" />
         {{ doc.page_count }} pages
       </div>
       <div class="stat-item" v-if="doc.chunk_count">
-        <svg viewBox="0 0 14 14" fill="none" width="12" height="12"><rect x="2" y="2" width="4" height="4" rx="0.5" stroke="currentColor" stroke-width="1.2"/><rect x="8" y="2" width="4" height="4" rx="0.5" stroke="currentColor" stroke-width="1.2"/><rect x="2" y="8" width="4" height="4" rx="0.5" stroke="currentColor" stroke-width="1.2"/><rect x="8" y="8" width="4" height="4" rx="0.5" stroke="currentColor" stroke-width="1.2"/></svg>
+        <font-awesome-icon :icon="['fas', 'table-cells']" />
         {{ doc.chunk_count }} chunks indexed
       </div>
       <div class="stat-item">
-        <svg viewBox="0 0 14 14" fill="none" width="12" height="12"><path d="M7 2v5l3 2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.2"/></svg>
+        <font-awesome-icon :icon="['fas', 'hard-drive']" />
         {{ formatSize(doc.file_size) }}
       </div>
       <div class="stat-item" v-if="doc.processed_at">
@@ -52,7 +50,7 @@
 
     <!-- Error -->
     <div v-if="doc.status === 'failed'" class="error-box">
-      <svg viewBox="0 0 16 16" fill="none" width="15" height="15"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.3"/><path d="M8 5v4M8 10.5v.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+      <font-awesome-icon :icon="['fas', 'circle-exclamation']" />
       <div>
         <p class="error-title">Processing failed</p>
         <p class="error-msg">{{ doc.error_message }}</p>
@@ -72,7 +70,7 @@
     <div v-if="doc.summary" class="section">
       <h3 class="section-title">AI Summary</h3>
       <div class="summary-card">
-        <svg viewBox="0 0 16 16" fill="none" width="14" height="14" class="summary-icon"><path d="M8 2l1.5 3.5H13l-2.8 2 1 3.5L8 9l-3.2 2 1-3.5L3 5.5h3.5L8 2z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
+        <font-awesome-icon :icon="['fas', 'wand-magic-sparkles']" class="summary-icon" />
         <p>{{ doc.summary }}</p>
       </div>
     </div>
@@ -108,7 +106,7 @@
 
     <!-- RAG hint -->
     <div v-if="doc.status === 'ready'" class="rag-hint">
-      <svg viewBox="0 0 16 16" fill="none" width="14" height="14"><path fill-rule="evenodd" d="M14 8c0 3.314-2.686 6-6 6S2 11.314 2 8s2.686-6 6-6 6 2.686 6 6zM7 5v2H5v2h2v2h2V9h2V7H9V5H7z" fill="currentColor" clip-rule="evenodd"/></svg>
+      <font-awesome-icon :icon="['fas', 'circle-info']" />
       <p>This document is now part of your AI's knowledge base. Ask about it in <router-link to="/chat" class="rag-link">AI Chat</router-link>.</p>
     </div>
   </div>
@@ -132,7 +130,7 @@ const router = useRouter()
 const store = useDocumentStore()
 const { confirm } = useConfirm()
 
-const docId = computed(() => Number(route.params.id))
+const docId = computed(() => route.params.id as string)
 const doc = computed(() => store.current)
 
 const reprocessing = ref(false)
@@ -169,7 +167,7 @@ async function handleReprocess() {
 }
 
 async function handleDelete() {
-  const doc = store.documents.find((d) => d.id === docId.value)
+  const doc = store.documents.find((d) => d.uuid === docId.value)
   const ok = await confirm({
     title: 'Delete document?',
     message: doc?.original_filename ? `"${doc.original_filename}" will be permanently removed.` : 'This document will be permanently removed.',
@@ -189,7 +187,7 @@ async function doSearch() {
   searchRan.value = false
   try {
     const hits = await store.search(searchQuery.value, 6)
-    searchResults.value = hits.filter((h) => h.document_id === docId.value)
+    searchResults.value = hits.filter((h) => h.document_id === doc.value?.id)
     searchRan.value = true
   } finally {
     searching.value = false
@@ -209,8 +207,7 @@ function formatDate(iso: string): string {
 
 <style scoped>
 .doc-detail {
-  padding: 32px 32px 80px;
-  max-width: 800px;
+  padding: 36px 40px 80px;
 }
 
 /* Header */

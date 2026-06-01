@@ -43,6 +43,8 @@ class TaskRead(TaskBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    uuid: str
+    project_uuid: str | None = None
     project_id: int
     completed_at: datetime | None
     created_at: datetime

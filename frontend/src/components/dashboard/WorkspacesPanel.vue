@@ -29,7 +29,7 @@
           background: palette(idx).bg,
           borderColor: palette(idx).border,
         }"
-        @click="$router.push(`/workspaces/${ws.id}`)"
+        @click="$router.push(`/workspaces/${ws.uuid}`)"
       >
         <div class="ws-card-top">
           <span class="ws-card-count" :style="{ color: palette(idx).accent }">

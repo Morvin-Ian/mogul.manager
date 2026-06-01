@@ -3,7 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 
 import models
-from agents.planner import PlannerAgent
+from agents.deepseek import DeepSeekAgent as PlannerAgent
 from schemas.plans import PlanCreate, PlanDetail, PlanStepUpdate, PlanUpdate
 from schemas.plans import PlanStepRead
 from services.auth import CurrentUser
@@ -62,11 +62,11 @@ async def create_plan(
 
 @router.get("/{plan_id}", response_model=PlanDetail)
 async def get_plan(
-    plan_id: int,
+    plan_id: str,
     current_user: CurrentUser,
     svc: Annotated[PlanService, Depends()],
 ):
-    plan = await svc.get_detail(plan_id)
+    plan = await svc.get_detail_by_uuid(plan_id)
     if not plan or plan.user_id != current_user.id:
         raise HTTPException(status_code=404, detail="Plan not found")
     return PlanDetail.model_validate(plan)
@@ -74,7 +74,7 @@ async def get_plan(
 
 @router.patch("/{plan_id}", response_model=PlanDetail)
 async def update_plan(
-    plan_id: int,
+    plan_id: str,
     data: PlanUpdate,
     current_user: CurrentUser,
     svc: Annotated[PlanService, Depends()],
@@ -83,17 +83,17 @@ async def update_plan(
     if not plan or plan.user_id != current_user.id:
         raise HTTPException(status_code=404, detail="Plan not found")
     await svc.update(plan, data.model_dump(exclude_unset=True))
-    plan = await svc.get_detail(plan_id)
+    plan = await svc.get_detail_by_uuid(plan_id)
     return PlanDetail.model_validate(plan)
 
 
 @router.delete("/{plan_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_plan(
-    plan_id: int,
+    plan_id: str,
     current_user: CurrentUser,
     svc: Annotated[PlanService, Depends()],
 ):
-    plan = await svc.get_by_id(plan_id)
+    plan = await svc.get_by_uuid(plan_id)
     if not plan or plan.user_id != current_user.id:
         raise HTTPException(status_code=404, detail="Plan not found")
     await svc.delete(plan)
@@ -101,8 +101,8 @@ async def delete_plan(
 
 @router.patch("/{plan_id}/steps/{step_id}", response_model=PlanStepRead)
 async def update_step(
-    plan_id: int,
-    step_id: int,
+    plan_id: str,
+    step_id: str,
     data: PlanStepUpdate,
     current_user: CurrentUser,
     svc: Annotated[PlanService, Depends()],
@@ -110,8 +110,8 @@ async def update_step(
     plan = await svc.get_by_id(plan_id)
     if not plan or plan.user_id != current_user.id:
         raise HTTPException(status_code=404, detail="Plan not found")
-    step = await svc.get_step(step_id)
-    if not step or step.plan_id != plan_id:
+    step = await svc.get_step_by_uuid(step_id)
+    if not step or step.plan_id != plan.id:
         raise HTTPException(status_code=404, detail="Step not found")
     step = await svc.update_step(step, data.model_dump(exclude_unset=True))
     return PlanStepRead.model_validate(step)

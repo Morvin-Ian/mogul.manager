@@ -76,7 +76,7 @@
         </div>
       </div>
 
-      <TaskBoard :project-id="project.id" :workspace-id="project.workspace_id" />
+      <TaskBoard :project-id="project.id" :workspace-id="project.workspace_uuid" />
 
       <ProjectForm
         v-if="showForm"
@@ -127,7 +127,7 @@ const taskStats = computed(() => {
 
 const showForm = ref(false)
 const editingProject = ref<Project | null>(null)
-const projectId = computed(() => Number(route.params.id))
+const projectId = computed(() => route.params.id as string)
 const project = computed(() => projectStore.current)
 const membership = computed(() => membersStore.myMembership)
 const isAdmin = computed(() => membership.value?.role === 'admin' || membership.value?.role === 'owner')
@@ -142,7 +142,7 @@ watch(projectId, async (id) => {
     try {
       await projectStore.fetchOne(id)
       if (projectStore.current) {
-        await membersStore.fetchMyMembership(projectStore.current.workspace_id)
+        await membersStore.fetchMyMembership(projectStore.current.workspace_uuid ?? String(projectStore.current.workspace_id))
       }
     } catch {
       router.push('/')
@@ -184,16 +184,15 @@ async function handleDelete() {
     danger: true,
   })
   if (!ok) return
-  const wsId = project.value.workspace_id
+  const wsUuid = project.value.workspace_uuid
   await projectStore.remove(projectId.value)
-  router.push(`/workspaces/${wsId}`)
+  router.push(`/workspaces/${wsUuid}`)
 }
 </script>
 
 <style scoped>
 .project-detail {
-  padding: 36px 36px 80px;
-  max-width: 1400px;
+  padding: 36px 40px 80px;
 }
 
 .page-head {

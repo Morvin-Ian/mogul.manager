@@ -1,3 +1,4 @@
+from .base import TimestampedModel
 from .chat import Conversation, Message
 from .collaboration import Invitation, InvitationStatus, MemberRole, WorkspaceMember
 from .comments import Comment
@@ -10,6 +11,7 @@ from .users import PasswordResetToken, User
 from .workspaces import Workspace
 
 __all__ = [
+    "TimestampedModel",
     "User",
     "PasswordResetToken",
     "Comment",

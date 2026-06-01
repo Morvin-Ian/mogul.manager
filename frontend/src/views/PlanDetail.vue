@@ -87,7 +87,7 @@
             <a
               v-if="step.linked_task_id"
               class="linked-task"
-              @click.prevent="router.push(`/tasks/${step.linked_task_id}`)"
+              @click.prevent="router.push(`/tasks/${step.linked_task_uuid ?? step.linked_task_id}`)"
             >
               <svg viewBox="0 0 12 12" fill="none" width="10" height="10"><path d="M5 2H2.5A.5.5 0 002 2.5v7a.5.5 0 00.5.5h7a.5.5 0 00.5-.5V7M7 2h3v3M5 7l5-5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
               Linked task
@@ -135,7 +135,7 @@ const route = useRoute()
 const router = useRouter()
 const store = usePlanStore()
 
-const planId = computed(() => Number(route.params.id))
+const planId = computed(() => route.params.id as string)
 const plan = computed(() => store.current)
 
 onMounted(() => store.fetchOne(planId.value))
@@ -163,7 +163,7 @@ function isBlocked(step: PlanStep): boolean {
 }
 
 async function setStatus(step: PlanStep, status: StepStatus) {
-  await store.updateStep(plan.value!.id, step.id, status)
+  await store.updateStep(plan.value!.uuid, step.uuid, status)
 }
 </script>
 

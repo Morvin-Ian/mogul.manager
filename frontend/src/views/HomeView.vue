@@ -166,7 +166,7 @@ async function handleProjectSaved(data: Record<string, any>) {
 
 <style scoped>
 .home-view {
-  padding: 28px 32px;
+  padding: 32px 40px;
   min-height: 100%;
 }
 

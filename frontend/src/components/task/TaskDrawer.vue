@@ -308,21 +308,22 @@ const form = reactive<DrawerForm>({
 })
 
 const statuses: { key: TaskStatus; label: string }[] = [
-  { key: 'todo',        label: 'To Do' },
+  { key: 'todo',        label: 'Pending' },
   { key: 'in_progress', label: 'In Progress' },
   { key: 'review',      label: 'Review' },
-  { key: 'blocked',     label: 'Blocked' },
-  { key: 'completed',   label: 'Done' },
+  { key: 'blocked',     label: 'In Revision' },
+  { key: 'completed',   label: 'Completed' },
 ]
 
 const STATUS_LABELS: Record<TaskStatus, string> = {
-  todo: 'To Do', in_progress: 'In Progress', review: 'Review', blocked: 'Blocked', completed: 'Done',
+  todo: 'Pending', in_progress: 'In Progress', review: 'Review', blocked: 'In Revision', completed: 'Completed',
 }
 function statusLabel(s: TaskStatus) { return STATUS_LABELS[s] ?? s }
 
 const MEMBER_ALLOWED: Record<string, Set<TaskStatus>> = {
-  todo: new Set(['in_progress']),
+  todo:        new Set(['in_progress']),
   in_progress: new Set(['review']),
+  blocked:     new Set(['todo', 'in_progress', 'review']),
 }
 
 function canMemberChangeToStatus(toStatus: TaskStatus): boolean {
@@ -412,7 +413,7 @@ async function handleStatusChange(toStatus: TaskStatus) {
   if (!isAdmin.value && !canMemberChangeToStatus(toStatus)) return
   form.status = toStatus
   try {
-    const updated = await patch<Task>(`/tasks/${props.task.id}`, { status: toStatus })
+    const updated = await patch<Task>(`/tasks/${props.task.uuid}`, { status: toStatus })
     emit('updated', updated)
   } catch (e) {
     form.status = props.task.status
@@ -434,7 +435,7 @@ async function handleSave() {
       actual_hours: form.actual_hours,
       due_date: form.due_date || null,
     }
-    const updated = await patch<Task>(`/tasks/${props.task.id}`, payload)
+    const updated = await patch<Task>(`/tasks/${props.task.uuid}`, payload)
     editMode.value = false
     emit('updated', updated)
   } catch (e) {
@@ -454,7 +455,7 @@ async function handleDelete() {
     danger: true,
   })
   if (!ok) return
-  await taskStore.remove(props.task.id)
+  await taskStore.remove(props.task.uuid)
   emit('deleted')
 }
 

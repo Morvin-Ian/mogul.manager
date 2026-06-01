@@ -75,7 +75,7 @@
         v-for="doc in filteredDocs"
         :key="doc.id"
         class="doc-card"
-        @click="router.push(`/documents/${doc.id}`)"
+        @click="router.push(`/documents/${doc.uuid}`)"
       >
         <div class="doc-card-head">
           <span class="file-type-badge" :class="`badge-${doc.file_type}`">{{ doc.file_type.toUpperCase() }}</span>
@@ -245,8 +245,7 @@ onMounted(async () => {
 
 <style scoped>
 .docs-page {
-  padding: 36px 32px 80px;
-  max-width: 960px;
+  padding: 36px 40px 80px;
 }
 
 /* Drop zone */

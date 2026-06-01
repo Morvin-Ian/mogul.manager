@@ -8,6 +8,17 @@ from sqlalchemy import select, union_all
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import models
+import uuid as _uuid_mod
+
+
+def _is_valid_uuid(v: str) -> bool:
+    try:
+        _uuid_mod.UUID(v)
+        return True
+    except ValueError:
+        return False
+
+
 from database import get_db
 from models.collaboration import MemberRole
 
@@ -71,3 +82,11 @@ class WorkspaceService:
     async def delete(self, workspace: models.Workspace) -> None:
         await self.db.delete(workspace)
         await self.db.commit()
+
+    async def get_by_uuid(self, uuid: str) -> models.Workspace | None:
+        if not _is_valid_uuid(uuid):
+            return None
+        result = await self.db.execute(
+            select(models.Workspace).where(models.Workspace.uuid == uuid)
+        )
+        return result.scalars().first()

@@ -15,6 +15,8 @@ from schemas.chat.chat import (
     ConversationUpdate,
     MessageRead,
     MessageSend,
+    SuggestRequest,
+    SuggestResponse,
 )
 from services.auth import CurrentUser
 from services.chat.chat import ChatService
@@ -147,7 +149,9 @@ async def send_message(
         collected: list[str] = []
 
         # Build rich context including RAG over user's documents
-        user_context = await build_context(current_user.id, service.db, query=message.content)
+        user_context = await build_context(
+            current_user.id, service.db, query=message.content
+        )
 
         # Retrieve recent conversation history (short-term memory)
         context = await service.get_context(conversation_id)
@@ -175,3 +179,12 @@ async def send_message(
         )
 
     return StreamingResponse(generate(), media_type="text/event-stream")
+
+
+@router.post("/suggest")
+async def suggest_field(data: SuggestRequest, _: CurrentUser) -> SuggestResponse:
+    agent = get_deepseek()
+    suggestion = await agent.suggest_field(
+        data.context_type, data.title.strip(), data.field
+    )
+    return SuggestResponse(suggestion=suggestion)

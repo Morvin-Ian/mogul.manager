@@ -20,10 +20,10 @@ export const useWorkspaceStore = defineStore('workspaces', () => {
     }
   }
 
-  async function fetchOne(id: number) {
+  async function fetchOne(uuid: string) {
     loading.value = true
     try {
-      current.value = await get<Workspace>(`/workspaces/${id}`)
+      current.value = await get<Workspace>(`/workspaces/${uuid}`)
       return current.value
     } catch (e) {
       error.value = (e as Error).message
@@ -39,18 +39,18 @@ export const useWorkspaceStore = defineStore('workspaces', () => {
     return ws
   }
 
-  async function update(id: number, data: WorkspaceUpdate) {
-    const ws = await patch<Workspace>(`/workspaces/${id}`, data)
-    const idx = workspaces.value.findIndex((w) => w.id === id)
+  async function update(uuid: string, data: WorkspaceUpdate) {
+    const ws = await patch<Workspace>(`/workspaces/${uuid}`, data)
+    const idx = workspaces.value.findIndex((w) => w.uuid === uuid)
     if (idx !== -1) workspaces.value[idx] = ws
-    if (current.value?.id === id) current.value = ws
+    if (current.value?.uuid === uuid) current.value = ws
     return ws
   }
 
-  async function remove(id: number) {
-    await del(`/workspaces/${id}`)
-    workspaces.value = workspaces.value.filter((w) => w.id !== id)
-    if (current.value?.id === id) current.value = null
+  async function remove(uuid: string) {
+    await del(`/workspaces/${uuid}`)
+    workspaces.value = workspaces.value.filter((w) => w.uuid !== uuid)
+    if (current.value?.uuid === uuid) current.value = null
   }
 
   return { workspaces, current, loading, error, fetchAll, fetchOne, create, update, remove }

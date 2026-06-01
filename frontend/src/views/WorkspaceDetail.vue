@@ -153,7 +153,7 @@
           </div>
         </div>
         <div class="workspace-actions">
-          <button class="btn btn-sm" @click="$router.push(`/team/${currentWorkspace.id}`)">
+          <button class="btn btn-sm" @click="$router.push(`/team/${currentWorkspace.uuid}`)">
             <svg viewBox="0 0 14 14" fill="none" width="12" height="12">
               <path d="M5 10.5c0-1.5 1.12-2.5 3-2.5s3 1 3 2.5M3 7.5a1.5 1.5 0 110-3 1.5 1.5 0 010 3zm8 0a1.5 1.5 0 110-3 1.5 1.5 0 010 3zM8 4.5a1.5 1.5 0 110-3 1.5 1.5 0 010 3z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
@@ -218,7 +218,7 @@ const showForm = ref(false)
 const editingWorkspace = ref<Workspace | null>(null)
 const workspaceId = computed(() => {
   const id = route.params.id
-  return id ? Number(id) : null
+  return id ? (id as string) : null
 })
 const currentWorkspace = computed(() => workspaceStore.current)
 
@@ -254,10 +254,10 @@ function closeForm() {
 
 async function onSave(data: { title: string; description: string }) {
   if (editingWorkspace.value && currentWorkspace.value) {
-    await workspaceStore.update(currentWorkspace.value.id, data)
+    await workspaceStore.update(currentWorkspace.value.uuid, data)
   } else {
     const ws = await workspaceStore.create(data)
-    router.push(`/workspaces/${ws.id}`)
+    router.push(`/workspaces/${ws.uuid}`)
   }
   closeForm()
 }
@@ -278,15 +278,14 @@ async function handleDelete() {
     danger: true,
   })
   if (!ok) return
-  await workspaceStore.remove(currentWorkspace.value.id)
+  await workspaceStore.remove(currentWorkspace.value.uuid)
   router.push('/')
 }
 </script>
 
 <style scoped>
 .workspace-detail {
-  padding: 36px 36px 80px;
-  max-width: 1200px;
+  padding: 36px 40px 80px;
 }
 
 /* Explainer */
@@ -468,8 +467,9 @@ async function handleDelete() {
 
 .workspace-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(300px, 380px));
   gap: 16px;
+  justify-content: start;
 }
 
 /* ── Page head (workspace list) ── */

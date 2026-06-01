@@ -4,6 +4,7 @@ export type ProjectStatus = 'planning' | 'active' | 'on_hold' | 'completed' | 'a
 
 export interface User {
   id: number
+  uuid: string
   username: string
   email: string
   profile_path: string | null
@@ -18,6 +19,7 @@ export interface TokenResponse {
 
 export interface Workspace {
   id: number
+  uuid: string
   title: string
   description: string | null
   settings: Record<string, unknown> | null
@@ -42,6 +44,8 @@ export interface WorkspaceUpdate {
 
 export interface Project {
   id: number
+  uuid: string
+  workspace_uuid: string | null
   workspace_id: number
   created_by_id: number | null
   title: string
@@ -79,6 +83,8 @@ export interface ProjectUpdate {
 
 export interface Task {
   id: number
+  uuid: string
+  project_uuid: string | null
   project_id: number
   title: string
   description: string | null
@@ -135,6 +141,7 @@ export interface CommentUser {
 
 export interface Comment {
   id: number
+  uuid: string
   user_id: number
   task_id: number
   parent_id: number | null
@@ -152,6 +159,7 @@ export interface CommentCreate {
 
 export interface Conversation {
   id: number
+  uuid: string
   user_id: number
   title: string | null
   is_archived: boolean
@@ -161,6 +169,7 @@ export interface Conversation {
 
 export interface Message {
   id: number
+  uuid: string
   conversation_id: number
   role: string
   content: string
@@ -178,6 +187,7 @@ export type StepPriority = 'low' | 'medium' | 'high' | 'urgent'
 
 export interface PlanStep {
   id: number
+  uuid: string
   plan_id: number
   title: string
   description: string | null
@@ -186,6 +196,7 @@ export interface PlanStep {
   step_order: number
   dependencies: number[]
   linked_task_id: number | null
+  linked_task_uuid: string | null
   agent_notes: string | null
   created_at: string
   updated_at: string
@@ -193,6 +204,7 @@ export interface PlanStep {
 
 export interface Plan {
   id: number
+  uuid: string
   user_id: number
   workspace_id: number | null
   title: string
@@ -215,6 +227,7 @@ export type DocumentFileType = 'pdf' | 'docx' | 'txt' | 'csv'
 
 export interface Document {
   id: number
+  uuid: string
   user_id: number
   title: string
   original_filename: string
@@ -249,6 +262,7 @@ export type InvitationStatus = 'pending' | 'accepted' | 'expired' | 'revoked'
 
 export interface WorkspaceMember {
   id: number
+  uuid: string
   workspace_id: number
   user_id: number
   role: MemberRole
@@ -259,6 +273,7 @@ export interface WorkspaceMember {
 
 export interface Invitation {
   id: number
+  uuid: string
   workspace_id: number
   email: string
   role: MemberRole

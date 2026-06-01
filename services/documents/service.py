@@ -2,7 +2,17 @@ from __future__ import annotations
 
 import logging
 import time
-import uuid
+import uuid as _uuid_mod
+
+
+def _is_valid_uuid(v: str) -> bool:
+    try:
+        _uuid_mod.UUID(v)
+        return True
+    except ValueError:
+        return False
+
+
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated
@@ -56,6 +66,16 @@ class DocumentService:
         )
         return list(result.scalars().all())
 
+    async def get_by_uuid(self, document_uuid: str, user_id: int) -> Document | None:
+        if not _is_valid_uuid(document_uuid):
+            return None
+        result = await self.db.execute(
+            select(Document).where(
+                Document.uuid == document_uuid, Document.user_id == user_id
+            )
+        )
+        return result.scalars().first()
+
     async def get_document(self, document_id: int, user_id: int) -> Document | None:
         result = await self.db.execute(
             select(Document).where(
@@ -93,7 +113,7 @@ class DocumentService:
         if len(content) > MAX_FILE_SIZE:
             raise ValueError("File exceeds the 20 MB size limit.")
 
-        storage_key = f"documents/{uuid.uuid4().hex}{ext}"
+        storage_key = f"documents/{_uuid_mod.uuid4().hex}{ext}"
         await run_in_threadpool(_s3_upload, content, storage_key)
 
         doc = Document(

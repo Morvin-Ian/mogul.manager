@@ -39,3 +39,13 @@ class ConversationDetail(ConversationRead):
 
 class MessageSend(BaseModel):
     content: str
+
+
+class SuggestRequest(BaseModel):
+    context_type: str
+    title: str
+    field: str = "description"
+
+
+class SuggestResponse(BaseModel):
+    suggestion: str

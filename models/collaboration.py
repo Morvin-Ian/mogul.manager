@@ -4,10 +4,10 @@ import enum
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Index, Integer, String
+from sqlalchemy import DateTime, Enum, ForeignKey, Index, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from database import Base
+from models.base import TimestampedModel
 
 if TYPE_CHECKING:
     from .users import User
@@ -27,33 +27,22 @@ class InvitationStatus(str, enum.Enum):
     revoked = "revoked"
 
 
-class WorkspaceMember(Base):
+class WorkspaceMember(TimestampedModel):
     __tablename__ = "workspace_members"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     workspace_id: Mapped[int] = mapped_column(
-        ForeignKey("workspaces.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
+        ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False, index=True
     )
     user_id: Mapped[int] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
     role: Mapped[MemberRole] = mapped_column(
-        Enum(MemberRole, name="memberrole"),
-        nullable=False,
-        default=MemberRole.member,
+        Enum(MemberRole, name="memberrole"), nullable=False, default=MemberRole.member
     )
     joined_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        default=lambda: datetime.now(UTC),
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
     )
-    last_seen_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True),
-        nullable=True,
-    )
+    last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     workspace: Mapped["Workspace"] = relationship("Workspace")
     user: Mapped["User"] = relationship("User")
@@ -63,39 +52,22 @@ class WorkspaceMember(Base):
     )
 
 
-class Invitation(Base):
+class Invitation(TimestampedModel):
     __tablename__ = "invitations"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     workspace_id: Mapped[int] = mapped_column(
-        ForeignKey("workspaces.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
+        ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False, index=True
     )
     email: Mapped[str] = mapped_column(String(120), nullable=False, index=True)
     role: Mapped[MemberRole] = mapped_column(
-        Enum(MemberRole, name="memberrole"),
-        nullable=False,
-        default=MemberRole.member,
+        Enum(MemberRole, name="memberrole"), nullable=False, default=MemberRole.member
     )
     token: Mapped[str] = mapped_column(String(128), nullable=False, unique=True, index=True)
     invited_by_id: Mapped[int] = mapped_column(
-        ForeignKey("users.id", ondelete="SET NULL"),
-        nullable=True,
-        index=True,
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
     )
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        default=lambda: datetime.now(UTC),
-    )
-    expires_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-    )
-    accepted_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True),
-        nullable=True,
-    )
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     status: Mapped[InvitationStatus] = mapped_column(
         Enum(InvitationStatus, name="invitationstatus"),
         nullable=False,

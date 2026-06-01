@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 class DocumentResponse(BaseModel):
     id: int
+    uuid: str
     user_id: int
     title: str
     original_filename: str

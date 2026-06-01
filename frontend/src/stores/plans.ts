@@ -20,11 +20,11 @@ export const usePlanStore = defineStore('plans', () => {
     }
   }
 
-  async function fetchOne(id: number) {
+  async function fetchOne(uuid: string) {
     loading.value = true
     try {
-      current.value = await get<Plan>(`/plans/${id}`)
-      const idx = plans.value.findIndex((p) => p.id === id)
+      current.value = await get<Plan>(`/plans/${uuid}`)
+      const idx = plans.value.findIndex((p) => p.uuid === uuid)
       if (idx !== -1) plans.value[idx] = current.value
       return current.value
     } catch (e) {
@@ -41,21 +41,21 @@ export const usePlanStore = defineStore('plans', () => {
     return plan
   }
 
-  async function remove(id: number) {
-    await del(`/plans/${id}`)
-    plans.value = plans.value.filter((p) => p.id !== id)
-    if (current.value?.id === id) current.value = null
+  async function remove(uuid: string) {
+    await del(`/plans/${uuid}`)
+    plans.value = plans.value.filter((p) => p.uuid !== uuid)
+    if (current.value?.uuid === uuid) current.value = null
   }
 
-  async function updateStep(planId: number, stepId: number, status: StepStatus, notes?: string): Promise<PlanStep> {
-    const step = await patch<PlanStep>(`/plans/${planId}/steps/${stepId}`, {
+  async function updateStep(planUuid: string, stepUuid: string, status: StepStatus, notes?: string): Promise<PlanStep> {
+    const step = await patch<PlanStep>(`/plans/${planUuid}/steps/${stepUuid}`, {
       status,
       agent_notes: notes ?? null,
     })
     // Patch step in local state
-    const plan = plans.value.find((p) => p.id === planId) ?? current.value
+    const plan = plans.value.find((p) => p.uuid === planUuid) ?? current.value
     if (plan) {
-      const i = plan.steps.findIndex((s) => s.id === stepId)
+      const i = plan.steps.findIndex((s) => s.uuid === stepUuid)
       if (i !== -1) plan.steps[i] = step
     }
     return step

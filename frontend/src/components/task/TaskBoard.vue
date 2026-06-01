@@ -81,7 +81,7 @@ import TaskModal from './TaskModal.vue'
 import TaskDrawer from './TaskDrawer.vue'
 import SkeletonBoard from '../common/SkeletonBoard.vue'
 
-const props = defineProps<{ projectId: number; workspaceId?: number }>()
+const props = defineProps<{ projectId: number; workspaceId?: string }>()
 
 const taskStore = useTaskStore()
 const membersStore = useMembersStore()
@@ -93,24 +93,24 @@ const btnColor = computed(() => isDark.value ? '#15202B' : '#ffffff')
 
 const showModal = ref(false)
 const loading = ref(false)
-const draggedId = ref<number | null>(null)
+const draggedId = ref<string | null>(null)
 const dropError = ref<string | null>(null)
 const selectedTask = ref<Task | null>(null)
 
-// Member-allowed forward transitions
 const MEMBER_ALLOWED: Record<string, Set<TaskStatus>> = {
-  todo: new Set(['in_progress']),
+  todo:        new Set(['in_progress']),
   in_progress: new Set(['review']),
+  blocked:     new Set(['todo', 'in_progress', 'review']),
 }
 
 interface Column { key: TaskStatus; label: string }
 
 const columns: Column[] = [
-  { key: 'todo',        label: 'To Do' },
+  { key: 'todo',        label: 'Pending' },
   { key: 'in_progress', label: 'In Progress' },
   { key: 'review',      label: 'Review' },
-  { key: 'blocked',     label: 'Blocked' },
-  { key: 'completed',   label: 'Done' },
+  { key: 'blocked',     label: 'In Revision' },
+  { key: 'completed',   label: 'Completed' },
 ]
 
 const grouped = computed(() => {
@@ -150,13 +150,13 @@ function canDragTask(task: Task): boolean {
 function canDropToCol(toStatus: TaskStatus): boolean {
   if (!draggedId.value) return false
   if (isAdminOrOwner.value) return true
-  const task = taskStore.tasks.find((t) => t.id === draggedId.value)
+  const task = taskStore.tasks.find((t) => t.uuid === draggedId.value)
   if (!task) return false
   if (task.assigned_to_id !== auth.user?.id) return false
   return MEMBER_ALLOWED[task.status]?.has(toStatus) ?? false
 }
 
-function onDragStart(id: number) {
+function onDragStart(id: string) {
   draggedId.value = id
   dropError.value = null
 }
@@ -169,7 +169,7 @@ function showDropError(msg: string) {
 async function onDrop(toStatus: TaskStatus) {
   if (!draggedId.value) return
 
-  const task = taskStore.tasks.find((t) => t.id === draggedId.value)
+  const task = taskStore.tasks.find((t) => t.uuid === draggedId.value)
   if (!task) { draggedId.value = null; return }
 
   // Same column — nothing to do
@@ -183,7 +183,7 @@ async function onDrop(toStatus: TaskStatus) {
     }
     const allowed = MEMBER_ALLOWED[task.status]
     if (!allowed?.has(toStatus)) {
-      showDropError('You can only move: To Do → In Progress → Review.')
+      showDropError('You can only move: Pending → In Progress → Review, or In Revision back to any earlier stage.')
       draggedId.value = null
       return
     }
@@ -277,7 +277,7 @@ function onTaskUpdated(updated: Task) {
 /* ── Board columns layout ── */
 .board-columns {
   display: flex;
-  gap: 10px;
+  gap: 14px;
   overflow-x: auto;
   padding-bottom: 20px;
   align-items: flex-start;
@@ -285,13 +285,14 @@ function onTaskUpdated(updated: Task) {
 
 /* ── Column ── */
 .board-column {
-  flex: 0 0 245px;
-  background: #ffffff;
+  flex: 1 1 0;
+  min-width: 240px;
+  background: var(--surface);
   border-radius: 10px;
-  border: 1px solid #E8EAED;
+  border: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  max-height: calc(100vh - 270px);
+  max-height: calc(100vh - 260px);
   transition: border-color 0.15s, box-shadow 0.15s;
   overflow: hidden;
 }
@@ -343,7 +344,7 @@ function onTaskUpdated(updated: Task) {
 .count {
   font-size: 12px;
   font-weight: 500;
-  color: #9CA3AF;
+  color: var(--text-light);
   line-height: 1;
 }
 
@@ -366,9 +367,9 @@ function onTaskUpdated(updated: Task) {
   width: 100%;
   padding: 10px 14px;
   border: none;
-  border-top: 1px solid #F3F4F6;
+  border-top: 1px solid var(--border);
   background: transparent;
-  color: #9CA3AF;
+  color: var(--text-light);
   font-size: 12.5px;
   font-weight: 500;
   font-family: inherit;
@@ -377,8 +378,8 @@ function onTaskUpdated(updated: Task) {
   flex-shrink: 0;
 }
 .col-add-btn:hover {
-  color: #6B7280;
-  background: #F9FAFB;
+  color: var(--text-muted);
+  background: var(--bg);
 }
 
 /* ── Dark mode ── */

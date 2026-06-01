@@ -12,6 +12,7 @@ class PlanStepRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    uuid: str
     plan_id: int
     title: str
     description: str | None
@@ -21,6 +22,7 @@ class PlanStepRead(BaseModel):
     dependencies: list[int]
     linked_task_id: int | None
     agent_notes: str | None
+    linked_task_uuid: str | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -35,6 +37,7 @@ class PlanRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    uuid: str
     user_id: int
     workspace_id: int | None
     title: str

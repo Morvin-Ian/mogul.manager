@@ -31,10 +31,10 @@ router = APIRouter(
 
 
 async def _get_workspace_or_404(
-    workspace_id: int,
+    workspace_id: str,
     ws_service: WorkspaceService,
 ) -> models.Workspace:
-    workspace = await ws_service.get_by_id(workspace_id)
+    workspace = await ws_service.get_by_uuid(workspace_id)
     if not workspace:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found"
@@ -44,13 +44,13 @@ async def _get_workspace_or_404(
 
 @router.get("/me", response_model=MyMembershipResponse)
 async def get_my_membership(
-    workspace_id: int,
+    workspace_id: str,
     current_user: CurrentUser,
     collab: Annotated[CollaborationService, Depends()],
     ws_service: Annotated[WorkspaceService, Depends()],
 ):
-    await _get_workspace_or_404(workspace_id, ws_service)
-    member = await collab.get_member(workspace_id, current_user.id)
+    workspace = await _get_workspace_or_404(workspace_id, ws_service)
+    member = await collab.get_member(workspace.id, current_user.id)
     if not member:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -66,26 +66,26 @@ async def get_my_membership(
 
 @router.get("", response_model=list[MemberResponse])
 async def list_members(
-    workspace_id: int,
+    workspace_id: str,
     current_user: CurrentUser,
     collab: Annotated[CollaborationService, Depends()],
     ws_service: Annotated[WorkspaceService, Depends()],
 ):
-    await _get_workspace_or_404(workspace_id, ws_service)
-    await collab.require_access(workspace_id, current_user.id, min_role="member")
-    return await collab.list_members(workspace_id)
+    workspace = await _get_workspace_or_404(workspace_id, ws_service)
+    await collab.require_access(workspace.id, current_user.id, min_role="member")
+    return await collab.list_members(workspace.id)
 
 
 @router.post("/invite", response_model=InvitationResponse, status_code=status.HTTP_201_CREATED)
 async def invite_member(
-    workspace_id: int,
+    workspace_id: str,
     body: InviteRequest,
     current_user: CurrentUser,
     collab: Annotated[CollaborationService, Depends()],
     ws_service: Annotated[WorkspaceService, Depends()],
 ):
     workspace = await _get_workspace_or_404(workspace_id, ws_service)
-    await collab.require_access(workspace_id, current_user.id, min_role="admin")
+    await collab.require_access(workspace.id, current_user.id, min_role="admin")
 
     if body.role not in ("admin", "member"):
         raise HTTPException(
@@ -94,7 +94,7 @@ async def invite_member(
         )
 
     invitation = await collab.create_invite(
-        workspace_id=workspace_id,
+        workspace_id=workspace.id,
         email=body.email,
         role=body.role,
         invited_by_id=current_user.id,
@@ -116,32 +116,32 @@ async def invite_member(
 
 @router.get("/invitations", response_model=list[InvitationResponse])
 async def list_invitations(
-    workspace_id: int,
+    workspace_id: str,
     current_user: CurrentUser,
     collab: Annotated[CollaborationService, Depends()],
     ws_service: Annotated[WorkspaceService, Depends()],
 ):
-    await _get_workspace_or_404(workspace_id, ws_service)
-    await collab.require_access(workspace_id, current_user.id, min_role="admin")
-    invitations = await collab.list_invitations(workspace_id)
+    workspace = await _get_workspace_or_404(workspace_id, ws_service)
+    await collab.require_access(workspace.id, current_user.id, min_role="admin")
+    invitations = await collab.list_invitations(workspace.id)
     return [InvitationResponse.model_validate(inv) for inv in invitations]
 
 
 @router.delete("/invitations/{invitation_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def revoke_invitation(
-    workspace_id: int,
+    workspace_id: str,
     invitation_id: int,
     current_user: CurrentUser,
     collab: Annotated[CollaborationService, Depends()],
     ws_service: Annotated[WorkspaceService, Depends()],
 ):
-    await _get_workspace_or_404(workspace_id, ws_service)
-    await collab.require_access(workspace_id, current_user.id, min_role="admin")
+    workspace = await _get_workspace_or_404(workspace_id, ws_service)
+    await collab.require_access(workspace.id, current_user.id, min_role="admin")
 
     result = await collab.db.execute(
         select(models.Invitation).where(
             models.Invitation.id == invitation_id,
-            models.Invitation.workspace_id == workspace_id,
+            models.Invitation.workspace_id == workspace.id,
         )
     )
     invitation = result.scalars().first()
@@ -156,16 +156,16 @@ async def revoke_invitation(
 
 @router.patch("/{user_id}/role", response_model=MemberResponse)
 async def update_member_role(
-    workspace_id: int,
+    workspace_id: str,
     user_id: int,
     body: RoleUpdateRequest,
     current_user: CurrentUser,
     collab: Annotated[CollaborationService, Depends()],
     ws_service: Annotated[WorkspaceService, Depends()],
 ):
-    await _get_workspace_or_404(workspace_id, ws_service)
+    workspace = await _get_workspace_or_404(workspace_id, ws_service)
     member = await collab.update_role(
-        workspace_id=workspace_id,
+        workspace_id=workspace.id,
         user_id=user_id,
         new_role=body.role,
         by_user_id=current_user.id,
@@ -175,15 +175,15 @@ async def update_member_role(
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def remove_member(
-    workspace_id: int,
+    workspace_id: str,
     user_id: int,
     current_user: CurrentUser,
     collab: Annotated[CollaborationService, Depends()],
     ws_service: Annotated[WorkspaceService, Depends()],
 ):
-    await _get_workspace_or_404(workspace_id, ws_service)
+    workspace = await _get_workspace_or_404(workspace_id, ws_service)
     await collab.remove_member(
-        workspace_id=workspace_id,
+        workspace_id=workspace.id,
         user_id=user_id,
         by_user_id=current_user.id,
     )

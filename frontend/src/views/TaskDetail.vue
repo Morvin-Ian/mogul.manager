@@ -156,7 +156,7 @@ const editingTask = ref<Task | null>(null)
 const comments = ref<Comment[]>([])
 const newComment = ref('')
 
-const taskId = computed(() => Number(route.params.id))
+const taskId = computed(() => route.params.id as string)
 const task = computed(() => taskStore.current)
 
 const membership = computed(() => membersStore.myMembership)
@@ -176,10 +176,14 @@ watch(taskId, async (id) => {
   if (id) {
     try {
       await taskStore.fetchOne(id)
-      comments.value = await taskStore.fetchComments(id)
-      if (taskStore.current) {
-        const project = await get<{ workspace_id: number }>(`/projects/${taskStore.current.project_id}`)
-        await membersStore.fetchMyMembership(project.workspace_id)
+      const loadedTask = taskStore.current
+      if (loadedTask) {
+        comments.value = await taskStore.fetchComments(loadedTask.id)
+        const wsUuid = loadedTask.project_uuid
+          ? await get<{ workspace_uuid: string | null }>(`/projects/${loadedTask.project_uuid}`)
+              .then(p => p.workspace_uuid)
+          : null
+        if (wsUuid) await membersStore.fetchMyMembership(wsUuid)
       }
     } catch {
       router.push('/')
@@ -216,14 +220,14 @@ async function handleDelete() {
     danger: true,
   })
   if (!ok) return
-  const pid = task.value.project_id
+  const pUuid = task.value.project_uuid ?? task.value.project_id
   await taskStore.remove(taskId.value)
-  router.push(`/projects/${pid}`)
+  router.push(`/projects/${pUuid}`)
 }
 
 async function addComment() {
   if (!newComment.value.trim()) return
-  const c = await taskStore.createComment({ task_id: taskId.value, content: newComment.value })
+  const c = await taskStore.createComment({ task_id: task.value!.id, content: newComment.value })
   comments.value.push(c)
   newComment.value = ''
 }

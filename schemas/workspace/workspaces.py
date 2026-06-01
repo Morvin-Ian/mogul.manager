@@ -24,6 +24,7 @@ class WorkspaceRead(WorkspaceBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    uuid: str
     user_id: int
     is_archived: bool
     created_at: datetime

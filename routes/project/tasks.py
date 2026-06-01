@@ -28,8 +28,9 @@ ASSIGNEE_EDITABLE_FIELDS = {"status", "actual_hours", "metadata_json"}
 
 # Status transitions a member (assignee) is allowed to make
 MEMBER_ALLOWED_TRANSITIONS: dict[str, set[str]] = {
-    "todo": {"in_progress"},
+    "todo":        {"in_progress"},
     "in_progress": {"review"},
+    "blocked":     {"todo", "in_progress", "review"},
 }
 
 
@@ -45,8 +46,8 @@ async def _get_project_or_404(project_id: int, db: AsyncSession) -> models.Proje
     return project
 
 
-async def _get_task_or_404(task_id: int, service: TaskService) -> models.Task:
-    task = await service.get_by_id(task_id)
+async def _get_task_or_404(task_id: str, service: TaskService) -> models.Task:
+    task = await service.get_by_uuid(task_id)
     if not task:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
@@ -79,9 +80,9 @@ async def _notify_assignment_background(
     project_name: str,
     priority: str,
     task_status: str,
-    task_id: int,
+    task_uuid: str,
 ) -> None:
-    task_url = f"{settings.frontend_url}/tasks/{task_id}"
+    task_url = f"{settings.frontend_url}/tasks/{task_uuid}"
     try:
         await send_task_assignment_email(
             to_email=to_email,
@@ -130,7 +131,7 @@ async def _schedule_notification(
         project_name=project_name,
         priority=priority_map.get(task.priority, "Medium"),
         task_status=task.status,
-        task_id=task.id,
+        task_uuid=task.uuid,
     )
 
 
@@ -188,7 +189,7 @@ async def list_tasks(
 
 @router.get("/{task_id}", response_model=TaskRead)
 async def get_task(
-    task_id: int,
+    task_id: str,
     current_user: CurrentUser,
     service: Annotated[TaskService, Depends()],
     collab: Annotated[CollaborationService, Depends()],
@@ -202,7 +203,7 @@ async def get_task(
 
 @router.patch("/{task_id}", response_model=TaskRead)
 async def update_task(
-    task_id: int,
+    task_id: str,
     task_update: TaskUpdate,
     current_user: CurrentUser,
     bt: BackgroundTasks,
@@ -237,7 +238,7 @@ async def update_task(
             if new_status not in allowed:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
-                    detail="You can only move tasks forward: To Do → In Progress → Review",
+                    detail="You can only move tasks forward, or move an In Revision task back to an earlier stage.",
                 )
 
     was_assigned_to = task.assigned_to_id
@@ -250,7 +251,7 @@ async def update_task(
 
 @router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_task(
-    task_id: int,
+    task_id: str,
     current_user: CurrentUser,
     service: Annotated[TaskService, Depends()],
     collab: Annotated[CollaborationService, Depends()],

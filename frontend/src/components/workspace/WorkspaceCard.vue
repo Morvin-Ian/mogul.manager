@@ -5,7 +5,7 @@
       background: pal.bg,
       borderColor: pal.border,
     }"
-    @click="$router.push(`/workspaces/${workspace.id}`)"
+    @click="$router.push(`/workspaces/${workspace.uuid}`)"
   >
     <!-- Top row: initial avatar + status -->
     <div class="ws-top">

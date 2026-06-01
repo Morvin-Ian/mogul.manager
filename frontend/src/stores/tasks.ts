@@ -24,10 +24,10 @@ export const useTaskStore = defineStore('tasks', () => {
     return get<Task[]>(`/tasks?workspace_id=${workspaceId}&status=review`)
   }
 
-  async function fetchOne(id: number) {
+  async function fetchOne(uuid: string) {
     loading.value = true
     try {
-      current.value = await get<Task>(`/tasks/${id}`)
+      current.value = await get<Task>(`/tasks/${uuid}`)
       return current.value
     } catch (e) {
       error.value = (e as Error).message
@@ -43,18 +43,18 @@ export const useTaskStore = defineStore('tasks', () => {
     return t
   }
 
-  async function update(id: number, data: TaskUpdate) {
-    const t = await patch<Task>(`/tasks/${id}`, data)
-    const idx = tasks.value.findIndex((tk) => tk.id === id)
+  async function update(uuid: string, data: TaskUpdate) {
+    const t = await patch<Task>(`/tasks/${uuid}`, data)
+    const idx = tasks.value.findIndex((tk) => tk.uuid === uuid)
     if (idx !== -1) tasks.value[idx] = t
-    if (current.value?.id === id) current.value = t
+    if (current.value?.uuid === uuid) current.value = t
     return t
   }
 
-  async function remove(id: number) {
-    await del(`/tasks/${id}`)
-    tasks.value = tasks.value.filter((t) => t.id !== id)
-    if (current.value?.id === id) current.value = null
+  async function remove(uuid: string) {
+    await del(`/tasks/${uuid}`)
+    tasks.value = tasks.value.filter((t) => t.uuid !== uuid)
+    if (current.value?.uuid === uuid) current.value = null
   }
 
   async function fetchComments(taskId: number) {

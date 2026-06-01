@@ -20,10 +20,10 @@ export const useDocumentStore = defineStore('documents', () => {
     }
   }
 
-  async function fetchOne(id: number) {
+  async function fetchOne(uuid: string) {
     loading.value = true
     try {
-      current.value = await get<Document>(`/documents/${id}`)
+      current.value = await get<Document>(`/documents/${uuid}`)
       _sync(current.value)
       return current.value
     } catch (e) {
@@ -44,20 +44,20 @@ export const useDocumentStore = defineStore('documents', () => {
     if (ctx?.project_id) fd.append('project_id', String(ctx.project_id))
     const doc = await postFile<Document>('/documents', fd)
     documents.value.unshift(doc)
-    _pollStatus(doc.id)
+    _pollStatus(doc.uuid)
     return doc
   }
 
-  async function remove(id: number) {
-    await del(`/documents/${id}`)
-    documents.value = documents.value.filter((d) => d.id !== id)
-    if (current.value?.id === id) current.value = null
+  async function remove(uuid: string) {
+    await del(`/documents/${uuid}`)
+    documents.value = documents.value.filter((d) => d.uuid !== uuid)
+    if (current.value?.uuid === uuid) current.value = null
   }
 
-  async function reprocess(id: number) {
-    const doc = await post<Document>(`/documents/${id}/reprocess`, undefined)
+  async function reprocess(uuid: string) {
+    const doc = await post<Document>(`/documents/${uuid}/reprocess`, undefined)
     _sync(doc)
-    _pollStatus(id)
+    _pollStatus(doc.uuid)
     return doc
   }
 
@@ -72,20 +72,20 @@ export const useDocumentStore = defineStore('documents', () => {
   // ── internals ───────────────────────────────────────────────────
 
   function _sync(doc: Document) {
-    const idx = documents.value.findIndex((d) => d.id === doc.id)
+    const idx = documents.value.findIndex((d) => d.uuid === doc.uuid)
     if (idx !== -1) documents.value[idx] = doc
     else documents.value.unshift(doc)
-    if (current.value?.id === doc.id) current.value = doc
+    if (current.value?.uuid === doc.uuid) current.value = doc
   }
 
-  async function _pollStatus(id: number, attempts = 0) {
+  async function _pollStatus(uuid: string, attempts = 0) {
     if (attempts > 60) return // give up after 5 minutes
     await new Promise((r) => setTimeout(r, 5000))
     try {
-      const doc = await get<Document>(`/documents/${id}`)
+      const doc = await get<Document>(`/documents/${uuid}`)
       _sync(doc)
       if (doc.status === 'pending' || doc.status === 'processing') {
-        _pollStatus(id, attempts + 1)
+        _pollStatus(uuid, attempts + 1)
       }
     } catch {
       // silent

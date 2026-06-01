@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import datetime
 from enum import Enum
 from typing import TYPE_CHECKING
 
@@ -8,7 +8,7 @@ from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from database import Base
+from models.base import TimestampedModel
 
 if TYPE_CHECKING:
     from .comments import Comment
@@ -31,24 +31,14 @@ class TaskPriority(int, Enum):
     URGENT = 4
 
 
-class Task(Base):
+class Task(TimestampedModel):
     __tablename__ = "tasks"
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     title: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     description: Mapped[str] = mapped_column(Text, nullable=True)
-    status: Mapped[TaskStatus] = mapped_column(
-        SQLEnum(TaskStatus),
-        default=TaskStatus.TODO,
-    )
-    priority: Mapped[TaskPriority] = mapped_column(
-        SQLEnum(TaskPriority),
-        default=TaskPriority.MEDIUM,
-    )
-    project_id: Mapped[int] = mapped_column(
-        ForeignKey("projects.id"),
-        nullable=False,
-    )
+    status: Mapped[TaskStatus] = mapped_column(SQLEnum(TaskStatus), default=TaskStatus.TODO)
+    priority: Mapped[TaskPriority] = mapped_column(SQLEnum(TaskPriority), default=TaskPriority.MEDIUM)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), nullable=False)
     assigned_agent: Mapped[str] = mapped_column(String(100), nullable=True)
     assigned_to_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True
@@ -60,26 +50,8 @@ class Task(Base):
     due_date: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     completed_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
 
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        default=datetime.now(UTC),
-    )
-
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        default=datetime.now(UTC),
-        onupdate=datetime.now(UTC),
-    )
-
-    project: Mapped["Project"] = relationship(
-        "Project",
-        back_populates="tasks",
-    )
-
-    assignee: Mapped["User | None"] = relationship(
-        "User",
-        foreign_keys=[assigned_to_id],
-    )
+    project: Mapped["Project"] = relationship("Project", back_populates="tasks")
+    assignee: Mapped["User | None"] = relationship("User", foreign_keys=[assigned_to_id])
 
     @property
     def assignee_name(self) -> str | None:
@@ -87,18 +59,20 @@ class Task(Base):
 
     parent_task: Mapped["Task"] = relationship(
         "Task",
-        remote_side=[id],
+        remote_side=lambda: [Task.id],
         back_populates="subtasks",
     )
-
     subtasks: Mapped[list["Task"]] = relationship(
         "Task",
         back_populates="parent_task",
         cascade="all, delete-orphan",
     )
-
     comments: Mapped[list["Comment"]] = relationship(
         "Comment",
         back_populates="task",
         cascade="all, delete-orphan",
     )
+
+    @property
+    def project_uuid(self) -> str | None:
+        return self.project.uuid if self.project else None
