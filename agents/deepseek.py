@@ -1,5 +1,7 @@
 import json
 import logging
+import re
+import uuid
 
 from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletionMessageParam
@@ -12,6 +14,52 @@ from tools import ALL_TOOLS, dispatch
 logger = logging.getLogger(__name__)
 
 _MAX_TOOL_ITERATIONS = 5
+
+# ── DSML tool call detection & parsing ───────────────────────────────────────
+# DeepSeek sometimes outputs its native DSML format as plain text instead of
+# using the OpenAI function-calling API. These helpers detect, parse, and strip
+# those blocks so they never reach the user.
+
+_DSML_BLOCK_RE = re.compile(
+    r'<｜｜DSML｜｜tool_calls>.*?</｜｜DSML｜｜tool_calls>',
+    re.DOTALL,
+)
+_DSML_INVOKE_RE = re.compile(
+    r'<｜｜DSML｜｜invoke name="([^"]+)">(.*?)</｜｜DSML｜｜invoke>',
+    re.DOTALL,
+)
+_DSML_PARAM_RE = re.compile(
+    r'<｜｜DSML｜｜parameter name="([^"]+)" string="([^"]+)">(.*?)</｜｜DSML｜｜parameter>',
+    re.DOTALL,
+)
+
+
+def _has_dsml(text: str) -> bool:
+    return "｜｜DSML｜｜tool_calls" in text
+
+
+def _strip_dsml(text: str) -> str:
+    """Remove all DSML tool call blocks from text, returning only prose."""
+    return _DSML_BLOCK_RE.sub("", text).strip()
+
+
+def _parse_dsml_tool_calls(text: str) -> list[dict]:
+    """Parse DeepSeek DSML blocks into a list of {name, args} dicts."""
+    calls = []
+    for inv in _DSML_INVOKE_RE.finditer(text):
+        func_name = inv.group(1)
+        args: dict = {}
+        for p in _DSML_PARAM_RE.finditer(inv.group(2)):
+            pname, is_str, value = p.group(1), p.group(2).lower() == "true", p.group(3).strip()
+            if not is_str:
+                try:
+                    args[pname] = float(value) if "." in value else int(value)
+                except ValueError:
+                    args[pname] = value
+            else:
+                args[pname] = value
+        calls.append({"name": func_name, "args": args})
+    return calls
 
 # ── Planner prompt (used by decompose()) ─────────────────────────────────────
 _PLANNER_SYSTEM_PROMPT = """\

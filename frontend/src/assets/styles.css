@@ -1226,3 +1226,45 @@ html[data-theme="dark"] body {
   background: rgba(91,155,255,0.28);
   color: #F7F9F9;
 }
+
+/* ══════════════════════════════════════════════════════════════
+   AUTH PAGES — dark mode
+══════════════════════════════════════════════════════════════ */
+
+/* Brand panel: subtle dark gradient for dark mode */
+[data-theme="dark"] .auth-brand-panel {
+  background: linear-gradient(150deg, #111113 0%, #1a1a1c 50%, #222226 100%) !important;
+}
+[data-theme="dark"] .auth-brand-panel::before {
+  background: rgba(255,255,255,0.03) !important;
+  border-color: rgba(255,255,255,0.06) !important;
+}
+[data-theme="dark"] .auth-brand-panel::after {
+  background: rgba(0,0,0,0.2) !important;
+}
+
+/* Form card: match the app's panel/modal style in dark mode */
+[data-theme="dark"] .auth-form-inner {
+  background: #1E2732 !important;
+  border-color: #2A3540 !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.3) !important;
+}
+
+/* Google button: use dark-mode surface instead of hardcoded white */
+[data-theme="dark"] .btn-google {
+  background: #253341 !important;
+  border-color: #38444D !important;
+  color: var(--text) !important;
+}
+[data-theme="dark"] .btn-google:hover {
+  background: #2D3E50 !important;
+  border-color: #536471 !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3) !important;
+}
+
+/* ForgotPassword success icon */
+[data-theme="dark"] .success-icon {
+  background: rgba(91,155,255,0.18) !important;
+  border-color: rgba(91,155,255,0.35) !important;
+  color: #5B9BFF !important;
+}

@@ -3,35 +3,11 @@
     <div class="auth-brand-panel">
       <div class="brand-inner">
         <div class="brand-logo-row">
-          <div class="brand-mark">
-            <svg viewBox="0 0 20 20" fill="none" width="18" height="18">
-              <path d="M3 16V7l4 5 3-7 3 7 4-5v9" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </div>
-          <span class="brand-name">Mogul Manager</span>
+          <span class="brand-wordmark">mogul<span class="brand-dot">.</span></span>
+          <span class="brand-submark">manager</span>
         </div>
-        <h2 class="brand-headline">Work smarter with<br />AI-driven projects</h2>
-        <p class="brand-sub">Manage workspaces, track tasks, and collaborate with your AI assistant — all in one place.</p>
-        <ul class="brand-features">
-          <li>
-            <span class="feature-icon">
-              <svg viewBox="0 0 16 16" fill="none"><path d="M3 8l3.5 3.5L13 4.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </span>
-            Kanban boards &amp; task tracking
-          </li>
-          <li>
-            <span class="feature-icon">
-              <svg viewBox="0 0 16 16" fill="none"><path d="M3 8l3.5 3.5L13 4.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </span>
-            AI-powered project intelligence
-          </li>
-          <li>
-            <span class="feature-icon">
-              <svg viewBox="0 0 16 16" fill="none"><path d="M3 8l3.5 3.5L13 4.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </span>
-            Real-time AI chat assistant
-          </li>
-        </ul>
+        <h2 class="brand-headline">Work smarter<br />with AI</h2>
+        <p class="brand-sub">Manage projects, track tasks, and collaborate — all in one place.</p>
       </div>
     </div>
 
@@ -137,7 +113,7 @@ async function handleLogin() {
 /* ── Left brand panel ── */
 .auth-brand-panel {
   flex: 0 0 46%;
-  background: linear-gradient(150deg, #0052FF 0%, #003CBF 50%, #0028A0 100%);
+  background: linear-gradient(150deg, #1c1c1e 0%, #2d2d30 50%, #3a3a3d 100%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -180,28 +156,26 @@ async function handleLogin() {
 
 .brand-logo-row {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  align-items: baseline;
+  gap: 3px;
   margin-bottom: 56px;
 }
 
-.brand-mark {
-  width: 40px;
-  height: 40px;
-  background: rgba(255,255,255,0.15);
-  border: 1.5px solid rgba(255,255,255,0.25);
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
+.brand-wordmark {
+  font-size: 28px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -1px;
+  line-height: 1;
 }
 
-.brand-name {
-  font-size: 18px;
-  font-weight: 700;
-  color: rgba(255,255,255,0.95);
-  letter-spacing: -0.3px;
+.brand-dot { color: rgba(255,255,255,0.65); }
+
+.brand-submark {
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.55);
+  letter-spacing: 0.3px;
 }
 
 .brand-headline {
@@ -214,43 +188,8 @@ async function handleLogin() {
 
 .brand-sub {
   font-size: 15px;
-  line-height: 1.75;
-  color: rgba(255,255,255,0.72);
-  margin-bottom: 44px;
-}
-
-.brand-features {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.brand-features li {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  font-size: 14px;
-  font-weight: 500;
-  color: rgba(255,255,255,0.9);
-}
-
-.feature-icon {
-  width: 28px;
-  height: 28px;
-  background: rgba(255,255,255,0.15);
-  border: 1px solid rgba(255,255,255,0.2);
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.feature-icon svg {
-  width: 13px;
-  height: 13px;
-  color: #fff;
+  line-height: 1.6;
+  color: rgba(255,255,255,0.65);
 }
 
 /* ── Right form panel ── */
@@ -259,13 +198,18 @@ async function handleLogin() {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--surface);
-  padding: 48px 40px;
+  background: var(--bg);
+  padding: 48px 32px;
 }
 
 .auth-form-inner {
   width: 100%;
-  max-width: 400px;
+  max-width: 420px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 40px;
+  box-shadow: 0 4px 24px rgba(10,11,13,0.09), 0 1px 6px rgba(10,11,13,0.06);
 }
 
 .auth-form-header {
@@ -372,7 +316,7 @@ h1 {
   padding: 11px 16px;
   border: 1.5px solid var(--border);
   border-radius: 11px;
-  background: #fff;
+  background: var(--surface);
   color: var(--text);
   font-size: 14px;
   font-weight: 500;
@@ -382,13 +326,13 @@ h1 {
 }
 
 .btn-google:hover {
-  background: #F9FAFB;
-  border-color: #CBD5E1;
+  background: var(--bg);
+  border-color: var(--border-strong);
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
 }
 
 @media (max-width: 768px) {
   .auth-brand-panel { display: none; }
-  .auth-form-panel { padding: 40px 24px; }
+  .auth-form-panel { padding: 24px 16px; }
 }
 </style>
