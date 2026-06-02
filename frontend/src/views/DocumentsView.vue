@@ -85,7 +85,7 @@
             <svg v-else-if="doc.status === 'failed'" viewBox="0 0 12 12" fill="none" width="10" height="10"><path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
             {{ doc.status }}
           </span>
-          <button class="doc-delete" @click.stop="handleDelete(doc.id)" title="Delete">
+          <button v-if="doc.user_id === auth.user?.id" class="doc-delete" @click.stop="handleDelete(doc.uuid)" title="Delete">
             <svg viewBox="0 0 12 12" fill="none" width="11" height="11"><path d="M1.5 3h9M4.5 3V2a.5.5 0 01.5-.5h1a.5.5 0 01.5.5v1M3 3l.5 6.5a.5.5 0 00.5.5h4a.5.5 0 00.5-.5L9 3" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
         </div>
@@ -136,6 +136,7 @@ import { useRouter } from 'vue-router'
 import { useDocumentStore } from '../stores/documents'
 import { useWorkspaceStore } from '../stores/workspaces'
 import { useProjectStore } from '../stores/projects'
+import { useAuthStore } from '../stores/auth'
 import { useConfirm } from '../composables/useConfirm'
 import type { Project } from '../types'
 import DocExplainer from '../components/common/DocExplainer.vue'
@@ -145,6 +146,7 @@ const store = useDocumentStore()
 const workspaceStore = useWorkspaceStore()
 const { confirm } = useConfirm()
 const projectStore = useProjectStore()
+const auth = useAuthStore()
 const router = useRouter()
 
 // ── Explainer ───────────────────────────────────────────────────
@@ -218,8 +220,8 @@ async function doUpload(file: File, ctx: { workspace_id?: number; project_id?: n
 }
 
 // ── Other ───────────────────────────────────────────────────────
-async function handleDelete(id: number) {
-  const doc = store.documents.find((d) => d.id === id)
+async function handleDelete(uuid: string) {
+  const doc = store.documents.find((d) => d.uuid === uuid)
   const ok = await confirm({
     title: 'Delete document?',
     message: doc?.original_filename ? `"${doc.original_filename}" will be permanently removed.` : 'This document will be permanently removed.',
@@ -229,7 +231,7 @@ async function handleDelete(id: number) {
     danger: true,
   })
   if (!ok) return
-  await store.remove(id)
+  await store.remove(uuid)
 }
 
 function formatSize(bytes: number): string {

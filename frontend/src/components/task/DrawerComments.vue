@@ -1,8 +1,9 @@
 <template>
   <div class="comments-tab">
     <div class="comment-compose">
-      <div class="compose-avatar" :style="{ background: memberGradient(auth.user?.username || 'U') }">
-        {{ (auth.user?.username || 'U').charAt(0).toUpperCase() }}
+      <div class="compose-avatar" :style="auth.user?.profile_path ? {} : { background: memberGradient(auth.user?.username || 'U') }">
+        <img v-if="auth.user?.profile_path" :src="auth.user.profile_path" :alt="auth.user?.username" class="avatar-img" />
+        <span v-else>{{ (auth.user?.username || 'U').charAt(0).toUpperCase() }}</span>
       </div>
       <div class="compose-field" :class="{ 'compose-field--focused': commentFocused }">
         <textarea
@@ -29,8 +30,9 @@
     <div v-else-if="comments.length === 0" class="feed-empty">No comments yet. Be the first!</div>
     <div v-else class="comments-feed">
       <div v-for="c in comments" :key="c.id" class="feed-item">
-        <div class="feed-avatar" :style="{ background: memberGradient(c.user?.username || auth.user?.username || 'U') }">
-          {{ (c.user?.username || auth.user?.username || 'U').charAt(0).toUpperCase() }}
+        <div class="feed-avatar" :style="(c.user?.profile_path || auth.user?.profile_path) ? {} : { background: memberGradient(c.user?.username || auth.user?.username || 'U') }">
+          <img v-if="c.user?.profile_path || auth.user?.profile_path" :src="c.user?.profile_path || auth.user?.profile_path || ''" :alt="c.user?.username || auth.user?.username" class="avatar-img" />
+          <span v-else>{{ (c.user?.username || auth.user?.username || 'U').charAt(0).toUpperCase() }}</span>
         </div>
         <div class="feed-body">
           <div class="feed-meta">
@@ -163,6 +165,7 @@ async function handleDeleteComment(id: number) {
   font-weight: 800;
   flex-shrink: 0;
   margin-top: 2px;
+  overflow: hidden;
 }
 
 .compose-field {
@@ -249,7 +252,9 @@ async function handleDeleteComment(id: number) {
   font-size: 11px;
   font-weight: 800;
   flex-shrink: 0;
+  overflow: hidden;
 }
+.avatar-img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
 
 .feed-body { flex: 1; min-width: 0; }
 

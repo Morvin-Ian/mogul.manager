@@ -29,8 +29,9 @@
         :key="member.id"
         class="member-row"
       >
-        <div class="member-avatar" :style="{ background: avatarColor(member.user.username) }">
-          {{ initials(member.user.username) }}
+        <div class="member-avatar" :style="member.user.profile_path ? {} : { background: avatarColor(member.user.username) }">
+          <img v-if="member.user.profile_path" :src="member.user.profile_path" :alt="member.user.username" class="member-avatar-img" />
+          <span v-else>{{ initials(member.user.username) }}</span>
         </div>
         <div class="member-info">
           <span class="member-name">{{ member.user.username }}</span>
@@ -291,7 +292,9 @@ function onInviteClose() {
   color: #fff;
   flex-shrink: 0;
   letter-spacing: 0.5px;
+  overflow: hidden;
 }
+.member-avatar-img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
 
 .member-info {
   flex: 1;

@@ -21,6 +21,9 @@ class DocumentResponse(BaseModel):
     url: str | None = None
     created_at: datetime
     processed_at: datetime | None = None
+    project_title: str | None = None
+    workspace_id: int | None = None
+    workspace_title: str | None = None
 
     model_config = {"from_attributes": True}
 

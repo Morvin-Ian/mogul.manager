@@ -60,10 +60,11 @@
           <div class="assignee-picker" :class="{ 'picker-open': showAssigneePicker }">
             <button type="button" class="picker-trigger" @click="showAssigneePicker = !showAssigneePicker">
               <template v-if="selectedAssignee">
-                <div class="pa-avatar" :style="{ background: memberGradient(selectedAssignee.user?.username || '') }">
-                  {{ (selectedAssignee.user?.username || '?').charAt(0).toUpperCase() }}
+                <div class="pa-avatar" :style="selectedAssignee.user?.profile_path ? {} : { background: memberGradient(selectedAssignee.user?.username || '') }">
+                  <img v-if="selectedAssignee.user?.profile_path" :src="selectedAssignee.user.profile_path" :alt="selectedAssignee.user?.username" class="pa-avatar-img" />
+                  <span v-else>{{ selectedAssignee.user?.id === auth.user?.id ? 'Me' : (selectedAssignee.user?.username || '?').charAt(0).toUpperCase() }}</span>
                 </div>
-                <span class="pa-name">{{ selectedAssignee.user?.username || selectedAssignee.user?.email }}</span>
+                <span class="pa-name">{{ selectedAssignee.user?.id === auth.user?.id ? 'You' : (selectedAssignee.user?.username || selectedAssignee.user?.email) }}</span>
                 <span class="pa-role-badge" :class="`role-${selectedAssignee.role}`">{{ selectedAssignee.role }}</span>
               </template>
               <template v-else>
@@ -101,8 +102,9 @@
                   class="picker-option"
                   @click="selectAssignee(m.user_id)"
                 >
-                  <div class="pa-avatar pa-avatar--sm" :style="{ background: memberGradient(m.user?.username || '') }">
-                    {{ (m.user?.username || '?').charAt(0).toUpperCase() }}
+                  <div class="pa-avatar pa-avatar--sm" :style="m.user?.profile_path ? {} : { background: memberGradient(m.user?.username || '') }">
+                    <img v-if="m.user?.profile_path" :src="m.user.profile_path" :alt="m.user?.username" class="pa-avatar-img" />
+                    <span v-else>{{ (m.user?.username || '?').charAt(0).toUpperCase() }}</span>
                   </div>
                   <div class="po-info">
                     <span class="po-name">{{ m.user?.username }}</span>
@@ -314,7 +316,9 @@ async function handleSubmit() {
   font-size: 12px;
   font-weight: 800;
   flex-shrink: 0;
+  overflow: hidden;
 }
+.pa-avatar-img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
 
 .pa-avatar--sm {
   width: 32px;

@@ -113,6 +113,8 @@ async def _schedule_notification(
     assignee = result.scalars().first()
     if not assignee or not assignee.email:
         return
+    if assignee.id == assigned_by.id:
+        return  # don't notify yourself
     result = await db.execute(
         select(models.Project)
         .options(joinedload(models.Project.workspace))
@@ -262,6 +264,29 @@ async def delete_task(
     # Only admins and owners can delete tasks
     await collab.require_access(project.workspace_id, current_user.id, min_role="admin")
     await service.delete(task)
+
+
+@router.post("/reorder", status_code=status.HTTP_204_NO_CONTENT)
+async def reorder_task(
+    body: dict,
+    current_user: CurrentUser,
+    service: Annotated[TaskService, Depends()],
+    collab: Annotated[CollaborationService, Depends()],
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    """Move a task to a new position (and optionally a new status column)."""
+    uuid = body.get("uuid")
+    new_position = body.get("position")
+    new_status = body.get("status")
+    if not uuid or new_position is None:
+        raise HTTPException(status_code=400, detail="uuid and position are required")
+
+    task = await _get_task_or_404(uuid, service)
+    project = await _get_project_or_404(task.project_id, db)
+    await collab.require_access(project.workspace_id, current_user.id, min_role="member")
+
+    target_status = new_status or task.status.value
+    await service.reorder_task(task, int(new_position), target_status)
 
 
 def _to_read(task: models.Task) -> TaskRead:

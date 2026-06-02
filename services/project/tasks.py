@@ -6,18 +6,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
 import models
-import uuid as _uuid_mod
-
-
-def _is_valid_uuid(v: str) -> bool:
-    try:
-        _uuid_mod.UUID(v)
-        return True
-    except ValueError:
-        return False
-
 
 from database import get_db
+from utils.uuid import is_valid_uuid as _is_valid_uuid
 
 
 class TaskService:
@@ -66,10 +57,98 @@ class TaskService:
                 selectinload(models.Task.project).selectinload(models.Project.workspace),
             )
             .where(models.Task.project_id == project_id)
+            .order_by(models.Task.position.asc().nulls_last(), models.Task.created_at.asc())
             .offset(skip)
             .limit(limit)
         )
         return list(result.unique().scalars().all())
+
+    async def reorder_task(
+        self,
+        task: models.Task,
+        new_position: int,
+        new_status: str,
+    ) -> None:
+        """
+        Move task to new_position within new_status column.
+        Shifts surrounding tasks by ±1 so positions stay contiguous.
+        """
+        from sqlalchemy import update as sa_update
+
+        old_position = task.position
+        old_status = task.status.value
+
+        tbl = models.Task.__table__
+
+        if old_status != new_status:
+            # ── Cross-column: vacate old slot, make room in new ──
+            if old_position is not None:
+                await self.db.execute(
+                    sa_update(tbl)
+                    .where(
+                        tbl.c.project_id == task.project_id,
+                        tbl.c.status == old_status,
+                        tbl.c.position > old_position,
+                        tbl.c.id != task.id,
+                    )
+                    .values(position=tbl.c.position - 1)
+                )
+            await self.db.execute(
+                sa_update(tbl)
+                .where(
+                    tbl.c.project_id == task.project_id,
+                    tbl.c.status == new_status,
+                    tbl.c.position >= new_position,
+                    tbl.c.id != task.id,
+                )
+                .values(position=tbl.c.position + 1)
+            )
+            task.status = models.TaskStatus(new_status)
+
+        elif old_position is None or old_position == new_position:
+            # ── No-op or first time positioning ──
+            if old_position is None:
+                await self.db.execute(
+                    sa_update(tbl)
+                    .where(
+                        tbl.c.project_id == task.project_id,
+                        tbl.c.status == new_status,
+                        tbl.c.position >= new_position,
+                        tbl.c.id != task.id,
+                    )
+                    .values(position=tbl.c.position + 1)
+                )
+
+        elif new_position > old_position:
+            # ── Moving down: close the gap above ──
+            await self.db.execute(
+                sa_update(tbl)
+                .where(
+                    tbl.c.project_id == task.project_id,
+                    tbl.c.status == new_status,
+                    tbl.c.position > old_position,
+                    tbl.c.position <= new_position,
+                    tbl.c.id != task.id,
+                )
+                .values(position=tbl.c.position - 1)
+            )
+
+        else:
+            # ── Moving up: open a gap below ──
+            await self.db.execute(
+                sa_update(tbl)
+                .where(
+                    tbl.c.project_id == task.project_id,
+                    tbl.c.status == new_status,
+                    tbl.c.position >= new_position,
+                    tbl.c.position < old_position,
+                    tbl.c.id != task.id,
+                )
+                .values(position=tbl.c.position + 1)
+            )
+
+        task.position = new_position
+        await self.db.commit()
 
     async def update(self, task: models.Task, update_data: dict) -> models.Task:
         for key, value in update_data.items():

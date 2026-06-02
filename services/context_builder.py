@@ -4,6 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import models
+from models.collaboration import WorkspaceMember
 from models.documents import DocumentStatus
 from services.documents import DocumentService
 from services.memory import MemoryService
@@ -63,6 +64,25 @@ async def build_context(user_id: int, db: AsyncSession, query: str | None = None
             for proj in projects:
                 project_map[proj.id] = proj
 
+    # ── Fetch membership data for all active workspaces ──────────
+    ws_ids = [ws.id for ws in active_workspaces]
+    my_roles: dict[int, str] = {}          # workspace_id → role
+    ws_members: dict[int, list[dict]] = {} # workspace_id → [{username, role}]
+
+    if ws_ids:
+        rows = await db.execute(
+            select(WorkspaceMember, models.User)
+            .join(models.User, WorkspaceMember.user_id == models.User.id)
+            .where(WorkspaceMember.workspace_id.in_(ws_ids))
+            .order_by(WorkspaceMember.workspace_id, WorkspaceMember.joined_at)
+        )
+        for member, user in rows.all():
+            ws_members.setdefault(member.workspace_id, []).append(
+                {"username": user.username, "role": member.role.value}
+            )
+            if member.user_id == user_id:
+                my_roles[member.workspace_id] = member.role.value
+
     # ── Group plans by workspace ───────────────────────────────────
     ws_plans: dict[int | None, list] = {}
     for plan in plans:
@@ -73,9 +93,17 @@ async def build_context(user_id: int, db: AsyncSession, query: str | None = None
         lines.append("\nWorkspaces, projects and plans:")
         for ws, projects in zip(active_workspaces, project_lists_result):
             active_projects = [p for p in projects if not p.is_archived]
-            lines.append(f"\n  Workspace: {ws.title!r}")
+            my_role = my_roles.get(ws.id, "member")
+            lines.append(f"\n  Workspace: {ws.title!r} (your role: {my_role})")
             if ws.description:
                 lines.append(f"    Description: {ws.description}")
+
+            members = ws_members.get(ws.id, [])
+            if members:
+                member_parts = ", ".join(
+                    f"{m['username']} ({m['role']})" for m in members
+                )
+                lines.append(f"    Team: {member_parts}")
 
             for proj in active_projects:
                 lines.append(f"    Project: {proj.title!r} (status: {proj.status.value})")

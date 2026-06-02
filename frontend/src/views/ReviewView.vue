@@ -51,10 +51,11 @@
         <div class="rc-head">
           <span class="rc-priority" :class="`rcp-${task.priority}`">{{ priorityLabel(task.priority) }}</span>
           <div v-if="task.assignee_name" class="rc-assignee">
-            <div class="rc-avatar" :style="{ background: gradient(task.assignee_name) }">
-              {{ task.assignee_name.charAt(0).toUpperCase() }}
+            <div class="rc-avatar" :style="task.assignee_avatar_url ? {} : { background: gradient(task.assignee_name) }">
+              <img v-if="task.assignee_avatar_url" :src="task.assignee_avatar_url" :alt="task.assignee_name" class="rc-avatar-img" />
+              <span v-else>{{ task.assigned_to_id === auth.user?.id ? 'Me' : task.assignee_name.charAt(0).toUpperCase() }}</span>
             </div>
-            <span>{{ task.assignee_name }}</span>
+            <span>{{ task.assigned_to_id === auth.user?.id ? 'You' : task.assignee_name }}</span>
           </div>
           <span v-else class="rc-unassigned">Unassigned</span>
         </div>
@@ -431,7 +432,9 @@ onMounted(async () => {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  overflow: hidden;
 }
+.rc-avatar-img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
 
 .rc-unassigned {
   margin-left: auto;

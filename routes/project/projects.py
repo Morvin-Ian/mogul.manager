@@ -1,10 +1,8 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy.ext.asyncio import AsyncSession
 
 import models
-from database import get_db
 from models.collaboration import MemberRole
 from schemas.project.projects import ProjectCreate, ProjectRead, ProjectUpdate
 from services.auth import CurrentUser
@@ -23,7 +21,9 @@ async def _require_workspace_member(
     collab: CollaborationService,
     min_role: str = "member",
 ) -> models.WorkspaceMember:
-    member = await collab.require_access(workspace_id, current_user.id, min_role=min_role)
+    member = await collab.require_access(
+        workspace_id, current_user.id, min_role=min_role
+    )
     return member
 
 
@@ -45,7 +45,9 @@ async def create_project(
     service: Annotated[ProjectService, Depends()],
     collab: Annotated[CollaborationService, Depends()],
 ):
-    await _require_workspace_member(project.workspace_id, current_user, collab, min_role="admin")
+    await _require_workspace_member(
+        project.workspace_id, current_user, collab, min_role="admin"
+    )
     data = project.model_dump(exclude_unset=True)
     data["created_by_id"] = current_user.id
     return await service.create(data)
@@ -61,8 +63,12 @@ async def list_projects(
     limit: int = Query(100, ge=1, le=500),
 ):
     if workspace_id is None:
-        return await service.list_all_accessible(current_user.id, skip=skip, limit=limit)
-    await _require_workspace_member(workspace_id, current_user, collab, min_role="member")
+        return await service.list_all_accessible(
+            current_user.id, skip=skip, limit=limit
+        )
+    await _require_workspace_member(
+        workspace_id, current_user, collab, min_role="member"
+    )
     return await service.list_by_workspace(workspace_id, skip=skip, limit=limit)
 
 
@@ -74,7 +80,9 @@ async def get_project(
     collab: Annotated[CollaborationService, Depends()],
 ):
     project = await _get_project_or_404(project_id, service)
-    await _require_workspace_member(project.workspace_id, current_user, collab, min_role="member")
+    await _require_workspace_member(
+        project.workspace_id, current_user, collab, min_role="member"
+    )
     return project
 
 
@@ -107,5 +115,7 @@ async def delete_project(
     collab: Annotated[CollaborationService, Depends()],
 ):
     project = await _get_project_or_404(project_id, service)
-    await _require_workspace_member(project.workspace_id, current_user, collab, min_role="admin")
+    await _require_workspace_member(
+        project.workspace_id, current_user, collab, min_role="admin"
+    )
     await service.delete(project)

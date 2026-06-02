@@ -69,9 +69,13 @@ export const useTaskStore = defineStore('tasks', () => {
     await del(`/comments/${id}`)
   }
 
+  async function reorder(uuid: string, position: number, status: string) {
+    await post('/tasks/reorder', { uuid, position, status })
+  }
+
   return {
     tasks, current, loading, error,
     fetchByProject, fetchReviewTasks, fetchOne, create, update, remove,
-    fetchComments, createComment, deleteComment,
+    fetchComments, createComment, deleteComment, reorder,
   }
 })

@@ -2,8 +2,7 @@
   <div
     class="task-card"
     :class="{ 'task-card--no-drag': !canDrag }"
-    :draggable="canDrag !== false"
-    @dragstart="canDrag !== false ? onDragStart() : undefined"
+    :data-task-uuid="task.uuid"
     @click="emit('select', task)"
   >
     <!-- Top row: priority badge + est. hours -->
@@ -41,11 +40,32 @@
           {{ formatDate(task.due_date) }}
         </span>
       </div>
-      <div v-if="task.assignee_name" class="avatar-stack">
-        <div class="avatar-chip" :style="{ background: gradient(task.assignee_name) }">
-          {{ task.assignee_name.charAt(0).toUpperCase() }}
+      <template v-if="isTeam">
+        <div v-if="task.assignee_name" class="assignee-pill" :class="{ 'assignee-pill--me': isMe }">
+          <div
+            class="avatar-chip"
+            :style="task.assignee_avatar_url ? {} : { background: gradient(task.assignee_name) }"
+          >
+            <img
+              v-if="task.assignee_avatar_url"
+              :src="task.assignee_avatar_url"
+              :alt="task.assignee_name"
+              class="avatar-img"
+            />
+            <span v-else>{{ isMe ? 'Me' : initials(task.assignee_name) }}</span>
+          </div>
+          <span class="assignee-name">{{ isMe ? 'You' : task.assignee_name }}</span>
         </div>
-      </div>
+        <div v-else class="assignee-pill assignee-pill--empty">
+          <div class="avatar-chip avatar-chip--empty">
+            <svg viewBox="0 0 12 12" fill="none" width="9" height="9">
+              <circle cx="6" cy="4" r="2" stroke="currentColor" stroke-width="1.2"/>
+              <path d="M1.5 10.5c0-2.21 2.015-4 4.5-4s4.5 1.79 4.5 4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <span class="assignee-name">Unassigned</span>
+        </div>
+      </template>
     </div>
   </div>
 </template>
@@ -53,12 +73,12 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { Task } from '../../types'
+import { useAuthStore } from '../../stores/auth'
 
-const props = defineProps<{ task: Task; canDrag?: boolean }>()
-const emit = defineEmits<{
-  dragstart: [id: string]
-  select: [task: Task]
-}>()
+const props = defineProps<{ task: Task; canDrag?: boolean; isTeam?: boolean }>()
+const auth = useAuthStore()
+const isMe = computed(() => props.task.assigned_to_id === auth.user?.id)
+const emit = defineEmits<{ select: [task: Task] }>()
 
 const priorityLabel = computed(() => {
   const labels: Record<number, string> = { 1: 'Low', 2: 'Medium', 3: 'High', 4: 'Urgent' }
@@ -79,14 +99,16 @@ function gradient(name: string): string {
   return GRADIENTS[Math.abs(h) % GRADIENTS.length]
 }
 
+function initials(name: string): string {
+  const parts = name.trim().split(/[\s._-]+/).filter(Boolean)
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase()
+  return name.slice(0, 2).toUpperCase()
+}
+
 function formatDate(d: string) {
   return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
-function onDragStart() {
-  if (props.canDrag === false) return
-  emit('dragstart', props.task.uuid)
-}
 </script>
 
 <style scoped>
@@ -212,27 +234,63 @@ function onDragStart() {
   text-overflow: ellipsis;
 }
 
-.avatar-stack {
-  display: flex;
-  flex-direction: row-reverse;
+.assignee-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  padding: 2px 8px 2px 3px;
   flex-shrink: 0;
+  max-width: 140px;
 }
 
 .avatar-chip {
-  width: 22px;
-  height: 22px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 800;
-  border: 2px solid var(--card-bg);
-  margin-left: -6px;
   flex-shrink: 0;
+  overflow: hidden;
 }
-.avatar-chip:last-child { margin-left: 0; }
+
+.assignee-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.assignee-pill--me {
+  background: var(--primary-light);
+  border-color: var(--primary-border);
+}
+.assignee-pill--me .assignee-name { color: var(--primary); }
+
+.assignee-pill--empty {
+  opacity: 0.55;
+  border-style: dashed;
+}
+
+.avatar-chip--empty {
+  background: var(--border);
+  color: var(--text-light);
+}
+
+.avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
 
 /* ── Dark mode ── */
 :global([data-theme="dark"]) .task-card {
@@ -256,7 +314,8 @@ function onDragStart() {
 :global([data-theme="dark"]) .card-due     { color: #8BAFC8; }
 :global([data-theme="dark"]) .est-hours    { color: #8BAFC8; }
 :global([data-theme="dark"]) .card-divider { background: rgba(91,155,255,0.12); }
-:global([data-theme="dark"]) .avatar-chip  { border-color: #1A2D42; }
+:global([data-theme="dark"]) .assignee-pill { background: rgba(255,255,255,0.05); border-color: rgba(91,155,255,0.2); }
+:global([data-theme="dark"]) .assignee-name { color: #8BAFC8; }
 
 :global([data-theme="dark"]) .pb-1 { background: rgba(22,163,74,0.22);  color: #4ADE80; }
 :global([data-theme="dark"]) .pb-2 { background: rgba(217,119,6,0.22);  color: #FBB040; }

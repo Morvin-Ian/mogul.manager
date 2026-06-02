@@ -1,8 +1,25 @@
-from fastapi import APIRouter, BackgroundTasks, Depends, Form, HTTPException, Query, UploadFile, File
+from pathlib import Path
+
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Query,
+    UploadFile,
+)
 from sqlalchemy.ext.asyncio import AsyncSession
 
+import models
 from database import get_db
-from schemas.documents import DocumentResponse, DocumentUpdate, SearchResponse, SearchHit
+from schemas.documents import (
+    DocumentResponse,
+    DocumentUpdate,
+    SearchHit,
+    SearchResponse,
+)
 from services.auth import CurrentUser
 from services.documents import (
     ALLOWED_CONTENT_TYPES,
@@ -11,7 +28,6 @@ from services.documents import (
     process_document_bg,
 )
 from services.documents.rag import RAGService
-from pathlib import Path
 
 router = APIRouter(prefix="/api/documents", tags=["Documents"])
 
@@ -41,7 +57,10 @@ async def upload_document(
 ):
     filename = file.filename or "document"
     ext = Path(filename).suffix.lower()
-    if ext not in ALLOWED_EXTENSIONS and (file.content_type or "") not in ALLOWED_CONTENT_TYPES:
+    if (
+        ext not in ALLOWED_EXTENSIONS
+        and (file.content_type or "") not in ALLOWED_CONTENT_TYPES
+    ):
         raise HTTPException(400, "Unsupported file type. Allowed: PDF, DOCX, TXT, CSV")
 
     content = await file.read()
@@ -79,10 +98,13 @@ async def delete_document(
     current_user: CurrentUser,
     db: AsyncSession = Depends(get_db),
 ):
-    doc_obj = await DocumentService(db).get_by_uuid(document_id, current_user.id)
+    svc = DocumentService(db)
+    doc_obj = await svc.get_by_uuid_any(document_id)
     if not doc_obj:
         raise HTTPException(404, "Document not found")
-    ok = await DocumentService(db).delete_document(doc_obj.id, current_user.id)
+    if doc_obj.user_id != current_user.id:
+        raise HTTPException(403, "You don't have permission to delete this document")
+    ok = await svc.delete_document(doc_obj.id, current_user.id)
     if not ok:
         raise HTTPException(404, "Document not found")
 
@@ -94,7 +116,8 @@ async def reprocess_document(
     current_user: CurrentUser,
     db: AsyncSession = Depends(get_db),
 ):
-    doc = await DocumentService(db).get_by_uuid(document_id, current_user.id)
+    svc = DocumentService(db)
+    doc = await svc.get_by_uuid(document_id, current_user.id)
     if not doc:
         raise HTTPException(404, "Document not found")
     background_tasks.add_task(process_document_bg, doc.id)
@@ -110,8 +133,9 @@ async def update_document(
 ):
     """Reassign a document to a different project (or make it general)."""
     from sqlalchemy import select
+
     svc = DocumentService(db)
-    doc = await svc.get_by_uuid(document_id, current_user.id)
+    doc = await svc.get_by_uuid_any(document_id)
     if not doc:
         raise HTTPException(404, "Document not found")
 
@@ -126,7 +150,8 @@ async def update_document(
         project = proj_result.scalars().first()
         if not project:
             raise HTTPException(404, "Project not found")
-        from models.collaboration import WorkspaceMember, MemberRole
+        from models.collaboration import MemberRole, WorkspaceMember
+
         member_result = await db.execute(
             select(WorkspaceMember).where(
                 WorkspaceMember.workspace_id == project.workspace_id,
@@ -135,7 +160,9 @@ async def update_document(
         )
         member = member_result.scalars().first()
         if not member or member.role not in (MemberRole.admin, MemberRole.owner):
-            raise HTTPException(403, "Admin or owner role required to reassign this document")
+            raise HTTPException(
+                403, "Admin or owner role required to reassign this document"
+            )
 
     doc.project_id = body.project_id
     await db.commit()

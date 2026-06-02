@@ -49,6 +49,7 @@ class Task(TimestampedModel):
     actual_hours: Mapped[int] = mapped_column(Integer, nullable=True)
     due_date: Mapped[datetime] = mapped_column(DateTime, nullable=True)
     completed_at: Mapped[datetime] = mapped_column(DateTime, nullable=True)
+    position: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     project: Mapped["Project"] = relationship("Project", back_populates="tasks")
     assignee: Mapped["User | None"] = relationship("User", foreign_keys=[assigned_to_id])
@@ -56,6 +57,10 @@ class Task(TimestampedModel):
     @property
     def assignee_name(self) -> str | None:
         return self.assignee.username if self.assignee else None
+
+    @property
+    def assignee_avatar_url(self) -> str | None:
+        return self.assignee.profile_path if self.assignee else None
 
     parent_task: Mapped["Task"] = relationship(
         "Task",

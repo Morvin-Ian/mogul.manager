@@ -4,14 +4,7 @@ import logging
 import time
 import uuid as _uuid_mod
 
-
-def _is_valid_uuid(v: str) -> bool:
-    try:
-        _uuid_mod.UUID(v)
-        return True
-    except ValueError:
-        return False
-
+from utils.uuid import is_valid_uuid as _is_valid_uuid
 
 from datetime import UTC, datetime
 from pathlib import Path
@@ -22,8 +15,10 @@ from fastapi import Depends
 from openai import AsyncOpenAI
 from sqlalchemy import delete as sa_delete, insert, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 from starlette.concurrency import run_in_threadpool
 
+import models
 from config import settings
 from database import AsyncSessionLocal, get_db
 from models.documents import Document, DocumentChunk, DocumentStatus, DocumentType
@@ -54,17 +49,16 @@ CHUNK_OVERLAP = 50
 SUMMARY_PREVIEW_CHARS = 4000
 
 
+_WITH_PROJECT = lambda q: q.options(  # noqa: E731
+    selectinload(Document.project).selectinload(models.Project.workspace)
+)
+
+
 class DocumentService:
     def __init__(self, db: Annotated[AsyncSession, Depends(get_db)]):
         self.db = db
 
     async def list_documents(self, user_id: int) -> list[Document]:
-        """
-        Return documents the user can see:
-        - Private docs (no project_id) they own
-        - Project docs from workspaces they are a member of (any role)
-        Project docs from workspaces they've left are not shown.
-        """
         from sqlalchemy import or_, and_
         from models.projects import Project
         from models.collaboration import WorkspaceMember
@@ -74,12 +68,10 @@ class DocumentService:
             .where(WorkspaceMember.user_id == user_id)
         )
         result = await self.db.execute(
-            select(Document)
+            _WITH_PROJECT(select(Document))
             .where(
                 or_(
-                    # Private documents (no project) owned by the user
                     and_(Document.user_id == user_id, Document.project_id.is_(None)),
-                    # Project documents in workspaces the user is a member of
                     Document.project_id.in_(accessible_project_ids),
                 )
             )
@@ -88,10 +80,8 @@ class DocumentService:
         return list(result.scalars().all())
 
     async def list_by_project(self, project_id: int, user_id: int) -> list[Document]:
-        """Documents attached to a specific project that the user can access."""
         from models.collaboration import WorkspaceMember
         from models.projects import Project
-        # Confirm user is a member of the project's workspace
         is_member = await self.db.execute(
             select(WorkspaceMember.id)
             .join(Project, Project.workspace_id == WorkspaceMember.workspace_id)
@@ -100,14 +90,13 @@ class DocumentService:
         if not is_member.scalars().first():
             return []
         result = await self.db.execute(
-            select(Document)
+            _WITH_PROJECT(select(Document))
             .where(Document.project_id == project_id)
             .order_by(Document.created_at.desc())
         )
         return list(result.scalars().all())
 
     async def list_by_workspace(self, workspace_id: int, user_id: int) -> list[Document]:
-        """All project documents in a workspace visible to the user."""
         from models.collaboration import WorkspaceMember
         from models.projects import Project
         accessible_project_ids = (
@@ -119,7 +108,7 @@ class DocumentService:
             )
         )
         result = await self.db.execute(
-            select(Document)
+            _WITH_PROJECT(select(Document))
             .where(Document.project_id.in_(accessible_project_ids))
             .order_by(Document.created_at.desc())
         )
@@ -129,9 +118,17 @@ class DocumentService:
         if not _is_valid_uuid(document_uuid):
             return None
         result = await self.db.execute(
-            select(Document).where(
+            _WITH_PROJECT(select(Document)).where(
                 Document.uuid == document_uuid, Document.user_id == user_id
             )
+        )
+        return result.scalars().first()
+
+    async def get_by_uuid_any(self, document_uuid: str) -> Document | None:
+        if not _is_valid_uuid(document_uuid):
+            return None
+        result = await self.db.execute(
+            select(Document).where(Document.uuid == document_uuid)
         )
         return result.scalars().first()
 

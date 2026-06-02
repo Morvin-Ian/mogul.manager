@@ -41,7 +41,7 @@ class ChatService:
             select(models.Conversation)
             .where(
                 models.Conversation.user_id == user_id,
-                models.Conversation.is_archived == False,
+                models.Conversation.is_archived.is_(False),
             )
             .order_by(models.Conversation.updated_at.desc())
             .offset(skip)
@@ -92,7 +92,9 @@ class ChatService:
         )
         return list(result.scalars().all())
 
-    async def get_context(self, conversation_id: int, max_messages: int = 40) -> list[ChatCompletionMessageParam]:
+    async def get_context(
+        self, conversation_id: int, max_messages: int = 40
+    ) -> list[ChatCompletionMessageParam]:
         messages = await self.get_messages(conversation_id)
         messages = messages[-max_messages:]
         result: list[ChatCompletionMessageParam] = []

@@ -50,3 +50,5 @@ class TaskRead(TaskBase):
     created_at: datetime
     updated_at: datetime
     assignee_name: str | None = None
+    assignee_avatar_url: str | None = None
+    position: int | None = None

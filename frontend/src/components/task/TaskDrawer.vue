@@ -139,10 +139,11 @@
               <div v-if="editMode && isAdmin" class="assignee-picker" :class="{ 'picker-open': showAssigneePicker }">
                 <button type="button" class="picker-trigger" @click="showAssigneePicker = !showAssigneePicker">
                   <template v-if="selectedAssignee">
-                    <div class="av-circle" :style="{ background: memberGradient(selectedAssignee.user?.username || '') }">
-                      {{ (selectedAssignee.user?.username || '?').charAt(0).toUpperCase() }}
+                    <div class="av-circle" :style="selectedAssignee.user?.profile_path ? {} : { background: memberGradient(selectedAssignee.user?.username || '') }">
+                      <img v-if="selectedAssignee.user?.profile_path" :src="selectedAssignee.user.profile_path" :alt="selectedAssignee.user?.username" class="av-img" />
+                      <span v-else>{{ selectedAssignee.user?.id === auth.user?.id ? 'Me' : (selectedAssignee.user?.username || '?').charAt(0).toUpperCase() }}</span>
                     </div>
-                    <span class="av-name">{{ selectedAssignee.user?.username }}</span>
+                    <span class="av-name">{{ selectedAssignee.user?.id === auth.user?.id ? 'You' : selectedAssignee.user?.username }}</span>
                   </template>
                   <template v-else>
                     <div class="av-empty">
@@ -163,8 +164,9 @@
                       <font-awesome-icon v-if="!form.assigned_to_id" :icon="['fas', 'check']" class="po-check" />
                     </div>
                     <div v-for="m in workspaceMembers" :key="m.user_id" class="picker-option" @click="selectAssignee(m.user_id)">
-                      <div class="av-circle av-circle--sm" :style="{ background: memberGradient(m.user?.username || '') }">
-                        {{ (m.user?.username || '?').charAt(0).toUpperCase() }}
+                      <div class="av-circle av-circle--sm" :style="m.user?.profile_path ? {} : { background: memberGradient(m.user?.username || '') }">
+                        <img v-if="m.user?.profile_path" :src="m.user.profile_path" :alt="m.user?.username" class="av-img" />
+                        <span v-else>{{ (m.user?.username || '?').charAt(0).toUpperCase() }}</span>
                       </div>
                       <div class="po-info">
                         <span class="po-name">{{ m.user?.username }}</span>
@@ -177,10 +179,11 @@
               </div>
               <!-- Read-only -->
               <div v-else-if="task.assignee_name" class="av-read">
-                <div class="av-circle av-circle--sm" :style="{ background: memberGradient(task.assignee_name) }">
-                  {{ task.assignee_name.charAt(0).toUpperCase() }}
+                <div class="av-circle av-circle--sm" :style="task.assignee_avatar_url ? {} : { background: memberGradient(task.assignee_name) }">
+                  <img v-if="task.assignee_avatar_url" :src="task.assignee_avatar_url" :alt="task.assignee_name" class="av-img" />
+                  <span v-else>{{ task.assigned_to_id === auth.user?.id ? 'Me' : task.assignee_name.charAt(0).toUpperCase() }}</span>
                 </div>
-                <span class="prop-text">{{ task.assignee_name }}</span>
+                <span class="prop-text">{{ task.assigned_to_id === auth.user?.id ? 'You' : task.assignee_name }}</span>
               </div>
               <span v-else class="prop-empty">Unassigned</span>
             </div>
@@ -811,8 +814,10 @@ onMounted(() => {
   font-size: 10px;
   font-weight: 800;
   flex-shrink: 0;
+  overflow: hidden;
 }
 .av-circle--sm { width: 28px; height: 28px; font-size: 11px; }
+.av-img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
 
 .av-empty {
   width: 24px;

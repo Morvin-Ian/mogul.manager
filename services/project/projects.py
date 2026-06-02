@@ -2,22 +2,12 @@ from typing import Annotated
 
 from fastapi import Depends
 from sqlalchemy import select
-from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 import models
-import uuid as _uuid_mod
-
-
-def _is_valid_uuid(v: str) -> bool:
-    try:
-        _uuid_mod.UUID(v)
-        return True
-    except ValueError:
-        return False
-
-
 from database import get_db
+from utils.uuid import is_valid_uuid as _is_valid_uuid
 
 
 class ProjectService:
@@ -86,10 +76,11 @@ class ProjectService:
         self, user_id: int, skip: int = 0, limit: int = 500
     ) -> list[models.Project]:
         from sqlalchemy import or_
+
         from models.collaboration import WorkspaceMember
-        accessible_ws_ids = (
-            select(WorkspaceMember.workspace_id)
-            .where(WorkspaceMember.user_id == user_id)
+
+        accessible_ws_ids = select(WorkspaceMember.workspace_id).where(
+            WorkspaceMember.user_id == user_id
         )
         result = await self.db.execute(
             select(models.Project)

@@ -6,18 +6,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 import models
-import uuid as _uuid_mod
-
-
-def _is_valid_uuid(v: str) -> bool:
-    try:
-        _uuid_mod.UUID(v)
-        return True
-    except ValueError:
-        return False
-
 
 from database import get_db
+from utils.uuid import is_valid_uuid as _is_valid_uuid
 
 
 class PlanService:

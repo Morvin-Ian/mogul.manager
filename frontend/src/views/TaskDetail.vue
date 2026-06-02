@@ -102,7 +102,10 @@
         <div v-if="comments.length === 0" class="empty-comments">No comments yet. Be the first to comment.</div>
         <div v-else class="comments-list">
           <div v-for="comment in comments" :key="comment.id" class="comment-item">
-            <div class="comment-avatar">{{ (auth.user?.username ?? 'U').charAt(0).toUpperCase() }}</div>
+            <div class="comment-avatar" :style="auth.user?.profile_path ? {} : {}">
+              <img v-if="auth.user?.profile_path" :src="auth.user.profile_path" :alt="auth.user?.username" class="comment-avatar-img" />
+              <span v-else>{{ (auth.user?.username ?? 'U').charAt(0).toUpperCase() }}</span>
+            </div>
             <div class="comment-body">
               <div class="comment-header">
                 <span class="comment-author">{{ auth.user?.username }}</span>
@@ -461,7 +464,9 @@ function onStatusUpdated() {
   font-size: 12px;
   font-weight: 800;
   flex-shrink: 0;
+  overflow: hidden;
 }
+.comment-avatar-img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
 
 .comment-body {
   flex: 1;

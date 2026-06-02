@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import enum
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String, Text, func
@@ -11,7 +12,7 @@ from config import settings
 from database import Base
 from models.base import TimestampedModel
 
-if False:  # TYPE_CHECKING
+if TYPE_CHECKING:
     from .projects import Project
 
 EMBEDDING_DIM = 384  # BAAI/bge-small-en-v1.5
@@ -55,6 +56,8 @@ class Document(TimestampedModel):
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     processed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
+    project: Mapped["Project | None"] = relationship("Project", foreign_keys=[project_id], lazy="select")
+
     chunks: Mapped[list[DocumentChunk]] = relationship(
         "DocumentChunk", back_populates="document", cascade="all, delete-orphan"
     )
@@ -64,6 +67,18 @@ class Document(TimestampedModel):
         if self.storage_key:
             return f"https://{settings.s3_custom_domain}/{self.storage_key}"
         return None
+
+    @property
+    def project_title(self) -> str | None:
+        return self.project.title if self.project else None
+
+    @property
+    def workspace_id(self) -> int | None:
+        return self.project.workspace_id if self.project else None
+
+    @property
+    def workspace_title(self) -> str | None:
+        return self.project.workspace_title if self.project else None
 
 
 class DocumentChunk(Base):

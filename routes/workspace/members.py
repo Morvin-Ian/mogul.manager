@@ -35,6 +35,8 @@ async def _get_workspace_or_404(
     ws_service: WorkspaceService,
 ) -> models.Workspace:
     workspace = await ws_service.get_by_uuid(workspace_id)
+    if not workspace and workspace_id.isdigit():
+        workspace = await ws_service.get_by_id(int(workspace_id))
     if not workspace:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found"

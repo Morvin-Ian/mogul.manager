@@ -1,11 +1,11 @@
 import json
 import logging
-import re
-import uuid
 
 from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletionMessageParam
-from openai.types.chat.chat_completion_message_tool_call import ChatCompletionMessageToolCall
+from openai.types.chat.chat_completion_message_tool_call import (
+    ChatCompletionMessageToolCall,
+)
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from config import settings
@@ -15,51 +15,6 @@ logger = logging.getLogger(__name__)
 
 _MAX_TOOL_ITERATIONS = 5
 
-# ── DSML tool call detection & parsing ───────────────────────────────────────
-# DeepSeek sometimes outputs its native DSML format as plain text instead of
-# using the OpenAI function-calling API. These helpers detect, parse, and strip
-# those blocks so they never reach the user.
-
-_DSML_BLOCK_RE = re.compile(
-    r'<｜｜DSML｜｜tool_calls>.*?</｜｜DSML｜｜tool_calls>',
-    re.DOTALL,
-)
-_DSML_INVOKE_RE = re.compile(
-    r'<｜｜DSML｜｜invoke name="([^"]+)">(.*?)</｜｜DSML｜｜invoke>',
-    re.DOTALL,
-)
-_DSML_PARAM_RE = re.compile(
-    r'<｜｜DSML｜｜parameter name="([^"]+)" string="([^"]+)">(.*?)</｜｜DSML｜｜parameter>',
-    re.DOTALL,
-)
-
-
-def _has_dsml(text: str) -> bool:
-    return "｜｜DSML｜｜tool_calls" in text
-
-
-def _strip_dsml(text: str) -> str:
-    """Remove all DSML tool call blocks from text, returning only prose."""
-    return _DSML_BLOCK_RE.sub("", text).strip()
-
-
-def _parse_dsml_tool_calls(text: str) -> list[dict]:
-    """Parse DeepSeek DSML blocks into a list of {name, args} dicts."""
-    calls = []
-    for inv in _DSML_INVOKE_RE.finditer(text):
-        func_name = inv.group(1)
-        args: dict = {}
-        for p in _DSML_PARAM_RE.finditer(inv.group(2)):
-            pname, is_str, value = p.group(1), p.group(2).lower() == "true", p.group(3).strip()
-            if not is_str:
-                try:
-                    args[pname] = float(value) if "." in value else int(value)
-                except ValueError:
-                    args[pname] = value
-            else:
-                args[pname] = value
-        calls.append({"name": func_name, "args": args})
-    return calls
 
 # ── Planner prompt (used by decompose()) ─────────────────────────────────────
 _PLANNER_SYSTEM_PROMPT = """\
@@ -144,35 +99,60 @@ class DeepSeekAgent:
         base = (
             "You are Mogul Manager, an AI assistant built into the Mogul Manager project management platform. "
             "You help users manage workspaces, projects, tasks, plans, and documents.\n\n"
-
             "TAKE ACTION IMMEDIATELY:\n"
             "When a user asks you to create, update, delete, or change anything — do it right away using the available tools. "
             "Never ask for confirmation or permission before acting. "
             "After completing an action, give a specific confirmation: name the item and state the outcome clearly "
             "(e.g. 'Created task \"Fix login bug\" in project Backend, due Friday.'). "
             "If a tool returns an error, report what failed and suggest what the user can do next.\n\n"
-
+            "TEAM ROLES AND PERMISSIONS:\n"
+            "Every workspace has members with one of three roles. You must read the user's role from the USER CONTEXT "
+            "and enforce these rules strictly — never carry out a restricted action even if the user asks.\n\n"
+            "  owner — full control:\n"
+            "    ✓ Everything admin can do\n"
+            "    ✓ Delete the workspace\n"
+            "    ✓ Transfer ownership to another member\n\n"
+            "  admin — management access:\n"
+            "    ✓ Invite new members and revoke invitations\n"
+            "    ✓ Remove members from the workspace\n"
+            "    ✓ Change member roles (cannot promote to owner)\n"
+            "    ✓ Create, update, archive, and delete projects\n"
+            "    ✓ Create, update, and delete any task in any project\n"
+            "    ✓ Update workspace settings (name, description)\n"
+            "    ✓ Create and manage plans\n\n"
+            "  member — contributor access:\n"
+            "    ✓ View all projects and tasks in their workspace\n"
+            "    ✓ Create tasks in projects they belong to\n"
+            "    ✓ Update tasks assigned to them or created by them\n"
+            "    ✓ Upload and query documents\n"
+            "    ✗ Cannot invite or remove members\n"
+            "    ✗ Cannot change anyone's role\n"
+            "    ✗ Cannot create, archive, or delete projects\n"
+            "    ✗ Cannot delete tasks they did not create\n"
+            "    ✗ Cannot change workspace settings\n"
+            "    ✗ Cannot delete the workspace\n\n"
+            "When a member asks you to do something they are not permitted to do:\n"
+            "- Decline clearly and explain what role is needed.\n"
+            "- Tell them to ask an admin or owner to do it.\n"
+            "- Do NOT attempt the action, even partially.\n"
+            "Example: 'Only admins and owners can invite members. Ask a workspace admin to send the invite.'\n\n"
             "RESPONSE STYLE:\n"
             "- Be direct and concise. Skip filler phrases like 'Of course!' or 'Sure thing!'.\n"
             "- Lead with results: state what was done before any explanation.\n"
             "- Use short bullet lists when presenting multiple items.\n"
             "- For questions or analysis, answer first — add supporting detail only if it adds value.\n\n"
-
             "WHAT NEVER TO SHOW THE USER:\n"
             "- Never reveal any numeric IDs — no workspace IDs, project IDs, task IDs, plan IDs, step IDs, user IDs, or any other internal database identifiers.\n"
             "- Never show raw JSON, tool call output, API responses, or any internal data structures.\n"
             "- Never mention field names like 'id', 'workspace_id', 'assigned_to_id', 'user_id', etc.\n"
             "- Refer to items by their name or title only. If you must distinguish two items with the same name, use context (e.g. the project under 'X workspace') not IDs.\n\n"
-
             "TOOL USE:\n"
             "- Act proactively. If a request implies creating multiple items (e.g. a plan with tasks), do it all.\n"
             "- Chain tool calls within one response to fully complete a request without back-and-forth.\n"
             "- Never output raw tool syntax, JSON blocks, or XML tags in your text response.\n\n"
-
             "MEMORY:\n"
             "- You have stored memories about this user's preferences, goals, and decisions.\n"
             "- Apply what you know naturally — don't announce that you're using memory, just act on it.\n\n"
-
             "IDENTITY:\n"
             "Never mention Claude, Anthropic, DeepSeek, or any underlying AI technology. You are Mogul Manager."
         )
@@ -210,7 +190,8 @@ class DeepSeekAgent:
 
             # Only process standard function-type tool calls
             function_calls = [
-                tc for tc in choice.message.tool_calls
+                tc
+                for tc in choice.message.tool_calls
                 if isinstance(tc, ChatCompletionMessageToolCall)
             ]
 
@@ -237,13 +218,21 @@ class DeepSeekAgent:
                 try:
                     args = json.loads(tc.function.arguments)
                 except json.JSONDecodeError:
-                    logger.warning("Tool %s: malformed JSON arguments: %s", tc.function.name, tc.function.arguments)
+                    logger.warning(
+                        "Tool %s: malformed JSON arguments: %s",
+                        tc.function.name,
+                        tc.function.arguments,
+                    )
                     args = {}
                 result = await dispatch(tc.function.name, args, db)
                 try:
                     parsed_result = json.loads(result)
                     if "error" in parsed_result:
-                        logger.warning("Tool %s returned error: %s", tc.function.name, parsed_result["error"])
+                        logger.warning(
+                            "Tool %s returned error: %s",
+                            tc.function.name,
+                            parsed_result["error"],
+                        )
                 except json.JSONDecodeError:
                     pass
                 tool_msg: ChatCompletionMessageParam = {
@@ -282,7 +271,13 @@ class DeepSeekAgent:
                 max_tokens=1024,
             )
             raw = response.choices[0].message.content or "{}"
-            raw = raw.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+            raw = (
+                raw.strip()
+                .removeprefix("```json")
+                .removeprefix("```")
+                .removesuffix("```")
+                .strip()
+            )
             data = json.loads(raw)
             steps = data.get("steps", [])
             if not isinstance(steps, list) or not steps:
@@ -290,7 +285,14 @@ class DeepSeekAgent:
             return steps[:8]
         except Exception as exc:
             logger.warning("Plan decomposition failed: %s", exc)
-            return [{"title": goal, "description": None, "priority": "medium", "depends_on": []}]
+            return [
+                {
+                    "title": goal,
+                    "description": None,
+                    "priority": "medium",
+                    "depends_on": [],
+                }
+            ]
 
     # ── Form field suggestions ────────────────────────────────────────────────
 

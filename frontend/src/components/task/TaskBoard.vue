@@ -23,33 +23,47 @@
         v-for="col in columns"
         :key="col.key"
         class="board-column"
-        :class="[`col-${col.key}`, { 'col-drop-target': draggedId && canDropToCol(col.key), 'col-drop-blocked': draggedId && !canDropToCol(col.key) }]"
-        @dragover.prevent
-        @drop="onDrop(col.key)"
+        :class="`col-${col.key}`"
       >
         <div class="column-header">
           <div class="column-header-left">
             <span class="col-dot"></span>
             <h3>{{ col.label }}</h3>
-            <span class="count">{{ grouped[col.key]?.length || 0 }}</span>
+            <span class="count">{{ localTasks[col.key]?.length || 0 }}</span>
           </div>
         </div>
-        <div class="column-body">
-          <TaskCard
-            v-for="task in grouped[col.key]"
-            :key="task.id"
-            :task="task"
-            :can-drag="canDragTask(task)"
-            @select="selectedTask = $event"
-            @dragstart="onDragStart"
-          />
-        </div>
+
+        <draggable
+          v-model="localTasks[col.key]"
+          class="column-body"
+          item-key="uuid"
+          group="tasks"
+          :animation="180"
+          ghost-class="task-ghost"
+          chosen-class="task-chosen"
+          drag-class="task-dragging"
+          :data-status="col.key"
+          :disabled="!canDragAny"
+          @start="onDragStart"
+          @end="onDragEnd"
+        >
+          <template #item="{ element }">
+            <TaskCard
+              :task="element"
+              :can-drag="canDragTask(element)"
+              :is-team="isTeam"
+              @select="selectedTask = $event"
+            />
+          </template>
+        </draggable>
+
         <button class="col-add-btn" @click="showModal = true">
           <font-awesome-icon :icon="['fas', 'plus']" />
           New
         </button>
       </div>
     </div>
+
     <TaskModal
       v-if="showModal"
       :project-id="projectId"
@@ -69,13 +83,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
+import draggable from 'vuedraggable'
 import { useTaskStore } from '../../stores/tasks'
 import { useMembersStore } from '../../stores/members'
 import { useAuthStore } from '../../stores/auth'
 import { useTheme } from '../../composables/useTheme'
 import type { Task, TaskStatus } from '../../types'
-import { patch } from '../../stores/client'
 import TaskCard from './TaskCard.vue'
 import TaskModal from './TaskModal.vue'
 import TaskDrawer from './TaskDrawer.vue'
@@ -93,9 +107,9 @@ const btnColor = computed(() => isDark.value ? '#15202B' : '#ffffff')
 
 const showModal = ref(false)
 const loading = ref(false)
-const draggedId = ref<string | null>(null)
 const dropError = ref<string | null>(null)
 const selectedTask = ref<Task | null>(null)
+const isSyncing = ref(false)
 
 const MEMBER_ALLOWED: Record<string, Set<TaskStatus>> = {
   todo:        new Set(['in_progress']),
@@ -104,7 +118,6 @@ const MEMBER_ALLOWED: Record<string, Set<TaskStatus>> = {
 }
 
 interface Column { key: TaskStatus; label: string }
-
 const columns: Column[] = [
   { key: 'todo',        label: 'Pending' },
   { key: 'in_progress', label: 'In Progress' },
@@ -113,16 +126,34 @@ const columns: Column[] = [
   { key: 'completed',   label: 'Completed' },
 ]
 
-const grouped = computed(() => {
-  const map: Record<string, Task[]> = {}
+// SortableJS needs mutable per-column arrays
+const localTasks = reactive<Record<string, Task[]>>(
+  Object.fromEntries(columns.map(c => [c.key, []]))
+)
+
+function syncFromStore() {
+  if (isSyncing.value) return
   for (const col of columns) {
-    map[col.key] = taskStore.tasks.filter((t) => t.status === col.key)
+    localTasks[col.key] = taskStore.tasks
+      .filter(t => t.status === col.key)
+      .slice()
   }
-  return map
-})
+}
+
+watch(() => taskStore.tasks, syncFromStore, { deep: true, immediate: true })
 
 const myRole = computed(() => membersStore.myMembership?.role ?? null)
 const isAdminOrOwner = computed(() => myRole.value === 'admin' || myRole.value === 'owner')
+const isTeam = computed(() => membersStore.members.length > 1)
+const canDragAny = computed(() => {
+  if (isAdminOrOwner.value) return true
+  return taskStore.tasks.some(t => t.assigned_to_id === auth.user?.id)
+})
+
+function canDragTask(task: Task): boolean {
+  if (isAdminOrOwner.value) return true
+  return task.assigned_to_id === auth.user?.id
+}
 
 async function loadTasks() {
   loading.value = true
@@ -133,31 +164,24 @@ async function loadTasks() {
 onMounted(async () => {
   await loadTasks()
   if (props.workspaceId) {
-    await membersStore.fetchMyMembership(props.workspaceId)
+    await Promise.all([
+      membersStore.fetchMyMembership(props.workspaceId),
+      membersStore.fetchMembers(props.workspaceId),
+    ])
   }
 })
 
 watch(() => props.projectId, loadTasks)
 watch(() => props.workspaceId, async (id) => {
-  if (id) await membersStore.fetchMyMembership(id)
+  if (id) {
+    await Promise.all([
+      membersStore.fetchMyMembership(id),
+      membersStore.fetchMembers(id),
+    ])
+  }
 })
 
-function canDragTask(task: Task): boolean {
-  if (isAdminOrOwner.value) return true
-  return task.assigned_to_id === auth.user?.id
-}
-
-function canDropToCol(toStatus: TaskStatus): boolean {
-  if (!draggedId.value) return false
-  if (isAdminOrOwner.value) return true
-  const task = taskStore.tasks.find((t) => t.uuid === draggedId.value)
-  if (!task) return false
-  if (task.assigned_to_id !== auth.user?.id) return false
-  return MEMBER_ALLOWED[task.status]?.has(toStatus) ?? false
-}
-
-function onDragStart(id: string) {
-  draggedId.value = id
+function onDragStart() {
   dropError.value = null
 }
 
@@ -166,36 +190,42 @@ function showDropError(msg: string) {
   setTimeout(() => { dropError.value = null }, 3500)
 }
 
-async function onDrop(toStatus: TaskStatus) {
-  if (!draggedId.value) return
+async function onDragEnd(evt: any) {
+  const fromStatus = (evt.from as HTMLElement).dataset.status as TaskStatus
+  const toStatus = (evt.to as HTMLElement).dataset.status as TaskStatus
+  const newIndex: number = evt.newIndex
+  const oldIndex: number = evt.oldIndex
+  const sameColumn = fromStatus === toStatus
 
-  const task = taskStore.tasks.find((t) => t.uuid === draggedId.value)
-  if (!task) { draggedId.value = null; return }
+  // Task is already at newIndex in localTasks[toStatus] — SortableJS moved it
+  const movedTask = localTasks[toStatus]?.[newIndex]
+  if (!movedTask) { syncFromStore(); return }
 
-  // Same column — nothing to do
-  if (task.status === toStatus) { draggedId.value = null; return }
+  // No-op
+  if (sameColumn && newIndex === oldIndex) return
 
+  // Permission check — revert if not allowed
   if (!isAdminOrOwner.value) {
-    if (task.assigned_to_id !== auth.user?.id) {
+    if (movedTask.assigned_to_id !== auth.user?.id) {
       showDropError('You can only move tasks assigned to you.')
-      draggedId.value = null
-      return
+      syncFromStore(); return
     }
-    const allowed = MEMBER_ALLOWED[task.status]
-    if (!allowed?.has(toStatus)) {
-      showDropError('You can only move: Pending → In Progress → Review, or In Revision back to any earlier stage.')
-      draggedId.value = null
-      return
+    if (!sameColumn && !MEMBER_ALLOWED[fromStatus]?.has(toStatus)) {
+      showDropError('You can only move: Pending → In Progress → Review, or In Revision back.')
+      syncFromStore(); return
     }
   }
 
+  isSyncing.value = true
   try {
-    await patch(`/tasks/${draggedId.value}`, { status: toStatus })
+    await taskStore.reorder(movedTask.uuid, newIndex, toStatus)
     await taskStore.fetchByProject(props.projectId)
   } catch (e) {
     console.error(e)
+    syncFromStore()
+  } finally {
+    isSyncing.value = false
   }
-  draggedId.value = null
 }
 
 async function onTaskCreated(data: Record<string, any>) {
@@ -293,70 +323,63 @@ function onTaskUpdated(updated: Task) {
   display: flex;
   flex-direction: column;
   max-height: calc(100vh - 260px);
-  transition: border-color 0.15s, box-shadow 0.15s;
   overflow: hidden;
 }
-
-.col-drop-target {
-  border-color: #3B82F6 !important;
-  box-shadow: 0 0 0 3px rgba(59,130,246,0.15) !important;
-}
-.col-drop-blocked { opacity: 0.4; }
 
 /* ── Column header ── */
 .column-header {
   padding: 14px 14px 10px;
   flex-shrink: 0;
 }
-.column-header-left {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-}
+.column-header-left { display: flex; align-items: center; gap: 7px; }
 
-/* Dot — filled circle, no ring/glow */
-.col-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
+.col-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 .col-todo        .col-dot { background: #94A3B8; }
 .col-in_progress .col-dot { background: #3B82F6; }
 .col-review      .col-dot { background: #F59E0B; }
 .col-blocked     .col-dot { background: #EF4444; }
 .col-completed   .col-dot { background: #10B981; }
 
-/* Column name — colored to match dot, normal case, semi-bold */
-.column-header h3 {
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0;
-  text-transform: none;
-}
+.column-header h3 { font-size: 13px; font-weight: 600; letter-spacing: 0; text-transform: none; }
 .col-todo        .column-header h3 { color: #64748B; }
 .col-in_progress .column-header h3 { color: #3B82F6; }
 .col-review      .column-header h3 { color: #F59E0B; }
 .col-blocked     .column-header h3 { color: #EF4444; }
 .col-completed   .column-header h3 { color: #10B981; }
 
-/* Count — plain gray number, no badge */
-.count {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-light);
-  line-height: 1;
-}
+.count { font-size: 12px; font-weight: 500; color: var(--text-light); line-height: 1; }
 
-/* ── Column body ── */
+/* ── Column body (sortable container) ── */
 .column-body {
-  padding: 0 8px 6px;
+  padding: 0 8px 8px;
   display: flex;
   flex-direction: column;
   gap: 8px;
   overflow-y: auto;
   flex: 1;
-  min-height: 40px;
+  min-height: 60px;
+}
+
+/* ── SortableJS classes ── */
+
+/* The ghost: hollow placeholder that shows WHERE the card will land */
+:global(.task-ghost) {
+  opacity: 0 !important;
+  /* invisible — the gap itself shows the insertion point */
+}
+
+/* The chosen card (lifted): subtle lift + ring */
+:global(.task-chosen) {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18), 0 0 0 2px var(--primary) !important;
+  transform: scale(1.02) !important;
+  z-index: 999;
+  cursor: grabbing !important;
+}
+
+/* The drag clone following the cursor */
+:global(.task-dragging) {
+  opacity: 0.95 !important;
+  cursor: grabbing !important;
 }
 
 /* ── + New button ── */
@@ -377,24 +400,12 @@ function onTaskUpdated(updated: Task) {
   transition: color 0.12s, background 0.12s;
   flex-shrink: 0;
 }
-.col-add-btn:hover {
-  color: var(--text-muted);
-  background: var(--bg);
-}
+.col-add-btn:hover { color: var(--text-muted); background: var(--bg); }
 
 /* ── Dark mode ── */
-:global([data-theme="dark"]) .board-column {
-  background: #1E2732;
-  border-color: #2F3E4E;
-}
-:global([data-theme="dark"]) .col-add-btn {
-  border-top-color: #2F3E4E;
-  color: #536471;
-}
-:global([data-theme="dark"]) .col-add-btn:hover {
-  background: rgba(255,255,255,0.04);
-  color: #8B98A5;
-}
+:global([data-theme="dark"]) .board-column { background: #1E2732; border-color: #2F3E4E; }
+:global([data-theme="dark"]) .col-add-btn { border-top-color: #2F3E4E; color: #536471; }
+:global([data-theme="dark"]) .col-add-btn:hover { background: rgba(255,255,255,0.04); color: #8B98A5; }
 :global([data-theme="dark"]) .count { color: #536471; }
 
 :global([data-theme="dark"]) .col-todo        .column-header h3 { color: #8B98A5; }

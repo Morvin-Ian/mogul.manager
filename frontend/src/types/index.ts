@@ -94,6 +94,8 @@ export interface Task {
   assigned_to_id: number | null
   assignee_name: string | null
   assignee_email: string | null
+  assignee_avatar_url: string | null
+  position: number | null
   parent_task_id: number | null
   metadata_json: Record<string, unknown> | null
   estimated_hours: number | null
