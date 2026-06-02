@@ -407,12 +407,12 @@ onMounted(async () => {
   align-items: center;
   gap: 5px;
   padding: 3px 9px;
-  background: #E5E2FF;
-  border: 1px solid #B0A8E8;
+  background: #EFF6FF;
+  border: 1px solid #BFDBFE;
   border-radius: var(--radius-full);
   font-size: 11px;
   font-weight: 600;
-  color: #3830A0;
+  color: #1E40AF;
   align-self: flex-start;
 }
 

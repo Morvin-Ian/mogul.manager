@@ -38,18 +38,6 @@
             </router-link>
 
             <router-link
-                to="/plans"
-                active-class="active"
-                class="nav-item"
-                title="Plans"
-            >
-                <span class="icon-wrap">
-                    <font-awesome-icon :icon="['fas', 'list-check']" />
-                </span>
-                <span class="nav-label">Plans</span>
-            </router-link>
-
-            <router-link
                 to="/chat"
                 active-class="active"
                 class="nav-item nav-item--ai"
@@ -111,16 +99,16 @@ import { useRouter } from "vue-router";
 import { useAuthStore } from "../../stores/auth";
 import { useTheme } from "../../composables/useTheme";
 
-import { ref } from 'vue'
+import { ref } from "vue";
 const router = useRouter();
 const auth = useAuthStore();
 const { isDark, toggle } = useTheme();
 
 // Show pulsing badge until user clicks AI Chat
-const showAiBadge = ref(localStorage.getItem('ai_chat_visited') !== '1')
+const showAiBadge = ref(localStorage.getItem("ai_chat_visited") !== "1");
 function dismissAiBadge() {
-  showAiBadge.value = false
-  localStorage.setItem('ai_chat_visited', '1')
+    showAiBadge.value = false;
+    localStorage.setItem("ai_chat_visited", "1");
 }
 
 function handleLogout() {
@@ -383,10 +371,19 @@ function handleLogout() {
     animation: ai-badge-pulse 1.8s ease-in-out infinite;
 }
 @keyframes ai-badge-pulse {
-    0%, 100% { transform: scale(1); opacity: 1; }
-    50%       { transform: scale(1.3); opacity: 0.7; }
+    0%,
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.3);
+        opacity: 0.7;
+    }
 }
 
 /* AI Chat nav item — subtle highlight */
-.nav-item--ai .icon-wrap { position: relative; }
+.nav-item--ai .icon-wrap {
+    position: relative;
+}
 </style>

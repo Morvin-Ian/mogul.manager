@@ -27,7 +27,7 @@ TASK_TOOLS = [
         "type": "function",
         "function": {
             "name": "create_task",
-            "description": "Create a new task inside a project.",
+            "description": "Create a new task inside a project. Use assigned_to_email to assign it to a team member.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -42,6 +42,10 @@ TASK_TOOLS = [
                         "type": "string",
                         "enum": ["todo", "in_progress", "review", "blocked", "completed"],
                     },
+                    "assigned_to_email": {
+                        "type": "string",
+                        "description": "Email address of the team member to assign this task to. Use the email shown in the USER CONTEXT team list.",
+                    },
                     "estimated_hours": {"type": "integer"},
                     "due_date": {"type": "string", "description": "ISO 8601 date-time"},
                 },
@@ -53,7 +57,7 @@ TASK_TOOLS = [
         "type": "function",
         "function": {
             "name": "update_task",
-            "description": "Update an existing task's fields.",
+            "description": "Update an existing task's fields, including reassigning it to a different team member.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -68,10 +72,33 @@ TASK_TOOLS = [
                         "type": "string",
                         "enum": ["low", "medium", "high", "urgent"],
                     },
+                    "assigned_to_email": {
+                        "type": "string",
+                        "description": "Email of the team member to assign this task to. Use the email shown in the USER CONTEXT team list.",
+                    },
+                    "due_date": {"type": "string", "description": "ISO 8601 date-time"},
                     "estimated_hours": {"type": "integer"},
                     "actual_hours": {"type": "integer"},
                 },
                 "required": ["task_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "assign_task",
+            "description": "Assign or reassign a task to a specific team member by their email address.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "task_id": {"type": "integer", "description": "ID of the task to assign"},
+                    "assigned_to_email": {
+                        "type": "string",
+                        "description": "Email address of the team member. Use the email shown in the USER CONTEXT team list.",
+                    },
+                },
+                "required": ["task_id", "assigned_to_email"],
             },
         },
     },
@@ -161,6 +188,23 @@ async def handle(name: str, args: dict, db: AsyncSession) -> str:
         if not task:
             return json.dumps({"error": f"Task {args['task_id']} not found"})
         return json.dumps({"task": _serialize(task)})
+
+    if name == "assign_task":
+        task_id: int = args["task_id"]
+        task = await svc.get_by_id(task_id)
+        if not task:
+            return json.dumps({"error": f"Task {task_id} not found"})
+        from sqlalchemy import select as _select
+        email = args["assigned_to_email"]
+        user_result = await db.execute(
+            _select(models.User).where(models.User.email == email)
+        )
+        user = user_result.scalars().first()
+        if not user:
+            return json.dumps({"error": f"No user found with email '{email}'. They must be a registered member of the workspace."})
+        task = await svc.update(task, {"assigned_to_id": user.id})
+        task = await _load_task_full(task.id, db) or task
+        return json.dumps({"success": True, "task": _serialize(task)})
 
     if name == "delete_task":
         task = await svc.get_by_id(args["task_id"])

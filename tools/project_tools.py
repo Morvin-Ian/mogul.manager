@@ -32,7 +32,7 @@ PROJECT_TOOLS = [
         "type": "function",
         "function": {
             "name": "update_project",
-            "description": "Update an existing project's title, description, or status.",
+            "description": "Update an existing project's title, description, status, or due date.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -42,6 +42,10 @@ PROJECT_TOOLS = [
                     "status": {
                         "type": "string",
                         "enum": ["planning", "active", "on_hold", "completed", "archived"],
+                    },
+                    "due_date": {
+                        "type": "string",
+                        "description": "ISO 8601 date-time, e.g. 2026-08-15T00:00:00Z",
                     },
                 },
                 "required": ["project_id"],

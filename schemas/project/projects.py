@@ -42,3 +42,5 @@ class ProjectRead(ProjectBase):
     is_archived: bool
     created_at: datetime
     updated_at: datetime
+    task_count: int = 0
+    completed_count: int = 0

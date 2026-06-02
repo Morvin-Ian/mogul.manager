@@ -20,8 +20,8 @@
         </svg>
       </button>
 
-      <button class="qa-card qa-card--purple" @click="router.push('/chat')">
-        <div class="qa-icon qa-icon--purple">
+      <button class="qa-card qa-card--teal" @click="router.push('/chat')">
+        <div class="qa-icon qa-icon--teal">
           <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
             <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             <path d="M8 10h8M8 14h5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
@@ -105,7 +105,7 @@ const router = useRouter()
 }
 
 .qa-card--blue   { background: #D5EDF0; border-color: #80C4C0; }
-.qa-card--purple { background: #E5E2FF; border-color: #B0A8E8; }
+.qa-card--teal   { background: #DBEAFE; border-color: #93C5FD; }
 .qa-card--green  { background: #D8F0D8; border-color: #70C878; }
 .qa-card--orange { background: #F2E0CC; border-color: #CFA070; }
 
@@ -120,7 +120,7 @@ const router = useRouter()
 }
 
 .qa-icon--blue   { background: #80C8C4; color: #1A7068; }
-.qa-icon--purple { background: #C0BAF0; color: #3830A0; }
+.qa-icon--teal   { background: #3B82F6; color: #fff; }
 .qa-icon--green  { background: #68CC80; color: #1A5820; }
 .qa-icon--orange { background: #D4A878; color: #7A3410; }
 

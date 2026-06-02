@@ -8,7 +8,6 @@ from models.collaboration import WorkspaceMember
 from models.documents import DocumentStatus
 from services.documents import DocumentService
 from services.memory import MemoryService
-from services.plans import PlanService
 from services.project.projects import ProjectService
 from services.documents.rag import RAGService
 from services.workspace.workspaces import WorkspaceService
@@ -20,10 +19,8 @@ _ACTIVE_STATUSES = {
 }
 
 _TASK_DISPLAY_LIMIT = 12
-_PENDING_STEP_LIMIT = 3
 _DOC_DISPLAY_LIMIT = 10
 _MEMORY_LIMIT = 15
-_PLAN_DISPLAY_LIMIT = 6
 
 
 async def build_context(user_id: int, db: AsyncSession, query: str | None = None) -> str:
@@ -36,14 +33,12 @@ async def build_context(user_id: int, db: AsyncSession, query: str | None = None
 
     ws_svc   = WorkspaceService(db)   # type: ignore[arg-type]
     proj_svc = ProjectService(db)     # type: ignore[arg-type]
-    plan_svc = PlanService(db)        # type: ignore[arg-type]
     mem_svc  = MemoryService(db)      # type: ignore[arg-type]
     doc_svc  = DocumentService(db)    # type: ignore[arg-type]
 
-    workspaces, active_tasks, plans, memories, documents = await asyncio.gather(
+    workspaces, active_tasks, memories, documents = await asyncio.gather(
         ws_svc.list_by_user(user_id),
         _fetch_active_tasks(user_id, db),
-        plan_svc.list_accessible(user_id),
         mem_svc.list_by_user(user_id, limit=_MEMORY_LIMIT),
         doc_svc.list_documents(user_id),
     )
@@ -78,73 +73,37 @@ async def build_context(user_id: int, db: AsyncSession, query: str | None = None
         )
         for member, user in rows.all():
             ws_members.setdefault(member.workspace_id, []).append(
-                {"username": user.username, "role": member.role.value}
+                {"username": user.username, "email": user.email or "", "role": member.role.value}
             )
             if member.user_id == user_id:
                 my_roles[member.workspace_id] = member.role.value
 
-    # ── Group plans by workspace ───────────────────────────────────
-    ws_plans: dict[int | None, list] = {}
-    for plan in plans:
-        ws_plans.setdefault(plan.workspace_id, []).append(plan)
-
-    # ── Workspace + Project + Plan tree ───────────────────────────
+    # ── Workspace + Project tree ──────────────────────────────────
     if active_workspaces:
-        lines.append("\nWorkspaces, projects and plans:")
+        lines.append("\nWorkspaces and projects:")
         for ws, projects in zip(active_workspaces, project_lists_result):
             active_projects = [p for p in projects if not p.is_archived]
             my_role = my_roles.get(ws.id, "member")
-            lines.append(f"\n  Workspace: {ws.title!r} (your role: {my_role})")
+            lines.append(f"\n  Workspace: {ws.title!r} (workspace_id: {ws.id}, your role: {my_role})")
             if ws.description:
                 lines.append(f"    Description: {ws.description}")
 
             members = ws_members.get(ws.id, [])
             if members:
                 member_parts = ", ".join(
-                    f"{m['username']} ({m['role']})" for m in members
+                    f"{m['username']} <{m['email']}> ({m['role']})" for m in members
                 )
                 lines.append(f"    Team: {member_parts}")
+                lines.append(f"    (Use the email addresses above when assigning tasks)")
 
             for proj in active_projects:
-                lines.append(f"    Project: {proj.title!r} (status: {proj.status.value})")
+                lines.append(f"    Project: {proj.title!r} (project_id: {proj.id}, status: {proj.status.value})")
                 if proj.description:
                     lines.append(f"      Description: {proj.description}")
                 if proj.ai_summary:
                     lines.append(f"      AI summary: {proj.ai_summary}")
-
-            for plan in ws_plans.get(ws.id, [])[:_PLAN_DISPLAY_LIMIT]:
-                total = len(plan.steps)
-                done  = sum(1 for s in plan.steps if s.status.value in ("completed", "skipped"))
-                pct   = round(done / total * 100) if total else 0
-                lines.append(
-                    f"    Plan: {plan.title!r} "
-                    f"(status: {plan.status.value}, {done}/{total} steps done, {pct}% complete)"
-                )
-                if plan.description:
-                    lines.append(f"      Goal: {plan.description}")
-                running = [s for s in plan.steps if s.status.value == "running"]
-                pending = [s for s in plan.steps if s.status.value == "pending"]
-                for s in running:
-                    lines.append(f"      [running] {s.title!r}")
-                for s in pending[:_PENDING_STEP_LIMIT]:
-                    dep_note = " (blocked until dependencies complete)" if s.dependencies else ""
-                    lines.append(f"      [pending] {s.title!r} (priority: {s.priority.value}){dep_note}")
-                if len(pending) > _PENDING_STEP_LIMIT:
-                    lines.append(f"      ... {len(pending) - _PENDING_STEP_LIMIT} more pending steps")
     else:
         lines.append("\nThe user has no workspaces yet.")
-
-    # Personal plans (not tied to a workspace)
-    personal_plans = ws_plans.get(None, [])
-    if personal_plans:
-        lines.append("\nPersonal plans (not linked to a workspace):")
-        for plan in personal_plans[:_PLAN_DISPLAY_LIMIT]:
-            total = len(plan.steps)
-            done  = sum(1 for s in plan.steps if s.status.value in ("completed", "skipped"))
-            lines.append(
-                f"  Plan: {plan.title!r} "
-                f"(status: {plan.status.value}, {done}/{total} steps done)"
-            )
 
     # ── Active tasks ──────────────────────────────────────────────
     if active_tasks:

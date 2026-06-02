@@ -258,7 +258,7 @@ onMounted(() => projectStore.fetchAll())
   font-size: 11px; font-weight: 700; padding: 2px 9px;
   border-radius: var(--radius-full); letter-spacing: 0.1px;
 }
-.chip-planning  { background: rgba(168,160,248,0.18); color: #5248C8; }
+.chip-planning  { background: rgba(100,116,139,0.15); color: #475569; }
 .chip-active    { background: rgba(0,186,124,0.14);   color: #00845A; }
 .chip-on_hold   { background: rgba(255,179,0,0.16);   color: #A87800; }
 .chip-completed { background: rgba(104,204,128,0.18); color: #1A5820; }
@@ -300,7 +300,7 @@ onMounted(() => projectStore.fetchAll())
 
 /* Dark mode */
 :global([data-theme="dark"]) .filter-pill.active { background: #F7F9F9 !important; color: #15202B !important; border-color: #F7F9F9 !important; }
-:global([data-theme="dark"]) .chip-planning  { background: rgba(168,160,248,0.22) !important; color: #A8A0F8 !important; }
+:global([data-theme="dark"]) .chip-planning  { background: rgba(100,116,139,0.2) !important; color: #94A3B8 !important; }
 :global([data-theme="dark"]) .chip-active    { background: rgba(0,186,124,0.2) !important;    color: #00BA7C !important; }
 :global([data-theme="dark"]) .chip-on_hold   { background: rgba(255,179,0,0.2) !important;    color: #FFB300 !important; }
 :global([data-theme="dark"]) .chip-completed { background: rgba(104,204,128,0.22) !important; color: #68CC80 !important; }

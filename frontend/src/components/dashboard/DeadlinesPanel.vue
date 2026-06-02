@@ -27,9 +27,6 @@
         :class="`urgency-${item.urgency}`"
         @click="$router.push(`/projects/${item.projectUuid ?? item.projectId}`)"
       >
-        <span class="deadline-badge" :class="`dl-badge-${item.urgency}`">
-          {{ item.label }}
-        </span>
         <div class="deadline-info">
           <p class="deadline-title">{{ item.title }}</p>
           <p class="deadline-sub">
@@ -42,11 +39,8 @@
             <span class="deadline-date">{{ item.formattedDate }}</span>
           </p>
         </div>
-        <span class="deadline-type-icon task">
-          <svg viewBox="0 0 16 16" fill="none" width="12" height="12">
-            <rect x="1.5" y="1.5" width="13" height="13" rx="2" stroke="currentColor" stroke-width="1.5"/>
-            <path d="M5.5 8.5l2 2 3-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
+        <span class="deadline-badge" :class="`dl-badge-${item.urgency}`">
+          {{ item.label }}
         </span>
       </div>
     </div>
@@ -158,7 +152,7 @@ const upcomingDeadlines = computed(() => {
   align-items: center;
   gap: 12px;
   padding: 13px 16px;
-  border-radius: 14px;
+  border-radius: 8px;
   border: 1.5px solid transparent;
   cursor: pointer;
   transition: filter 0.12s, transform 0.12s;
@@ -167,7 +161,7 @@ const upcomingDeadlines = computed(() => {
 
 .urgency-overdue { background: #F5DEDE; border-color: #CC8888; }
 .urgency-today   { background: #F5E4CC; border-color: #D0A060; }
-.urgency-soon    { background: #E5E2FF; border-color: #B0A8E8; }
+.urgency-soon    { background: #DBEAFE; border-color: #93C5FD; }
 .urgency-later   { background: #D8F0DC; border-color: #70C888; }
 
 .deadline-badge {
@@ -182,7 +176,7 @@ const upcomingDeadlines = computed(() => {
 }
 .dl-badge-overdue { background: #D07878; color: #601010; }
 .dl-badge-today   { background: #CFA060; color: #6A3008; }
-.dl-badge-soon    { background: #C0BAF0; color: #3830A0; }
+.dl-badge-soon    { background: #93C5FD; color: #1E40AF; }
 .dl-badge-later   { background: #68CC80; color: #145820; }
 
 .deadline-info { flex: 1; min-width: 0; }
@@ -212,7 +206,7 @@ const upcomingDeadlines = computed(() => {
   display: inline-block;
   flex-shrink: 0;
 }
-.deadline-type-dot.task    { background: #5250C0; }
+.deadline-type-dot.task    { background: #64748B; }
 .deadline-type-dot.project { background: #B06030; }
 
 .deadline-sub-label {
@@ -257,11 +251,7 @@ const upcomingDeadlines = computed(() => {
   color: var(--text-light);
 }
 .urgency-overdue .deadline-type-icon.task    { color: #601010; background: rgba(96,16,16,0.12); }
-.urgency-overdue .deadline-type-icon.project { color: #601010; background: rgba(96,16,16,0.12); }
 .urgency-today   .deadline-type-icon.task    { color: #6A3008; background: rgba(106,48,8,0.12); }
-.urgency-today   .deadline-type-icon.project { color: #6A3008; background: rgba(106,48,8,0.12); }
-.urgency-soon    .deadline-type-icon.task    { color: #3830A0; background: rgba(56,48,160,0.12); }
-.urgency-soon    .deadline-type-icon.project { color: #3830A0; background: rgba(56,48,160,0.12); }
+.urgency-soon    .deadline-type-icon.task    { color: #1E40AF; background: rgba(30,64,175,0.12); }
 .urgency-later   .deadline-type-icon.task    { color: #145820; background: rgba(20,88,32,0.12); }
-.urgency-later   .deadline-type-icon.project { color: #145820; background: rgba(20,88,32,0.12); }
 </style>

@@ -83,22 +83,6 @@
         <!-- Supporting concepts row -->
         <div class="explainer-support">
           <div class="support-col">
-            <div class="explainer-icon explainer-icon--plan">
-              <svg viewBox="0 0 20 20" fill="none" width="18" height="18">
-                <path d="M9 5H7a2 2 0 00-2 2v9a2 2 0 002 2h6a2 2 0 002-2V7a2 2 0 00-2-2h-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                <rect x="9" y="3" width="2" height="4" rx="1" fill="currentColor" opacity="0.6"/>
-                <path d="M7 11l2 2 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </div>
-            <div>
-              <p class="explainer-label">Plans <span class="support-badge support-badge--ai">AI</span></p>
-              <p class="explainer-text">Describe a goal — AI breaks it into prioritised steps.</p>
-            </div>
-          </div>
-
-          <div class="support-divider"></div>
-
-          <div class="support-col">
             <div class="explainer-icon explainer-icon--file">
               <svg viewBox="0 0 20 20" fill="none" width="18" height="18">
                 <path d="M13 2H5a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7l-4-5z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
@@ -180,37 +164,6 @@
       />
       <ProjectList :workspace-id="currentWorkspace.id" />
 
-      <!-- Plans section -->
-      <div v-if="wsPlans.length" class="ws-section">
-        <div class="ws-section-header">
-          <div class="ws-section-title">
-            <font-awesome-icon :icon="['fas', 'list-check']" />
-            Plans
-            <span class="ws-section-count">{{ wsPlans.length }}</span>
-          </div>
-          <button class="btn btn-sm" @click="$router.push('/plans')">
-            View all
-          </button>
-        </div>
-        <div class="ws-items-grid">
-          <div
-            v-for="plan in wsPlans"
-            :key="plan.uuid"
-            class="ws-item-card"
-            @click="$router.push(`/plans/${plan.uuid}`)"
-          >
-            <div class="ws-item-top">
-              <span class="ws-item-status" :class="`ps-${plan.status}`">{{ plan.status }}</span>
-              <span class="ws-item-meta">{{ plan.steps.length }} steps</span>
-            </div>
-            <p class="ws-item-title">{{ plan.title }}</p>
-            <div class="ws-progress-bar">
-              <div class="ws-progress-fill" :style="{ width: planProgress(plan) + '%' }" />
-            </div>
-          </div>
-        </div>
-      </div>
-
     </template>
 
     <WorkspaceForm
@@ -228,7 +181,7 @@
             <font-awesome-icon :icon="['fas', 'folder-plus']" />
           </div>
           <h3>Create your first project?</h3>
-          <p><strong>{{ journeyWsTitle }}</strong> is ready. Add a project — you can then create plans and upload documents to it.</p>
+          <p><strong>{{ journeyWsTitle }}</strong> is ready. Add a project to start tracking tasks and uploading documents.</p>
           <div class="journey-actions">
             <button class="btn" @click="skipPlanJourney">Skip for now</button>
             <button class="btn btn-primary" @click="skipPlanJourney">
@@ -249,8 +202,7 @@ import { useWorkspaceStore } from '../stores/workspaces'
 import { useMembersStore } from '../stores/members'
 import { useAuthStore } from '../stores/auth'
 import { useConfirm } from '../composables/useConfirm'
-import { usePlanStore } from '../stores/plans'
-import type { Workspace, Plan } from '../types'
+import type { Workspace } from '../types'
 
 import WorkspaceCard from '../components/workspace/WorkspaceCard.vue'
 import WorkspaceForm from '../components/workspace/WorkspaceForm.vue'
@@ -279,16 +231,6 @@ function dismissExplainer() {
 
 onMounted(() => workspaceStore.fetchAll())
 
-const planStore = usePlanStore()
-
-const wsPlans = ref<Plan[]>([])
-
-function planProgress(plan: Plan): number {
-  if (!plan.steps.length) return 0
-  const done = plan.steps.filter(s => s.status === 'completed' || s.status === 'skipped').length
-  return Math.round((done / plan.steps.length) * 100)
-}
-
 const showForm = ref(false)
 const editingWorkspace = ref<Workspace | null>(null)
 
@@ -310,16 +252,11 @@ watch(workspaceId, async (id) => {
     try {
       await workspaceStore.fetchOne(id)
       await membersStore.fetchMyMembership(id)
-      const ws = workspaceStore.current
-      if (ws) {
-        wsPlans.value = await planStore.fetchByWorkspace(ws.id)
-      }
     } catch {
       router.push('/')
     }
   } else {
     workspaceStore.current = null
-    wsPlans.value = []
   }
 }, { immediate: true })
 
@@ -434,7 +371,6 @@ async function handleDelete() {
 .explainer-icon--workspace { background: #E5E2FF; border: 1px solid #B0A8E8; color: #3830A0; }
 .explainer-icon--project   { background: #D5EDF0; border: 1px solid #80C4C0; color: #1A7068; }
 .explainer-icon--task      { background: #D8F0D8; border: 1px solid #70C878; color: #1A5820; }
-.explainer-icon--plan      { background: #F2E0CC; border: 1px solid #CFA070; color: #7A3410; }
 .explainer-icon--file      { background: #F5E4CC; border: 1px solid #D0A060; color: #6A3008; }
 
 .explainer-label {
@@ -477,7 +413,7 @@ async function handleDelete() {
   margin-bottom: 16px;
 }
 
-/* supporting concepts (Plans + Files) */
+/* supporting concepts */
 .explainer-support {
   display: flex;
   gap: 0;
@@ -686,98 +622,5 @@ async function handleDelete() {
   align-items: center;
 }
 
-/* ── Workspace plans / documents sections ── */
-.ws-section {
-  margin-top: 36px;
-}
-.ws-section-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 16px;
-  padding-bottom: 10px;
-  border-bottom: 1.5px solid var(--border);
-}
-.ws-section-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--text);
-}
-.ws-section-count {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text-light);
-  background: var(--bg);
-  border: 1px solid var(--border);
-  padding: 1px 7px;
-  border-radius: var(--radius-full);
-}
-.ws-items-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 12px;
-}
-.ws-item-card {
-  background: var(--surface);
-  border: 1.5px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 14px 16px;
-  cursor: pointer;
-  transition: border-color 0.14s, box-shadow 0.12s, transform 0.12s;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.ws-item-card:hover {
-  border-color: var(--border-strong);
-  box-shadow: 0 4px 14px rgba(10,11,13,0.07);
-  transform: translateY(-1px);
-}
-.ws-item-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-}
-.ws-item-title {
-  font-size: 13.5px;
-  font-weight: 600;
-  color: var(--text);
-  line-height: 1.4;
-}
-.ws-item-meta {
-  font-size: 11.5px;
-  color: var(--text-light);
-}
-.ws-item-status {
-  font-size: 10.5px;
-  font-weight: 700;
-  padding: 2px 8px;
-  border-radius: var(--radius-full);
-  text-transform: capitalize;
-}
-/* Plan statuses */
-.ps-active    { background: rgba(0,186,124,0.14); color: #00845A; }
-.ps-draft     { background: rgba(139,152,165,0.15); color: #536471; }
-.ps-completed { background: rgba(104,204,128,0.18); color: #1A5820; }
-.ps-cancelled { background: rgba(207,32,47,0.1); color: #CF202F; }
-
-
-.ws-progress-bar {
-  height: 3px;
-  background: var(--border);
-  border-radius: 999px;
-  overflow: hidden;
-  margin-top: 4px;
-}
-.ws-progress-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #10B981, #059669);
-  border-radius: 999px;
-  transition: width 0.4s ease;
-}
 
 </style>

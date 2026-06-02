@@ -186,7 +186,12 @@ class DocumentService:
         self.db.add(doc)
         await self.db.commit()
         await self.db.refresh(doc)
-        return doc
+        # Reload with project→workspace so the response schema can access
+        # project_title, workspace_id, workspace_title without lazy-loading.
+        result = await self.db.execute(
+            _WITH_PROJECT(select(Document)).where(Document.id == doc.id)
+        )
+        return result.scalars().first() or doc
 
     async def process(self, document_id: int) -> None:
         result = await self.db.execute(

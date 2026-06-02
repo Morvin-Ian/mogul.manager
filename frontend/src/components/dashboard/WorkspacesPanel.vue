@@ -92,7 +92,7 @@ const { confirm } = useConfirm()
 const wsMenuOpenId = ref<number | null>(null)
 
 const WS_PALETTE = [
-  { bg: '#E5E2FF', border: '#B0A8E8', accent: '#3830A0', initBg: '#C0BAF0' },
+  { bg: '#FCE7F3', border: '#F9A8D4', accent: '#9D174D', initBg: '#F472B6' },
   { bg: '#D5EDF0', border: '#80C4C0', accent: '#1A7068', initBg: '#80C8C4' },
   { bg: '#F2E0CC', border: '#CFA070', accent: '#7A3410', initBg: '#D4A878' },
   { bg: '#ECD8F8', border: '#C090DC', accent: '#6A2080', initBg: '#C090D8' },
@@ -101,7 +101,7 @@ const WS_PALETTE = [
 ]
 
 const WS_PALETTE_DARK = [
-  { bg: 'rgba(56,48,160,0.22)', border: 'rgba(168,160,248,0.38)', accent: '#A8A0F8', initBg: 'rgba(192,186,240,0.22)' },
+  { bg: 'rgba(157,23,77,0.22)', border: 'rgba(249,168,212,0.38)', accent: '#F9A8D4', initBg: 'rgba(244,114,182,0.22)' },
   { bg: 'rgba(26,112,104,0.22)', border: 'rgba(128,200,196,0.38)', accent: '#80C8C4', initBg: 'rgba(128,200,196,0.22)' },
   { bg: 'rgba(122,52,16,0.22)', border: 'rgba(212,168,120,0.38)', accent: '#D4A878', initBg: 'rgba(212,168,120,0.22)' },
   { bg: 'rgba(106,32,128,0.22)', border: 'rgba(192,144,216,0.38)', accent: '#C090D8', initBg: 'rgba(192,144,216,0.22)' },

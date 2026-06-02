@@ -51,16 +51,6 @@
                   {{ project.ai_summary }}
                 </span>
               </div>
-              <!-- Task progress bar -->
-              <div v-if="taskStats.total > 0" class="progress-bar-wrap">
-                <div class="progress-bar-track">
-                  <div
-                    class="progress-bar-fill"
-                    :style="{ width: taskStats.pct + '%' }"
-                  ></div>
-                </div>
-                <span class="progress-pct">{{ taskStats.pct }}%</span>
-              </div>
             </div>
           </div>
         </div>
@@ -82,65 +72,73 @@
         :prompts="[
           `Create tasks for ${project.title}`,
           `What is blocking ${project.title}?`,
-          `Build a plan for ${project.title}`,
           'Move all overdue tasks to In Revision',
         ]"
       />
-      <TaskBoard :project-id="project.id" :workspace-id="project.workspace_uuid" />
 
-      <!-- Project plans -->
-      <div class="proj-plans-section">
-        <div class="proj-section-header">
-          <div class="proj-section-title">
-            <font-awesome-icon :icon="['fas', 'list-check']" />
-            Plans
-            <span class="proj-section-count">{{ projectPlans.length }}</span>
-          </div>
-          <button class="btn btn-sm" @click="showPlanJourney = true">
-            <font-awesome-icon :icon="['fas', 'plus']" />
-            New plan
-          </button>
-        </div>
-        <div v-if="projectPlans.length" class="proj-plans-grid">
-          <div
-            v-for="plan in projectPlans"
-            :key="plan.uuid"
-            class="proj-plan-card"
-            @click="$router.push(`/plans/${plan.uuid}`)"
-          >
-            <div class="plan-card-top">
-              <span class="plan-status" :class="`ps-${plan.status}`">{{ plan.status }}</span>
-              <span class="plan-meta">{{ plan.steps.length }} steps · {{ planPct(plan) }}%</span>
-            </div>
-            <p class="plan-title">{{ plan.title }}</p>
-            <div class="plan-progress-bar">
-              <div class="plan-progress-fill" :style="{ width: planPct(plan) + '%' }" />
-            </div>
-          </div>
-        </div>
-        <p v-else class="proj-empty-hint">No plans yet. Create one to break the project into AI-generated steps.</p>
+      <!-- Tabs -->
+      <div class="proj-tabs">
+        <button
+          class="proj-tab"
+          :class="{ active: activeTab === 'board' }"
+          @click="activeTab = 'board'"
+        >
+          <svg viewBox="0 0 14 14" fill="none" width="13" height="13">
+            <rect x="1" y="1" width="4" height="12" rx="1" stroke="currentColor" stroke-width="1.2"/>
+            <rect x="7" y="1" width="4" height="8" rx="1" stroke="currentColor" stroke-width="1.2"/>
+            <rect x="7" y="11" width="4" height="2" rx="1" stroke="currentColor" stroke-width="1.2"/>
+            <rect x="13" y="1" width="0" height="0" rx="0"/>
+          </svg>
+          Board
+        </button>
+        <button
+          class="proj-tab"
+          :class="{ active: activeTab === 'docs' }"
+          @click="activeTab = 'docs'"
+        >
+          <svg viewBox="0 0 14 14" fill="none" width="13" height="13">
+            <path d="M3 1h6l3 3v9a1 1 0 01-1 1H3a1 1 0 01-1-1V2a1 1 0 011-1z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>
+            <path d="M9 1v3h3M5 7h4M5 9.5h3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+          </svg>
+          Documents
+          <span v-if="projectDocs.length" class="tab-count">{{ projectDocs.length }}</span>
+        </button>
       </div>
 
-      <!-- Project documents -->
-      <div class="proj-docs-section">
-        <div class="proj-docs-header">
-          <div class="proj-docs-title">
-            <font-awesome-icon :icon="['fas', 'file-lines']" />
-            Documents
-            <span class="proj-docs-count">{{ projectDocs.length }}</span>
-          </div>
-          <div class="proj-docs-actions">
+      <!-- Board tab -->
+      <div v-show="activeTab === 'board'">
+        <TaskBoard :project-id="project.id" :workspace-id="project.workspace_uuid" />
+      </div>
+
+      <!-- Documents tab -->
+      <div v-show="activeTab === 'docs'" class="docs-tab">
+        <div class="docs-tab-head">
+          <p class="docs-tab-sub">Files uploaded here are indexed and searchable by the AI in Chat.</p>
+          <div class="docs-tab-actions">
             <button class="btn btn-sm" @click="showDocUpload = true">
               <font-awesome-icon :icon="['fas', 'upload']" />
-              Upload
+              Upload document
             </button>
-            <button class="btn btn-sm" @click="$router.push('/documents')">
+            <button class="btn btn-sm btn-ghost" @click="$router.push('/documents')">
               <font-awesome-icon :icon="['fas', 'arrow-up-right-from-square']" />
-              All docs
+              All documents
             </button>
           </div>
         </div>
-        <div class="proj-docs-grid">
+
+        <div v-if="projectDocs.length === 0" class="docs-empty">
+          <div class="docs-empty-icon">
+            <font-awesome-icon :icon="['fas', 'file-lines']" />
+          </div>
+          <p class="docs-empty-title">No documents yet</p>
+          <p class="docs-empty-sub">Upload a PDF, DOCX, TXT or CSV to give your team and AI context for this project.</p>
+          <button class="btn btn-primary" @click="showDocUpload = true">
+            <font-awesome-icon :icon="['fas', 'upload']" />
+            Upload first document
+          </button>
+        </div>
+
+        <div v-else class="proj-docs-grid">
           <div
             v-for="doc in projectDocs"
             :key="doc.uuid"
@@ -178,38 +176,6 @@
       />
     </template>
 
-    <!-- Plan creation journey -->
-    <Teleport to="body">
-      <div v-if="showPlanJourney" class="journey-overlay" @click.self="showPlanJourney = false">
-        <div class="journey-card">
-          <div class="journey-icon">
-            <font-awesome-icon :icon="['fas', 'list-check']" />
-          </div>
-          <h3>Create a plan</h3>
-          <p>Describe the goal and AI will break it into steps — aware of this project's existing tasks.</p>
-          <div class="journey-input-row">
-            <input
-              v-model="newPlanTitle"
-              class="journey-input"
-              placeholder="e.g. Build user auth, Redesign landing page…"
-              @keydown.enter="createPlan"
-              autofocus
-            />
-          </div>
-          <div class="journey-actions">
-            <button class="btn" @click="showPlanJourney = false">Cancel</button>
-            <button
-              class="btn btn-primary"
-              :disabled="!newPlanTitle.trim() || planCreating"
-              @click="createPlan"
-            >
-              <font-awesome-icon v-if="planCreating" :icon="['fas', 'spinner']" spin />
-              {{ planCreating ? 'Creating…' : 'Create plan' }}
-            </button>
-          </div>
-        </div>
-      </div>
-    </Teleport>
   </div>
 </template>
 
@@ -217,8 +183,7 @@
 import { ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useDocumentStore } from '../stores/documents'
-import { usePlanStore } from '../stores/plans'
-import type { Document, Plan } from '../types'
+import type { Document } from '../types'
 import DocUploadModal from '../components/common/DocUploadModal.vue'
 import { useProjectStore } from '../stores/projects'
 import { useMembersStore } from '../stores/members'
@@ -244,36 +209,10 @@ const membersStore = useMembersStore()
 const auth = useAuthStore()
 const taskStore = useTaskStore()
 const docStore = useDocumentStore()
-const planStore = usePlanStore()
 const { confirm } = useConfirm()
 
+const activeTab = ref<'board' | 'docs'>('board')
 const projectDocs = ref<Document[]>([])
-const projectPlans = ref<Plan[]>([])
-
-// Plan creation
-const showPlanJourney = ref(false)
-const newPlanTitle = ref('')
-const planCreating = ref(false)
-
-async function createPlan() {
-  if (!newPlanTitle.value.trim() || !project.value) return
-  planCreating.value = true
-  try {
-    const plan = await planStore.create({ title: newPlanTitle.value.trim(), project_id: project.value.id })
-    showPlanJourney.value = false
-    newPlanTitle.value = ''
-    projectPlans.value = await planStore.fetchByProject(project.value.id)
-    router.push(`/plans/${plan.uuid}`)
-  } finally {
-    planCreating.value = false
-  }
-}
-
-function planPct(plan: Plan): number {
-  if (!plan.steps.length) return 0
-  const done = plan.steps.filter(s => s.status === 'completed' || s.status === 'skipped').length
-  return Math.round((done / plan.steps.length) * 100)
-}
 
 // Document upload
 const showDocUpload = ref(false)
@@ -328,10 +267,7 @@ watch(projectId, async (id) => {
       if (projectStore.current) {
         const p = projectStore.current
         await membersStore.fetchMyMembership(p.workspace_uuid ?? String(p.workspace_id))
-        ;[projectDocs.value, projectPlans.value] = await Promise.all([
-          docStore.fetchByProject(p.id),
-          planStore.fetchByProject(p.id),
-        ])
+        projectDocs.value = await docStore.fetchByProject(p.id)
       }
     } catch {
       router.push('/')
@@ -455,13 +391,13 @@ async function handleDelete() {
   border-radius: 50%;
   flex-shrink: 0;
 }
-.pill-planning  { background: rgba(168,160,248,0.18); color: #5248C8; }
+.pill-planning  { background: rgba(100,116,139,0.15); color: #475569; }
 .pill-active    { background: rgba(0,186,124,0.14);   color: #00845A; }
 .pill-on_hold   { background: rgba(255,179,0,0.16);   color: #A87800; }
 .pill-completed { background: rgba(104,204,128,0.18); color: #1A5820; }
 .pill-archived  { background: rgba(139,152,165,0.15); color: #536471; }
 
-.pill-planning  .pill-dot { background: #A8A0F8; }
+.pill-planning  .pill-dot { background: #94A3B8; }
 .pill-active    .pill-dot { background: #00BA7C; }
 .pill-on_hold   .pill-dot { background: #FFB300; }
 .pill-completed .pill-dot { background: #68CC80; }
@@ -517,39 +453,6 @@ async function handleDelete() {
   border-color: rgba(0, 82, 255, 0.2);
 }
 
-/* Progress bar */
-.progress-bar-wrap {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 12px;
-}
-
-.progress-bar-track {
-  flex: 1;
-  height: 4px;
-  background: var(--border);
-  border-radius: 999px;
-  overflow: hidden;
-}
-
-.progress-bar-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #10B981, #059669);
-  border-radius: 999px;
-  transition: width 0.4s ease;
-  min-width: 2px;
-}
-
-.progress-pct {
-  font-size: 11.5px;
-  font-weight: 700;
-  color: var(--text-muted);
-  flex-shrink: 0;
-  min-width: 34px;
-  text-align: right;
-}
-
 /* Dark mode overrides */
 :global([data-theme="dark"]) .task-stat-done {
   background: rgba(0, 186, 124, 0.15);
@@ -563,9 +466,91 @@ async function handleDelete() {
   border-color: rgba(91, 155, 255, 0.3);
 }
 
-:global([data-theme="dark"]) .progress-bar-track {
-  background: #38444D;
+/* ── Tabs ── */
+.proj-tabs {
+  display: flex;
+  gap: 2px;
+  border-bottom: 1.5px solid var(--border);
+  margin-bottom: 0;
+  padding: 0 2px;
 }
+.proj-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1.5px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: color 0.14s, border-color 0.14s;
+  letter-spacing: -0.1px;
+}
+.proj-tab:hover { color: var(--text); }
+.proj-tab.active {
+  color: var(--text);
+  border-bottom-color: #1c1c1e;
+}
+:global([data-theme="dark"]) .proj-tab.active { border-bottom-color: #F7F9F9; }
+.tab-count {
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 1px 6px;
+  color: var(--text-muted);
+}
+.proj-tab.active .tab-count {
+  background: #1c1c1e;
+  color: #fff;
+  border-color: #1c1c1e;
+}
+:global([data-theme="dark"]) .proj-tab.active .tab-count { background: #F7F9F9; color: #15202B; border-color: #F7F9F9; }
+
+/* ── Documents tab ── */
+.docs-tab {
+  padding-top: 24px;
+}
+.docs-tab-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.docs-tab-sub {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+.docs-tab-actions { display: flex; gap: 8px; flex-shrink: 0; }
+
+.docs-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 60px 20px;
+  text-align: center;
+}
+.docs-empty-icon {
+  width: 56px; height: 56px;
+  border-radius: 16px;
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px;
+  color: var(--text-light);
+}
+.docs-empty-title { font-size: 15px; font-weight: 700; color: var(--text); }
+.docs-empty-sub { font-size: 13.5px; color: var(--text-muted); max-width: 340px; line-height: 1.6; }
 
 /* ── Shared section styles ── */
 .proj-section-header, .proj-docs-header {
@@ -581,48 +566,6 @@ async function handleDelete() {
   padding: 1px 7px; border-radius: var(--radius-full);
 }
 .proj-docs-actions { display: flex; gap: 8px; }
-
-/* ── Project plans section ── */
-.proj-plans-section {
-  margin-top: 32px;
-  padding-top: 28px;
-  border-top: 1.5px solid var(--border);
-}
-.proj-plans-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 10px;
-}
-.proj-plan-card {
-  background: var(--surface); border: 1.5px solid var(--border);
-  border-radius: var(--radius-lg); padding: 14px 16px;
-  cursor: pointer; transition: border-color 0.13s, box-shadow 0.13s, transform 0.1s;
-  display: flex; flex-direction: column; gap: 7px;
-}
-.proj-plan-card:hover {
-  border-color: var(--border-strong);
-  box-shadow: 0 3px 12px rgba(10,11,13,0.07);
-  transform: translateY(-1px);
-}
-.plan-card-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
-.plan-title { font-size: 13px; font-weight: 600; color: var(--text); line-height: 1.35; }
-.plan-meta { font-size: 11px; color: var(--text-light); }
-.plan-status {
-  font-size: 10.5px; font-weight: 700; padding: 2px 8px;
-  border-radius: var(--radius-full); text-transform: capitalize;
-}
-.ps-active    { background: rgba(0,186,124,0.14); color: #00845A; }
-.ps-draft     { background: rgba(139,152,165,0.15); color: #536471; }
-.ps-completed { background: rgba(104,204,128,0.18); color: #1A5820; }
-.ps-cancelled { background: rgba(207,32,47,0.1); color: #CF202F; }
-.plan-progress-bar {
-  height: 3px; background: var(--border); border-radius: 999px; overflow: hidden;
-}
-.plan-progress-fill {
-  height: 100%; background: linear-gradient(90deg, #10B981, #059669);
-  border-radius: 999px; transition: width 0.3s;
-}
-.proj-empty-hint { font-size: 13px; color: var(--text-muted); font-style: italic; }
 
 /* ── Project documents section ── */
 .proj-docs-section {

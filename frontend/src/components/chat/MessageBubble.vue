@@ -1,13 +1,13 @@
 <template>
-  <div class="message" :class="[role === 'user' ? 'message-user' : 'message-assistant', { 'message-streaming': streaming }]">
-    <div class="message-avatar">
+  <div class="message" :class="[role === 'user' ? 'message-user' : 'message-assistant', { 'message-streaming': streaming, 'message-grouped': grouped }]">
+    <div class="message-avatar" :class="{ 'avatar-hidden': grouped }">
       {{ role === 'user' ? initials : 'AI' }}
     </div>
     <div class="message-content">
       <div class="message-text">
         <span v-if="streaming && !content">▊</span>
         <template v-else-if="role === 'assistant'">
-          <div class="md-body" v-html="renderedContent"></div>
+          <div class="md-body" ref="mdBodyRef" v-html="renderedContent"></div>
           <span v-if="streaming" class="cursor-blink">|</span>
         </template>
         <template v-else>
@@ -32,7 +32,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch, nextTick } from 'vue'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 import { useAuthStore } from '../../stores/auth'
@@ -42,10 +42,38 @@ const props = defineProps<{
   content: string
   streaming?: boolean
   createdAt?: string
+  grouped?: boolean
 }>()
 
 const auth = useAuthStore()
 const copied = ref(false)
+const mdBodyRef = ref<HTMLElement | null>(null)
+
+function injectCodeCopyButtons() {
+  if (!mdBodyRef.value) return
+  mdBodyRef.value.querySelectorAll('pre').forEach(pre => {
+    if (pre.querySelector('.code-copy-btn')) return
+    const btn = document.createElement('button')
+    btn.className = 'code-copy-btn'
+    btn.title = 'Copy code'
+    btn.innerHTML = `<svg viewBox="0 0 14 14" fill="none" width="12" height="12"><rect x="4.5" y="4.5" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M9.5 4.5V3a1 1 0 00-1-1H3a1 1 0 00-1 1v5.5a1 1 0 001 1h1.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg> Copy`
+    btn.addEventListener('click', () => {
+      const code = pre.querySelector('code')?.textContent ?? ''
+      navigator.clipboard.writeText(code).then(() => {
+        btn.textContent = 'Copied!'
+        setTimeout(() => {
+          btn.innerHTML = `<svg viewBox="0 0 14 14" fill="none" width="12" height="12"><rect x="4.5" y="4.5" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M9.5 4.5V3a1 1 0 00-1-1H3a1 1 0 00-1 1v5.5a1 1 0 001 1h1.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg> Copy`
+        }, 2000)
+      })
+    })
+    pre.style.position = 'relative'
+    pre.appendChild(btn)
+  })
+}
+
+watch(() => props.content, () => {
+  nextTick(injectCodeCopyButtons)
+})
 
 const initials = computed(() =>
   (auth.user?.username ?? 'U').slice(0, 2).toUpperCase()
@@ -76,6 +104,14 @@ async function copyContent() {
   display: flex;
   gap: 12px;
   max-width: 80%;
+}
+
+.message-grouped {
+  margin-top: -14px;
+}
+
+.avatar-hidden {
+  visibility: hidden;
 }
 
 .message-user {
@@ -159,7 +195,10 @@ async function copyContent() {
 .message-time {
   font-size: 11px;
   color: var(--text-light);
+  opacity: 0;
+  transition: opacity 0.15s;
 }
+.message:hover .message-time { opacity: 1; }
 
 .copy-btn {
   display: inline-flex;
@@ -229,4 +268,24 @@ async function copyContent() {
 .md-body :deep(th),
 .md-body :deep(td)              { border: 1px solid var(--border); padding: 7px 12px; text-align: left; }
 .md-body :deep(th)              { background: var(--bg); font-weight: 600; }
+.md-body :deep(.code-copy-btn) {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 6px;
+  color: rgba(255,255,255,0.6);
+  font-size: 11px;
+  font-family: inherit;
+  padding: 3px 8px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s, color 0.15s;
+}
+.md-body :deep(pre:hover .code-copy-btn) { opacity: 1; }
+.md-body :deep(.code-copy-btn:hover) { background: rgba(255,255,255,0.15); color: #fff; }
 </style>

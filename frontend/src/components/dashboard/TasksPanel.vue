@@ -102,8 +102,8 @@ watch(() => props.searchQuery, (val) => {
 })
 
 const statusOptions = [
-  { value: null,          label: 'All Tasks',    color: '#8880C0' },
-  { value: 'todo',        label: 'Pending',       color: '#5250C0' },
+  { value: null,          label: 'All Tasks',    color: '#64748B' },
+  { value: 'todo',        label: 'Pending',       color: '#64748B' },
   { value: 'in_progress', label: 'In Progress',  color: '#B06030' },
   { value: 'review',      label: 'In Review',    color: '#1A8878' },
   { value: 'blocked',     label: 'In Revision', color: '#C04040' },
@@ -423,7 +423,7 @@ async function toggleTask(task: Task) {
   transform: translateY(-1px);
 }
 
-.task-card-todo        { background: #E5E2FF; border-color: #B0A8E8; }
+.task-card-todo        { background: #F8FAFC; border-color: #CBD5E1; }
 .task-card-in_progress { background: #F2E0CC; border-color: #CFA070; }
 .task-card-review      { background: #D5EDF0; border-color: #80C4C0; }
 .task-card-blocked     { background: #F5DEDE; border-color: #CC8888; }
@@ -448,7 +448,7 @@ async function toggleTask(task: Task) {
   flex-shrink: 0;
 }
 
-.task-chip-todo        { background: #C0BAF0; color: #3830A0; }
+.task-chip-todo        { background: #E2E8F0; color: #475569; }
 .task-chip-in_progress { background: #D4A878; color: #7A3410; }
 .task-chip-review      { background: #80C8C4; color: #106860; }
 .task-chip-blocked     { background: #D07878; color: #601010; }
@@ -510,7 +510,7 @@ async function toggleTask(task: Task) {
   letter-spacing: 0.1px;
 }
 
-.status-pill-todo        { background: #C0BAF0; color: #3830A0; }
+.status-pill-todo        { background: #E2E8F0; color: #475569; }
 .status-pill-in_progress { background: #D4A878; color: #7A3410; }
 .status-pill-review      { background: #80C8C4; color: #106860; }
 .status-pill-blocked     { background: #D07878; color: #601010; }

@@ -1,6 +1,8 @@
 <template>
     <div class="chat-view">
         <div class="chat-layout">
+
+            <!-- Left panel: conversations -->
             <ChatConversations
                 :conversations="chatStore.conversations"
                 :loading="chatStore.loading"
@@ -13,204 +15,98 @@
             />
 
             <!-- Main chat area -->
-            <main class="chat-main">
+            <main class="chat-main" :class="{ 'has-conv': !!chatStore.current }">
+
+                <!-- Active conversation -->
                 <template v-if="chatStore.current">
-                    <div class="chat-messages" ref="messagesRef">
+                    <div class="chat-messages" ref="messagesRef" @scroll="onMessagesScroll">
+                        <!-- Welcome / empty thread -->
                         <div
                             v-if="chatStore.current.messages.length === 0"
                             class="chat-welcome"
                         >
-                            <div class="chat-welcome-icon">
-                                <span class="wlc-wordmark"
-                                    >mogul<span class="wlc-dot">.</span></span
-                                >
-                                <span class="wlc-sub">manager</span>
+                            <div class="welcome-brand">
+                                <span class="brand-word">mogul<span class="brand-dot">.</span></span>
+                                <span class="brand-sub">manager</span>
                             </div>
-                            <h3>
-                                {{
-                                    chatStore.current.title ||
-                                    "New conversation"
-                                }}
-                            </h3>
-                            <p>
-                                Ask me anything about your workspaces, projects,
-                                or tasks. I can help you analyze progress,
-                                suggest priorities, and provide insights.
+                            <h1 class="welcome-title">How can I help you today?</h1>
+                            <p class="welcome-sub">
+                                Ask me anything about your workspaces, projects, or tasks.
+                                I can act on your behalf — creating, updating, and analysing in real time.
                             </p>
-                            <div class="quick-prompts">
-                                <button
-                                    class="quick-prompt"
-                                    @click="
-                                        quickSend(
-                                            'What projects need my attention?',
-                                        )
-                                    "
-                                >
-                                    What projects need attention?
-                                </button>
-                                <button
-                                    class="quick-prompt"
-                                    @click="
-                                        quickSend('Summarize my overdue tasks')
-                                    "
-                                >
-                                    Summarize overdue tasks
-                                </button>
-                                <button
-                                    class="quick-prompt"
-                                    @click="
-                                        quickSend('What should I work on next?')
-                                    "
-                                >
-                                    What should I work on next?
-                                </button>
-                            </div>
 
-                            <div class="personalize-section">
-                                <div class="personalize-header">
-                                    <p class="personalize-label">
-                                        <svg
-                                            viewBox="0 0 14 14"
-                                            fill="none"
-                                            width="13"
-                                            height="13"
-                                        >
-                                            <path
-                                                d="M7 1.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM7 4v3.5l2 1"
-                                                stroke="currentColor"
-                                                stroke-width="1.3"
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                            />
-                                        </svg>
-                                        The more context you share, the smarter
-                                        I get
-                                    </p>
-                                    <span class="personalize-hint"
-                                        >Select one or more</span
-                                    >
-                                </div>
-                                <div class="personalize-tips">
-                                    <button
-                                        v-for="tip in personalizeTips"
-                                        :key="tip.text"
-                                        class="personalize-tip"
-                                        :class="{
-                                            selected: selectedTips.has(
-                                                tip.text,
-                                            ),
-                                        }"
-                                        @click="toggleTip(tip.text)"
-                                    >
-                                        <span
-                                            class="tip-tag"
-                                            :class="`tip-tag--${tip.kind}`"
-                                            >{{ tip.label }}</span
-                                        >
-                                        <span class="tip-text">{{
-                                            tip.text
-                                        }}</span>
-                                        <span class="tip-check">
-                                            <svg
-                                                viewBox="0 0 12 12"
-                                                fill="none"
-                                                width="11"
-                                                height="11"
-                                            >
-                                                <path
-                                                    d="M2 6l3 3 5-5"
-                                                    stroke="currentColor"
-                                                    stroke-width="1.8"
-                                                    stroke-linecap="round"
-                                                    stroke-linejoin="round"
-                                                />
-                                            </svg>
-                                        </span>
-                                    </button>
-                                </div>
-                                <div
-                                    v-if="selectedTips.size > 0"
-                                    class="personalize-actions"
+                            <!-- Action cards -->
+                            <div class="action-grid">
+                                <button
+                                    v-for="card in actionCards"
+                                    :key="card.text"
+                                    class="action-card"
+                                    @click="quickSend(card.text)"
                                 >
-                                    <span class="selection-count"
-                                        >{{ selectedTips.size }} selected</span
-                                    >
-                                    <button
-                                        class="btn btn-ghost btn-sm"
-                                        @click="selectedTips.clear()"
-                                    >
-                                        Clear
-                                    </button>
-                                    <button
-                                        class="btn btn-primary btn-sm"
-                                        @click="sendSelectedTips"
-                                    >
-                                        <svg
-                                            viewBox="0 0 14 14"
-                                            fill="none"
-                                            width="12"
-                                            height="12"
-                                        >
-                                            <path
-                                                d="M2 7l10-5-5 10V8L2 7z"
-                                                fill="currentColor"
-                                            />
+                                    <div class="action-icon" :style="{ background: card.bg }">
+                                        <component :is="'span'" v-html="card.svg"></component>
+                                    </div>
+                                    <span class="action-label">{{ card.label }}</span>
+                                    <span class="action-plus">
+                                        <svg viewBox="0 0 12 12" fill="none" width="11" height="11">
+                                            <path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
                                         </svg>
-                                        Send
-                                        {{
-                                            selectedTips.size > 1
-                                                ? `${selectedTips.size} preferences`
-                                                : "preference"
-                                        }}
-                                    </button>
-                                </div>
+                                    </span>
+                                </button>
                             </div>
                         </div>
+
+                        <!-- Messages -->
                         <MessageBubble
-                            v-for="msg in chatStore.current.messages"
+                            v-for="(msg, i) in chatStore.current.messages"
                             :key="msg.id || msg.content"
                             :role="msg.role"
                             :content="msg.content"
                             :created-at="msg.created_at"
+                            :grouped="i > 0 && chatStore.current.messages[i - 1].role === msg.role"
                         />
+
+                        <!-- Thinking indicator -->
                         <Transition name="thinking-fade">
                             <div
-                                v-if="
-                                    chatStore.streaming &&
-                                    !chatStore.streamContent &&
-                                    !chatStore.toolActivity
-                                "
+                                v-if="chatStore.streaming && !chatStore.streamContent && !chatStore.toolActivity"
                                 class="thinking-status"
                                 :key="chatStore.thinkingStatus"
                             >
-                                <span class="thinking-dot"></span>
-                                <span class="thinking-text">{{
-                                    chatStore.thinkingStatus
-                                }}</span>
+                                <span class="thinking-dots">
+                                    <span class="thinking-dot"></span>
+                                    <span class="thinking-dot"></span>
+                                    <span class="thinking-dot"></span>
+                                </span>
+                                <span class="thinking-text">{{ chatStore.thinkingStatus }}</span>
                             </div>
                         </Transition>
+
+                        <!-- Tool activity -->
                         <Transition name="thinking-fade">
-                            <div
-                                v-if="
-                                    chatStore.streaming &&
-                                    chatStore.toolActivity
-                                "
-                                class="tool-activity"
-                            >
+                            <div v-if="chatStore.streaming && chatStore.toolActivity" class="tool-activity">
                                 <span class="tool-activity-dot"></span>
-                                Running
-                                {{ formatToolName(chatStore.toolActivity) }}…
+                                Running {{ formatToolName(chatStore.toolActivity) }}…
                             </div>
                         </Transition>
+
+                        <!-- Streaming bubble -->
                         <MessageBubble
-                            v-if="
-                                chatStore.streaming && chatStore.streamContent
-                            "
+                            v-if="chatStore.streaming && chatStore.streamContent"
                             role="assistant"
                             :content="chatStore.streamContent"
                             :streaming="true"
                         />
                     </div>
+
+                    <!-- Scroll-to-bottom FAB -->
+                    <Transition name="fab-fade">
+                        <button v-if="showScrollBtn" class="scroll-fab" @click="scrollToBottom" title="Scroll to bottom">
+                            <svg viewBox="0 0 16 16" fill="none" width="16" height="16">
+                                <path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                    </Transition>
 
                     <ChatInput
                         v-model="input"
@@ -220,35 +116,64 @@
                     />
                 </template>
 
-                <div v-else class="chat-empty-state">
-                    <div class="empty-inner">
-                        <div class="empty-logo">
-                            <span class="wlc-wordmark">mogul<span class="wlc-dot">.</span></span>
-                            <span class="wlc-sub">manager</span>
-                        </div>
-                        <p class="empty-tagline">Your AI that <em>acts</em> — not just answers.</p>
-
-                        <div class="cap-grid">
-                            <div class="cap-card" v-for="cat in capabilities" :key="cat.title">
-                                <div class="cap-icon" :style="{ background: cat.bg, color: cat.color }">
-                                    <font-awesome-icon :icon="cat.icon" />
-                                </div>
-                                <div>
-                                    <p class="cap-title">{{ cat.title }}</p>
-                                    <ul class="cap-examples">
-                                        <li v-for="ex in cat.examples" :key="ex" @click="startWithPrompt(ex)">{{ ex }}</li>
-                                    </ul>
-                                </div>
+                <!-- No conversation selected -->
+                <div v-else class="no-conv-state">
+                    <div class="welcome-brand">
+                        <span class="brand-word">mogul<span class="brand-dot">.</span></span>
+                        <span class="brand-sub">manager</span>
+                    </div>
+                    <h1 class="welcome-title">How can I help you today?</h1>
+                    <p class="welcome-sub">Select a conversation or start a new one.</p>
+                    <div class="action-grid">
+                        <button
+                            v-for="card in actionCards"
+                            :key="card.text"
+                            class="action-card"
+                            @click="startWithPrompt(card.text)"
+                        >
+                            <div class="action-icon" :style="{ background: card.bg }">
+                                <component :is="'span'" v-html="card.svg"></component>
                             </div>
-                        </div>
-
-                        <button class="btn btn-primary empty-cta" @click="handleNewConversation">
-                            <font-awesome-icon :icon="['fas', 'plus']" />
-                            Start new chat
+                            <span class="action-label">{{ card.label }}</span>
+                            <span class="action-plus">
+                                <svg viewBox="0 0 12 12" fill="none" width="11" height="11">
+                                    <path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                                </svg>
+                            </span>
                         </button>
                     </div>
                 </div>
             </main>
+
+            <!-- Right panel: projects -->
+            <aside class="projects-panel">
+                <div class="proj-panel-head">
+                    <span class="proj-panel-title">Projects</span>
+                    <span class="proj-panel-count">({{ allProjects.length }})</span>
+                </div>
+                <div class="proj-panel-list">
+                    <div v-if="projectsLoading" v-for="n in 6" :key="n" class="proj-sk-item">
+                        <div class="sk-line sk-proj-title"></div>
+                        <div class="sk-line sk-proj-sub"></div>
+                    </div>
+                    <div v-else-if="allProjects.length === 0" class="proj-panel-empty">
+                        No projects yet
+                    </div>
+                    <div
+                        v-else
+                        v-for="p in allProjects"
+                        :key="p.id"
+                        class="proj-panel-item"
+                        @click="quickSendProject(p.title)"
+                    >
+                        <div class="proj-panel-info">
+                            <p class="proj-panel-name">{{ p.title }}</p>
+                            <p class="proj-panel-desc">{{ p.description || p.status }}</p>
+                        </div>
+                        <span class="proj-panel-dot" :class="`dot-${p.status}`"></span>
+                    </div>
+                </div>
+            </aside>
         </div>
     </div>
 </template>
@@ -257,205 +182,145 @@
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from "vue";
 import { useChatStore } from "../stores/chat";
 import { useConfirm } from "../composables/useConfirm";
+import { useWorkspaceStore } from "../stores/workspaces";
+import { get } from "../stores/client";
+import type { Project } from "../types";
 import MessageBubble from "../components/chat/MessageBubble.vue";
 import ChatConversations from "../components/chat/ChatConversations.vue";
 import ChatInput from "../components/chat/ChatInput.vue";
 
 const chatStore = useChatStore();
+const workspaceStore = useWorkspaceStore();
+const { confirm } = useConfirm();
 
-const capabilities = [
+// ── Projects panel ───────────────────────────────────────────────
+const allProjects = ref<Project[]>([]);
+const projectsLoading = ref(false);
+
+async function loadProjects() {
+    projectsLoading.value = true;
+    try {
+        await workspaceStore.fetchAll();
+        const wsIds = workspaceStore.workspaces.map((ws) => ws.id);
+        if (!wsIds.length) return;
+        const arrays = await Promise.all(wsIds.map((id) => get<Project[]>(`/projects?workspace_id=${id}`)));
+        allProjects.value = arrays.flat().filter((p) => !p.is_archived);
+    } catch {}
+    finally { projectsLoading.value = false; }
+}
+
+function quickSendProject(title: string) {
+    quickSend(`What is the status of the "${title}" project?`);
+}
+
+// ── Action cards ────────────────────────────────────────────────
+const actionCards = [
     {
-        title: 'Create & manage',
-        icon: ['fas', 'bolt'],
-        bg: 'rgba(0,82,255,0.1)',
-        color: 'var(--primary)',
-        examples: [
-            'Create 5 tasks for the landing page redesign',
-            'Move all overdue tasks to In Revision',
-            'Assign the login bug task to me',
-        ],
+        label: "What's blocking my team?",
+        text: "What is currently blocking my team's tasks?",
+        bg: '#DBEAFE',
+        svg: `<svg viewBox="0 0 20 20" fill="none" width="20" height="20"><circle cx="10" cy="10" r="7.5" stroke="#1E40AF" stroke-width="1.5"/><path d="M10 6v5M10 14v.5" stroke="#1E40AF" stroke-width="1.8" stroke-linecap="round"/></svg>`,
     },
     {
-        title: 'Plan & decompose',
-        icon: ['fas', 'list-check'],
-        bg: 'rgba(104,204,128,0.15)',
-        color: '#1A7A38',
-        examples: [
-            'Build a launch plan for our mobile app',
-            'Break "Redesign onboarding" into tasks',
-            'What are the next steps for my active plan?',
-        ],
+        label: "Summarize project progress",
+        text: "Summarize the current progress across all my active projects.",
+        bg: '#D1FAE5',
+        svg: `<svg viewBox="0 0 20 20" fill="none" width="20" height="20"><path d="M3 14l4-5 4 3 4-6" stroke="#065F46" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 17h14" stroke="#065F46" stroke-width="1.3" stroke-linecap="round"/></svg>`,
     },
     {
-        title: 'Analyze & report',
-        icon: ['fas', 'chart-bar'],
-        bg: 'rgba(255,179,0,0.12)',
-        color: '#A87800',
-        examples: [
-            'What\'s blocking my team right now?',
-            'Which project has the most overdue tasks?',
-            'Summarize progress across all workspaces',
-        ],
+        label: "Create tasks from a goal",
+        text: "Help me break down a goal into actionable tasks.",
+        bg: '#FEF3C7',
+        svg: `<svg viewBox="0 0 20 20" fill="none" width="20" height="20"><rect x="3" y="3" width="14" height="14" rx="3" stroke="#92400E" stroke-width="1.5"/><path d="M7 10l2.5 2.5L13 7.5" stroke="#92400E" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
     },
     {
-        title: 'Search & recall',
-        icon: ['fas', 'magnifying-glass'],
-        bg: 'rgba(168,160,248,0.15)',
-        color: '#5248C8',
-        examples: [
-            'Find all tasks assigned to me',
-            'What documents did I upload last week?',
-            'List all completed projects',
-        ],
+        label: "Draft a team status update",
+        text: "Draft a weekly status update summarising what my team has accomplished.",
+        bg: '#FCE7F3',
+        svg: `<svg viewBox="0 0 20 20" fill="none" width="20" height="20"><path d="M4 4h12v10H4z" stroke="#9D174D" stroke-width="1.5" stroke-linejoin="round"/><path d="M7 8h6M7 11h4" stroke="#9D174D" stroke-width="1.3" stroke-linecap="round"/><path d="M12.5 14.5l2 2.5" stroke="#9D174D" stroke-width="1.3" stroke-linecap="round"/></svg>`,
     },
 ]
 
-async function startWithPrompt(text: string) {
-    if (!chatStore.current && chatStore.conversations.length) {
-        await chatStore.fetchConversation(chatStore.conversations[0].id)
-    } else if (!chatStore.current) {
-        const conv = await chatStore.createConversation()
-        await chatStore.fetchConversation(conv.id)
-    }
-    if (chatStore.current) {
-        await chatStore.sendMessage(chatStore.current.id, text)
-    }
-}
-
-const { confirm } = useConfirm();
+// ── State ────────────────────────────────────────────────────────
 const input = ref("");
 const messagesRef = ref<HTMLElement | null>(null);
+const showScrollBtn = ref(false);
 
-// ── Personalize tips ────────────────────────────────────────────
-const personalizeTips = [
-    {
-        kind: "style",
-        label: "Style",
-        text: "I prefer my task descriptions to be short and action-focused",
-    },
-    {
-        kind: "goal",
-        label: "Goal",
-        text: "My main goal this month is to ship the v2 release",
-    },
-    {
-        kind: "style",
-        label: "Style",
-        text: "Always show me the highest priority tasks first",
-    },
-    {
-        kind: "work",
-        label: "Workflow",
-        text: "I work in two-week sprints and review goals every Friday",
-    },
-    {
-        kind: "goal",
-        label: "Goal",
-        text: "I want to clear my backlog before taking on new projects",
-    },
-    {
-        kind: "work",
-        label: "Workflow",
-        text: "I've decided to keep all design work in one dedicated project",
-    },
-];
-
-const selectedTips = ref(new Set<string>());
-
-function toggleTip(text: string) {
-    if (selectedTips.value.has(text)) {
-        selectedTips.value.delete(text);
-    } else {
-        selectedTips.value.add(text);
-    }
-    // Trigger reactivity on Set mutation
-    selectedTips.value = new Set(selectedTips.value);
+function onMessagesScroll() {
+    const el = messagesRef.value;
+    if (!el) return;
+    showScrollBtn.value = el.scrollHeight - el.scrollTop - el.clientHeight > 80;
 }
 
-async function sendSelectedTips() {
-    if (!selectedTips.value.size || chatStore.streaming || !chatStore.current)
-        return;
-    const combined = [...selectedTips.value].join("\n");
-    selectedTips.value = new Set();
-    await chatStore.sendMessage(chatStore.current.id, combined);
-}
-
-// ── Rotating input placeholder ─────────────────────────────────
+// ── Rotating placeholder ─────────────────────────────────────────
 const placeholders = [
-    "Message Mogul Manager AI…",
-    'Try: "I prefer tasks grouped by deadline"',
-    'Try: "My goal this week is…"',
-    'Try: "Always remind me about blocked tasks first"',
-    'Try: "I\'ve decided to pause the mobile project"',
+    "Ask me anything…",
+    'Try: "What projects need attention?"',
+    'Try: "Who has the most tasks right now?"',
+    'Try: "Move all overdue tasks to In Revision"',
     'Try: "Show me everything due this week"',
 ];
 const placeholderIndex = ref(0);
 const currentPlaceholder = computed(() => placeholders[placeholderIndex.value]);
 let placeholderTimer: ReturnType<typeof setInterval> | null = null;
 
-// ── Shared handler: send a pending message from FAB / nudge ──────
+// ── Pending message handler ──────────────────────────────────────
 async function dispatchPendingMessage(msg: string) {
-    chatStore.pendingMessage = null
+    chatStore.pendingMessage = null;
     if (!chatStore.current) {
         if (chatStore.conversations.length) {
-            await chatStore.fetchConversation(chatStore.conversations[0].id)
+            await chatStore.fetchConversation(chatStore.conversations[0].id);
         } else {
-            const conv = await chatStore.createConversation()
-            await chatStore.fetchConversation(conv.id)
+            const conv = await chatStore.createConversation();
+            await chatStore.fetchConversation(conv.id);
         }
     }
     if (chatStore.current) {
-        await chatStore.sendMessage(chatStore.current.id, msg)
+        await chatStore.sendMessage(chatStore.current.id, msg);
     }
 }
 
 onMounted(async () => {
     await chatStore.fetchConversations();
+    loadProjects();
     placeholderTimer = setInterval(() => {
         if (!input.value) {
-            placeholderIndex.value =
-                (placeholderIndex.value + 1) % placeholders.length;
+            placeholderIndex.value = (placeholderIndex.value + 1) % placeholders.length;
         }
     }, 3500);
-    // If a message was queued before navigation, send it now
+    await nextTick();
+    messagesRef.value?.addEventListener("scroll", onMessagesScroll, { passive: true });
     if (chatStore.pendingMessage) {
-        await dispatchPendingMessage(chatStore.pendingMessage)
+        await dispatchPendingMessage(chatStore.pendingMessage);
     }
 });
 
-// Handle prompts fired while the chat page is already open
 watch(() => chatStore.pendingMessage, async (msg) => {
-    if (msg) await dispatchPendingMessage(msg)
+    if (msg) await dispatchPendingMessage(msg);
 });
 
 onUnmounted(() => {
     if (placeholderTimer) clearInterval(placeholderTimer);
+    messagesRef.value?.removeEventListener("scroll", onMessagesScroll);
 });
 
-watch(
-    () => chatStore.current?.messages.length,
-    async () => {
-        await nextTick();
-        scrollToBottom();
-    },
-);
-watch(
-    () => chatStore.streamContent,
-    async () => {
-        await nextTick();
-        scrollToBottom();
-    },
-);
+watch(() => chatStore.current?.messages.length, async () => {
+    await nextTick();
+    scrollToBottom();
+});
+watch(() => chatStore.streamContent, async () => {
+    await nextTick();
+    scrollToBottom();
+});
 
 function scrollToBottom() {
     if (messagesRef.value)
         messagesRef.value.scrollTop = messagesRef.value.scrollHeight;
 }
 
+// ── Handlers ─────────────────────────────────────────────────────
 async function selectConversation(id: number) {
-    try {
-        await chatStore.fetchConversation(id);
-    } catch {}
+    try { await chatStore.fetchConversation(id); } catch {}
 }
 
 async function handleNewConversation() {
@@ -466,9 +331,7 @@ async function handleNewConversation() {
 }
 
 async function handleDeleteConv(id: number) {
-    try {
-        await chatStore.removeConversation(id);
-    } catch {}
+    try { await chatStore.removeConversation(id); } catch {}
 }
 
 async function handleClearAll() {
@@ -482,11 +345,8 @@ async function handleClearAll() {
         danger: true,
     });
     if (!ok) return;
-    const ids = chatStore.conversations.map((c) => c.id);
-    for (const id of ids) {
-        try {
-            await chatStore.removeConversation(id);
-        } catch {}
+    for (const id of chatStore.conversations.map((c) => c.id)) {
+        try { await chatStore.removeConversation(id); } catch {}
     }
 }
 
@@ -499,6 +359,18 @@ async function handleSend(text: string) {
 async function quickSend(text: string) {
     if (chatStore.streaming || !chatStore.current) return;
     await chatStore.sendMessage(chatStore.current.id, text);
+}
+
+async function startWithPrompt(text: string) {
+    if (!chatStore.current && chatStore.conversations.length) {
+        await chatStore.fetchConversation(chatStore.conversations[0].id);
+    } else if (!chatStore.current) {
+        const conv = await chatStore.createConversation();
+        await chatStore.fetchConversation(conv.id);
+    }
+    if (chatStore.current) {
+        await chatStore.sendMessage(chatStore.current.id, text);
+    }
 }
 
 function formatToolName(name: string) {
@@ -520,338 +392,166 @@ function formatToolName(name: string) {
     overflow: hidden;
 }
 
-/* Main */
+/* ── Main chat area ── */
 .chat-main {
     flex: 1;
     display: flex;
     flex-direction: column;
     min-width: 0;
     background: var(--bg);
+    position: relative;
 }
 
 .chat-messages {
     flex: 1;
     overflow-y: auto;
-    padding: 28px 32px;
+    padding: 32px 28px 24px;
     display: flex;
     flex-direction: column;
-    gap: 24px;
-    max-width: 820px;
+    gap: 20px;
+    max-width: 780px;
     width: 100%;
     margin: 0 auto;
 }
 
-/* Welcome state */
-.chat-welcome {
+/* ── Welcome screen ── */
+.chat-welcome,
+.no-conv-state {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 56px 20px 40px;
-    gap: 14px;
+    padding: 56px 16px 32px;
+    gap: 0;
     text-align: center;
 }
 
-.chat-welcome-icon {
+.welcome-brand {
     display: flex;
     align-items: baseline;
     gap: 3px;
-    margin-bottom: 4px;
+    margin-bottom: 28px;
 }
-
-.wlc-wordmark {
-    font-size: 38px;
-    font-weight: 700;
-    color: var(--text);
-    letter-spacing: -1.5px;
-    line-height: 1;
-}
-
-.wlc-dot {
-    color: var(--primary);
-}
-
-.wlc-sub {
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--text-muted);
-    letter-spacing: 0.3px;
-}
-
-.chat-welcome h3 {
-    font-size: 20px;
+.brand-word {
+    font-size: 22px;
     font-weight: 800;
     color: var(--text);
-    letter-spacing: -0.5px;
+    letter-spacing: -0.8px;
 }
-
-.chat-welcome p {
-    color: var(--text-muted);
-    font-size: 14px;
-    max-width: 380px;
-    line-height: 1.65;
-}
-
-.quick-prompts {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    justify-content: center;
-    margin-top: 6px;
-}
-
-.quick-prompt {
-    padding: 8px 16px;
-    background: var(--surface);
-    border: 1.5px solid var(--border);
-    border-radius: var(--radius-full);
-    font-size: 13px;
+.brand-dot { color: var(--primary); }
+.brand-sub {
+    font-size: 12px;
     font-weight: 500;
     color: var(--text-muted);
-    cursor: pointer;
-    font-family: inherit;
-    transition: all 0.15s;
-    letter-spacing: -0.1px;
+    letter-spacing: 0.2px;
 }
 
-.quick-prompt:hover {
-    border-color: #b0a8e8;
-    background: #e5e2ff;
-    color: #3830a0;
+.welcome-title {
+    font-size: 34px;
+    font-weight: 800;
+    color: var(--text);
+    letter-spacing: -1px;
+    line-height: 1.15;
+    margin-bottom: 14px;
 }
 
-/* ── Personalize section ── */
-.personalize-section {
-    margin-top: 28px;
-    width: 100%;
-    max-width: 560px;
-    border-top: 1px solid var(--border);
-    padding-top: 24px;
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-}
-
-.personalize-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-}
-
-.personalize-label {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--text-light);
-    text-transform: uppercase;
-    letter-spacing: 0.6px;
-}
-
-.personalize-hint {
-    font-size: 11.5px;
-    color: var(--text-light);
-    font-style: italic;
-    flex-shrink: 0;
-}
-
-.personalize-tips {
-    display: flex;
-    flex-direction: column;
-    gap: 7px;
-}
-
-.personalize-tip {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 14px;
-    background: var(--surface);
-    border: 1.5px solid var(--border);
-    border-radius: var(--radius);
-    cursor: pointer;
-    font-family: inherit;
-    text-align: left;
-    transition:
-        border-color 0.14s,
-        background 0.14s,
-        box-shadow 0.14s;
-    position: relative;
-}
-
-.personalize-tip:hover {
-    border-color: #b0a8e8;
-    background: #e5e2ff;
-    box-shadow: 0 2px 8px rgba(56, 48, 160, 0.08);
-}
-
-.personalize-tip.selected {
-    border-color: #3830a0;
-    background: #e5e2ff;
-    box-shadow: 0 0 0 3px rgba(56, 48, 160, 0.1);
-}
-
-.tip-tag {
-    flex-shrink: 0;
-    font-size: 10px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    padding: 2px 8px;
-    border-radius: var(--radius-full);
-    border: 1px solid;
-    white-space: nowrap;
-}
-
-.tip-tag--style {
-    background: #e5e2ff;
-    color: #3830a0;
-    border-color: #b0a8e8;
-}
-
-.tip-tag--goal {
-    background: #d8f0dc;
-    color: #1a5820;
-    border-color: #70c878;
-}
-
-.tip-tag--work {
-    background: #f2e0cc;
-    color: #7a3410;
-    border-color: #cfa070;
-}
-
-.tip-text {
-    flex: 1;
-    font-size: 13px;
+.welcome-sub {
+    font-size: 14.5px;
     color: var(--text-muted);
-    line-height: 1.4;
-    letter-spacing: -0.1px;
+    line-height: 1.6;
+    max-width: 480px;
+    margin-bottom: 40px;
 }
 
-.personalize-tip:hover .tip-text,
-.personalize-tip.selected .tip-text {
-    color: #3830a0;
-}
-
-.tip-check {
-    flex-shrink: 0;
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    border: 1.5px solid var(--border);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: transparent;
-    background: var(--surface);
-    transition: all 0.14s;
-}
-
-.personalize-tip.selected .tip-check {
-    background: #1c1c1e;
-    border-color: #1c1c1e;
-    color: #fff;
-}
-
-.personalize-actions {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding-top: 4px;
-    animation: fade-up 0.18s ease;
-}
-
-.selection-count {
-    flex: 1;
-    font-size: 12.5px;
-    font-weight: 600;
-    color: #3830a0;
-}
-
-@keyframes fade-up {
-    from {
-        opacity: 0;
-        transform: translateY(6px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* Empty state */
-.chat-empty-state {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 40px;
-}
-
-.empty-inner {
-    text-align: center;
-    max-width: 680px;
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 20px;
-    padding: 20px;
-}
-
-.empty-logo { display: flex; align-items: baseline; gap: 3px; }
-
-.empty-tagline {
-    font-size: 16px; color: var(--text-muted); line-height: 1.5; margin: 0;
-}
-.empty-tagline em { font-style: normal; color: var(--primary); font-weight: 700; }
-
-.empty-cta { margin-top: 4px; }
-
-/* Capabilities grid */
-.cap-grid {
+/* ── Action cards (2×2 grid) ── */
+.action-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 12px;
+    gap: 10px;
     width: 100%;
+    max-width: 580px;
     text-align: left;
 }
-.cap-card {
-    background: var(--surface); border: 1.5px solid var(--border);
-    border-radius: var(--radius-lg); padding: 14px 16px;
-    display: flex; gap: 12px; align-items: flex-start;
-}
-.cap-icon {
-    width: 34px; height: 34px; border-radius: 10px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 14px; flex-shrink: 0;
-}
-.cap-title {
-    font-size: 12.5px; font-weight: 700; color: var(--text);
-    text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 7px;
-}
-.cap-examples {
-    list-style: none; padding: 0; margin: 0;
-    display: flex; flex-direction: column; gap: 4px;
-}
-.cap-examples li {
-    font-size: 12.5px; color: var(--text-muted); cursor: pointer;
-    padding: 3px 7px; border-radius: 5px;
-    transition: background 0.12s, color 0.12s;
-    border: 1px solid transparent;
-}
-.cap-examples li:hover {
-    background: var(--primary-light); color: var(--primary);
-    border-color: var(--primary-border);
-}
-.cap-examples li::before { content: "→ "; color: var(--text-light); }
 
-.empty-icon {
+.action-card {
     display: flex;
-    align-items: baseline;
-    gap: 3px;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    cursor: pointer;
+    font-family: inherit;
+    text-align: left;
+    transition: border-color 0.14s, box-shadow 0.14s, transform 0.1s;
+    box-shadow: 0 1px 4px rgba(10,11,13,0.05);
+}
+.action-card:hover {
+    border-color: var(--border-strong);
+    box-shadow: 0 4px 16px rgba(10,11,13,0.1);
+    transform: translateY(-1px);
+}
+
+.action-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.action-label {
+    flex: 1;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.35;
+    letter-spacing: -0.1px;
+}
+
+.action-plus {
+    flex-shrink: 0;
+    width: 26px;
+    height: 26px;
+    border-radius: 8px;
+    background: #1c1c1e;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    transition: opacity 0.12s;
+}
+.action-card:hover .action-plus { opacity: 0.8; }
+:global([data-theme="dark"]) .action-plus { background: #F7F9F9; color: #1c1c1e; }
+
+/* ── Thinking & tool activity ── */
+.thinking-status {
+    align-self: flex-start;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12.5px;
+    color: var(--text-muted);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 7px 12px;
+}
+.thinking-dots { display: flex; align-items: center; gap: 3px; flex-shrink: 0; }
+.thinking-dot {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    animation: dot-bounce 1.2s ease-in-out infinite;
+}
+.thinking-dots .thinking-dot:nth-child(2) { animation-delay: 0.15s; }
+.thinking-dots .thinking-dot:nth-child(3) { animation-delay: 0.3s; }
+@keyframes dot-bounce {
+    0%, 60%, 100% { transform: translateY(0); opacity: 0.45; }
+    30%            { transform: translateY(-4px); opacity: 1; }
 }
 
 .tool-activity {
@@ -866,73 +566,153 @@ function formatToolName(name: string) {
     border-radius: var(--radius);
     padding: 7px 12px;
 }
-
 .tool-activity-dot {
-    width: 7px;
-    height: 7px;
+    width: 7px; height: 7px;
     border-radius: 50%;
-    background: #3830a0;
+    background: #00BA7C;
     animation: pulse 1s ease-in-out infinite;
     flex-shrink: 0;
 }
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(.75)} }
 
-.thinking-status {
-    align-self: flex-start;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 12.5px;
-    color: var(--text-muted);
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 7px 12px;
+/* Transitions */
+.thinking-fade-enter-active, .thinking-fade-leave-active {
+    transition: opacity 0.25s ease, transform 0.25s ease;
+}
+.thinking-fade-enter-from, .thinking-fade-leave-to {
+    opacity: 0; transform: translateY(4px);
 }
 
-.thinking-dot {
+/* Scroll FAB */
+.scroll-fab {
+    position: absolute;
+    bottom: 100px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 34px; height: 34px;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    color: var(--text-muted);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    transition: background 0.15s, box-shadow 0.15s;
+    z-index: 10;
+}
+.scroll-fab:hover { background: var(--bg); box-shadow: 0 4px 16px rgba(0,0,0,0.15); }
+.fab-fade-enter-active, .fab-fade-leave-active { transition: opacity 0.2s, transform 0.2s; }
+.fab-fade-enter-from, .fab-fade-leave-to { opacity: 0; transform: translateX(-50%) translateY(6px); }
+
+/* ── Projects panel (right) ── */
+.projects-panel {
+    width: 268px;
+    flex-shrink: 0;
+    border-left: 1px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+.proj-panel-head {
+    display: flex;
+    align-items: baseline;
+    gap: 5px;
+    padding: 18px 16px 14px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+}
+.proj-panel-title {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.2px;
+}
+.proj-panel-count {
+    font-size: 12.5px;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+.proj-panel-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 6px 8px;
+}
+.proj-panel-list::-webkit-scrollbar { width: 4px; }
+.proj-panel-list::-webkit-scrollbar-track { background: transparent; }
+.proj-panel-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+.proj-panel-empty {
+    font-size: 13px;
+    color: var(--text-light);
+    text-align: center;
+    padding: 32px 16px;
+}
+.proj-panel-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 10px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.1s;
+    margin-bottom: 1px;
+}
+.proj-panel-item:hover { background: var(--bg); }
+.proj-panel-info { flex: 1; min-width: 0; }
+.proj-panel-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 2px;
+}
+.proj-panel-desc {
+    font-size: 11.5px;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-transform: capitalize;
+}
+.proj-panel-dot {
     width: 7px;
     height: 7px;
     border-radius: 50%;
-    background: var(--text-muted);
-    animation: thinking-bounce 1.4s ease-in-out infinite;
     flex-shrink: 0;
 }
+.dot-active    { background: #00BA7C; }
+.dot-planning  { background: #94A3B8; }
+.dot-on_hold   { background: #F59E0B; }
+.dot-completed { background: #3B82F6; }
+.dot-archived  { background: #CBD5E1; }
 
-.thinking-text {
-    animation: thinking-breathe 1.8s ease-in-out infinite;
+/* Skeleton */
+.proj-sk-item {
+    padding: 10px;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 2px;
 }
+@keyframes shimmer {
+    0%   { background-position: -300px 0; }
+    100% { background-position:  300px 0; }
+}
+.sk-line {
+    background: linear-gradient(90deg, var(--bg) 25%, var(--border) 50%, var(--bg) 75%);
+    background-size: 300px 100%;
+    animation: shimmer 1.4s ease-in-out infinite;
+    border-radius: 4px;
+}
+.sk-proj-title { height: 12px; width: 75%; }
+.sk-proj-sub   { height: 10px; width: 50%; }
 
-@keyframes thinking-bounce {
-    0%,
-    100% {
-        transform: translateY(0);
-        opacity: 1;
-    }
-    50% {
-        transform: translateY(-3px);
-        opacity: 0.5;
-    }
-}
-
-@keyframes thinking-breathe {
-    0%,
-    100% {
-        opacity: 1;
-    }
-    50% {
-        opacity: 0.55;
-    }
-}
-
-.thinking-fade-enter-active,
-.thinking-fade-leave-active {
-    transition:
-        opacity 0.25s ease,
-        transform 0.25s ease;
-}
-.thinking-fade-enter-from,
-.thinking-fade-leave-to {
-    opacity: 0;
-    transform: translateY(4px);
+@media (max-width: 768px) {
+    .action-grid { grid-template-columns: 1fr; }
+    .welcome-title { font-size: 26px; }
+    .projects-panel { display: none; }
 }
 </style>
