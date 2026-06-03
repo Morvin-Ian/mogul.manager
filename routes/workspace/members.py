@@ -19,8 +19,8 @@ from schemas.workspace.collaboration import (
 )
 from services.auth import CurrentUser
 from services.workspace.collaboration import CollaborationService
-from utils.email import send_invite_email
 from services.workspace.workspaces import WorkspaceService
+from utils.email import send_invite_email
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +78,9 @@ async def list_members(
     return await collab.list_members(workspace.id)
 
 
-@router.post("/invite", response_model=InvitationResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/invite", response_model=InvitationResponse, status_code=status.HTTP_201_CREATED
+)
 async def invite_member(
     workspace_id: str,
     body: InviteRequest,
@@ -219,11 +221,16 @@ async def get_invitation_info(
         role=invitation.role.value,
         status=invitation.status.value,
         expires_at=invitation.expires_at,
-        workspace={"id": workspace.id if workspace else None, "title": workspace.title if workspace else None},
+        workspace={
+            "id": workspace.id if workspace else None,
+            "title": workspace.title if workspace else None,
+        },
     )
 
 
-@invitations_router.post("/{token}/accept", response_model=AcceptResponse, status_code=status.HTTP_200_OK)
+@invitations_router.post(
+    "/{token}/accept", response_model=AcceptResponse, status_code=status.HTTP_200_OK
+)
 async def accept_invitation(
     token: str,
     current_user: CurrentUser,

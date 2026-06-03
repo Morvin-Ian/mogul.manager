@@ -4,13 +4,14 @@ from datetime import datetime
 from enum import Enum
 from typing import TYPE_CHECKING
 
-from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, String, Text
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, String, Text, inspect
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from models.base import TimestampedModel
 
 if TYPE_CHECKING:
+    from .plans import Plan
     from .tasks import Task
     from .users import User
     from .workspaces import Workspace
@@ -52,12 +53,16 @@ class Project(TimestampedModel):
         back_populates="project",
         cascade="all, delete-orphan",
     )
+    plans: Mapped[list["Plan"]] = relationship(
+        "Plan",
+        back_populates="project",
+        cascade="all, delete-orphan",
+    )
 
     @property
     def workspace_uuid(self) -> str | None:
         try:
-            from sqlalchemy import inspect as _i
-            if 'workspace' in _i(self).unloaded:
+            if 'workspace' in inspect(self).unloaded:
                 return None
         except Exception:
             pass
@@ -66,8 +71,7 @@ class Project(TimestampedModel):
     @property
     def workspace_title(self) -> str | None:
         try:
-            from sqlalchemy import inspect as _i
-            if 'workspace' in _i(self).unloaded:
+            if 'workspace' in inspect(self).unloaded:
                 return None
         except Exception:
             pass

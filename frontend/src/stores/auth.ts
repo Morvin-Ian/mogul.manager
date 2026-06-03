@@ -84,6 +84,12 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = updated
   }
 
+  async function unlinkGoogle() {
+    const updated = await post<{ message: string }>('/auth/google/unlink', {})
+    await fetchUser()
+    return updated
+  }
+
   async function deleteAccount() {
     if (!user.value) return
     await del<void>(`/users/${user.value.id}`)
@@ -113,6 +119,7 @@ export const useAuthStore = defineStore('auth', () => {
     updateProfile,
     uploadProfilePicture,
     deleteProfilePicture,
+    unlinkGoogle,
     deleteAccount,
     logout,
   }

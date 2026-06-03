@@ -28,9 +28,24 @@
       </div>
     </div>
 
-    <div v-if="loading" class="review-loading">
-      <font-awesome-icon :icon="['fas', 'spinner']" spin />
-      Loading review tasks…
+    <!-- Skeleton grid while loading -->
+    <div v-if="loading" class="review-grid">
+      <div v-for="n in 6" :key="n" class="review-card sk-card">
+        <div class="rc-head">
+          <div class="sk sk-chip"></div>
+          <div class="sk-assignee-row">
+            <div class="sk sk-avatar-sm"></div>
+            <div class="sk sk-name"></div>
+          </div>
+        </div>
+        <div class="sk sk-title-line"></div>
+        <div class="sk sk-body-line"></div>
+        <div class="sk sk-body-line sk-body-short"></div>
+        <div class="sk-footer-row">
+          <div class="sk sk-footer-chip"></div>
+          <div class="sk sk-footer-chip"></div>
+        </div>
+      </div>
     </div>
 
     <div v-else-if="visibleTasks.length === 0" class="review-empty">
@@ -196,7 +211,7 @@ const GRADIENTS = [
   'linear-gradient(135deg,#10B981,#059669)',
   'linear-gradient(135deg,#F59E0B,#D97706)',
   'linear-gradient(135deg,#EF4444,#DC2626)',
-  'linear-gradient(135deg,#EC4899,#DB2777)',
+  'linear-gradient(135deg,#0D9488,#0891B2)',
 ]
 function gradient(name: string): string {
   let h = 0
@@ -312,15 +327,25 @@ onMounted(async () => {
   font-weight: 500;
 }
 
-/* ── Loading / empty ── */
-.review-loading {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--text-muted);
-  font-size: 14px;
-  padding: 40px 0;
+/* ── Skeleton ── */
+@keyframes sk-shimmer { 0%{background-position:-600px 0} 100%{background-position:600px 0} }
+.sk {
+  background: linear-gradient(90deg, var(--bg) 25%, var(--border) 50%, var(--bg) 75%);
+  background-size: 600px 100%;
+  animation: sk-shimmer 1.5s ease-in-out infinite;
+  border-radius: 4px;
+  flex-shrink: 0;
 }
+.sk-card { cursor: default; pointer-events: none; gap: 10px; display: flex; flex-direction: column; }
+.sk-chip         { height: 20px; width: 60px; border-radius: 99px; }
+.sk-assignee-row { display: flex; align-items: center; gap: 6px; }
+.sk-avatar-sm    { width: 24px; height: 24px; border-radius: 50%; }
+.sk-name         { height: 12px; width: 70px; }
+.sk-title-line   { height: 16px; width: 85%; margin-top: 4px; }
+.sk-body-line    { height: 12px; width: 100%; }
+.sk-body-short   { width: 65%; }
+.sk-footer-row   { display: flex; gap: 6px; margin-top: 4px; }
+.sk-footer-chip  { height: 18px; width: 72px; border-radius: 99px; }
 
 .review-empty {
   display: flex;

@@ -10,10 +10,16 @@ from fastapi import (
     Query,
     UploadFile,
 )
+from fastapi.responses import Response
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.concurrency import run_in_threadpool as _rtp
 
 import models
+from config import settings
 from database import get_db
+from models.collaboration import MemberRole, WorkspaceMember
+from models.documents import DocumentChunk
 from schemas.documents import (
     DocumentResponse,
     DocumentUpdate,
@@ -28,6 +34,7 @@ from services.documents import (
     process_document_bg,
 )
 from services.documents.rag import RAGService
+from services.documents.service import _s3_client, _s3_download
 
 router = APIRouter(prefix="/api/documents", tags=["Documents"])
 
@@ -132,8 +139,6 @@ async def update_document(
     db: AsyncSession = Depends(get_db),
 ):
     """Reassign a document to a different project (or make it general)."""
-    from sqlalchemy import select
-
     svc = DocumentService(db)
     doc = await svc.get_by_uuid_any(document_id)
     if not doc:
@@ -150,8 +155,6 @@ async def update_document(
         project = proj_result.scalars().first()
         if not project:
             raise HTTPException(404, "Project not found")
-        from models.collaboration import MemberRole, WorkspaceMember
-
         member_result = await db.execute(
             select(WorkspaceMember).where(
                 WorkspaceMember.workspace_id == project.workspace_id,
@@ -186,3 +189,85 @@ async def search_documents(
         results=[SearchHit(**h) for h in hits],
         count=len(hits),
     )
+
+
+@router.get("/{document_id}/file")
+async def stream_document_file(
+    document_id: str,
+    current_user: CurrentUser,
+    db: AsyncSession = Depends(get_db),
+):
+    """Proxy the raw file from S3 with inline Content-Disposition for in-browser viewing."""
+    _MIME = {
+        "pdf": "application/pdf",
+        "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "txt": "text/plain; charset=utf-8",
+        "csv": "text/csv; charset=utf-8",
+    }
+
+    doc = await DocumentService(db).get_by_uuid(document_id, current_user.id)
+    if not doc:
+        raise HTTPException(404, "Document not found")
+    if not doc.storage_key:
+        raise HTTPException(404, "File not stored")
+
+    storage_key = doc.storage_key
+    content = await _rtp(lambda: _s3_download(storage_key))
+    media_type = _MIME.get(doc.file_type.value, "application/octet-stream")
+
+    return Response(
+        content=content,
+        media_type=media_type,
+        headers={
+            "Content-Disposition": f'inline; filename="{doc.original_filename}"',
+            "Content-Length": str(len(content)),
+            "Cache-Control": "private, max-age=3600",
+        },
+    )
+
+
+@router.get("/{document_id}/view-url")
+async def get_view_url(
+    document_id: str,
+    current_user: CurrentUser,
+    db: AsyncSession = Depends(get_db),
+):
+    """Return a short-lived presigned URL for in-browser viewing."""
+    doc = await DocumentService(db).get_by_uuid(document_id, current_user.id)
+    if not doc:
+        raise HTTPException(404, "Document not found")
+    if not doc.storage_key:
+        raise HTTPException(404, "File not available")
+
+    storage_key = doc.storage_key
+    url = await _rtp(
+        lambda: _s3_client().generate_presigned_url(
+            "get_object",
+            Params={"Bucket": settings.s3_bucket_name, "Key": storage_key},
+            ExpiresIn=3600,
+        )
+    )
+    return {
+        "url": url,
+        "file_type": doc.file_type.value,
+        "filename": doc.original_filename,
+    }
+
+
+@router.get("/{document_id}/chunks")
+async def get_document_chunks(
+    document_id: str,
+    current_user: CurrentUser,
+    db: AsyncSession = Depends(get_db),
+):
+    """Return all text chunks for a document (used by the in-app text viewer)."""
+    doc = await DocumentService(db).get_by_uuid(document_id, current_user.id)
+    if not doc:
+        raise HTTPException(404, "Document not found")
+
+    result = await db.execute(
+        select(DocumentChunk.chunk_index, DocumentChunk.content)
+        .where(DocumentChunk.document_id == doc.id)
+        .order_by(DocumentChunk.chunk_index)
+    )
+    return [{"index": r.chunk_index, "content": r.content} for r in result.all()]

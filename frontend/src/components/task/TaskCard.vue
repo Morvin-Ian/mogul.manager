@@ -91,7 +91,7 @@ const GRADIENTS = [
   'linear-gradient(135deg,#10B981,#059669)',
   'linear-gradient(135deg,#F59E0B,#D97706)',
   'linear-gradient(135deg,#EF4444,#DC2626)',
-  'linear-gradient(135deg,#EC4899,#DB2777)',
+  'linear-gradient(135deg,#0D9488,#0891B2)',
 ]
 function gradient(name: string): string {
   let h = 0

@@ -91,6 +91,14 @@ export const useDocumentStore = defineStore('documents', () => {
     return res.results
   }
 
+  async function getViewUrl(uuid: string): Promise<{ url: string; file_type: string; filename: string }> {
+    return get(`/documents/${uuid}/view-url`)
+  }
+
+  async function getChunks(uuid: string): Promise<{ index: number; content: string }[]> {
+    return get(`/documents/${uuid}/chunks`)
+  }
+
   // ── internals ───────────────────────────────────────────────────
 
   function _sync(doc: Document) {
@@ -114,5 +122,5 @@ export const useDocumentStore = defineStore('documents', () => {
     }
   }
 
-  return { documents, current, loading, error, fetchAll, fetchByWorkspace, fetchByProject, updateProjectId, fetchOne, upload, remove, reprocess, search }
+  return { documents, current, loading, error, fetchAll, fetchByWorkspace, fetchByProject, updateProjectId, fetchOne, upload, remove, reprocess, search, getViewUrl, getChunks }
 })

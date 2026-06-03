@@ -3,9 +3,7 @@
     <!-- Top row: folder icon + status -->
     <div class="card-top">
       <div class="card-folder" :style="{ color: pal.accent }">
-        <svg viewBox="0 0 20 20" fill="none" width="20" height="20">
-          <path d="M2 5.5A1.5 1.5 0 013.5 4h3.586a1 1 0 01.707.293L9.5 5.5H16.5A1.5 1.5 0 0118 7v8.5A1.5 1.5 0 0116.5 17h-13A1.5 1.5 0 012 15.5v-10z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
-        </svg>
+        <font-awesome-icon :icon="['fas', 'folder']" style="font-size:20px;" />
       </div>
       <div class="card-status-pill">
         <span class="status-dot" :style="{ background: workspace.is_archived ? '#8B98A5' : '#00BA7C' }"></span>
@@ -27,16 +25,11 @@
     <!-- Footer: date + arrow -->
     <div class="card-footer">
       <span class="card-date">
-        <svg viewBox="0 0 14 14" fill="none" width="11" height="11">
-          <rect x="1" y="2" width="12" height="10.5" rx="1.5" stroke="currentColor" stroke-width="1.2"/>
-          <path d="M1 5.5h12M5 1v2.5M9 1v2.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
-        </svg>
+        <font-awesome-icon :icon="['fas', 'calendar-days']" style="font-size:11px;" />
         {{ formatDate(workspace.created_at) }}
       </span>
       <span class="card-caret" :style="{ background: pal.initBg, color: pal.accent }">
-        <svg viewBox="0 0 12 12" fill="none" width="10" height="10">
-          <path d="M4 2l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
+        <font-awesome-icon :icon="['fas', 'chevron-right']" style="font-size:10px;" />
       </span>
     </div>
   </div>
@@ -51,7 +44,7 @@ const props = defineProps<{ workspace: Workspace }>()
 const { isDark } = useTheme()
 
 const PALETTE = [
-  { bg: '#FCE7F3', border: '#F9A8D4', accent: '#9D174D', initBg: '#F472B6' },
+  { bg: '#EEF2FF', border: '#C7D2FE', accent: '#3730A3', initBg: '#818CF8' },
   { bg: '#E6F4F3', border: '#A8D8D4', accent: '#1A7068', initBg: '#A8D8D4' },
   { bg: '#FDF3E7', border: '#F0CB96', accent: '#92400E', initBg: '#F0CB96' },
   { bg: '#FEF3C7', border: '#FDE68A', accent: '#92400E', initBg: '#F59E0B' },
@@ -59,7 +52,7 @@ const PALETTE = [
   { bg: '#E6F0FB', border: '#A8CAEE', accent: '#1E3A7A', initBg: '#A8CAEE' },
 ]
 const PALETTE_DARK = [
-  { bg: 'rgba(157,23,77,0.22)', border: 'rgba(249,168,212,0.38)', accent: '#F9A8D4', initBg: 'rgba(244,114,182,0.22)' },
+  { bg: 'rgba(55,48,163,0.15)', border: 'rgba(165,180,252,0.3)', accent: '#A5B4FC', initBg: 'rgba(129,140,248,0.2)' },
   { bg: 'rgba(26,112,104,0.15)', border: 'rgba(128,200,196,0.3)', accent: '#80C8C4', initBg: 'rgba(128,200,196,0.2)' },
   { bg: 'rgba(146,64,14,0.15)', border: 'rgba(240,203,150,0.3)', accent: '#F0CB96', initBg: 'rgba(240,203,150,0.2)' },
   { bg: 'rgba(146,64,14,0.22)', border: 'rgba(245,158,11,0.4)', accent: '#F59E0B', initBg: 'rgba(245,158,11,0.25)' },

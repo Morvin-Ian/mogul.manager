@@ -3,9 +3,6 @@ from __future__ import annotations
 import logging
 import time
 import uuid as _uuid_mod
-
-from utils.uuid import is_valid_uuid as _is_valid_uuid
-
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated
@@ -13,7 +10,8 @@ from typing import Annotated
 import boto3
 from fastapi import Depends
 from openai import AsyncOpenAI
-from sqlalchemy import delete as sa_delete, insert, select
+from sqlalchemy import and_, insert, or_, select
+from sqlalchemy import delete as sa_delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from starlette.concurrency import run_in_threadpool
@@ -21,10 +19,13 @@ from starlette.concurrency import run_in_threadpool
 import models
 from config import settings
 from database import AsyncSessionLocal, get_db
+from models.collaboration import WorkspaceMember
 from models.documents import Document, DocumentChunk, DocumentStatus, DocumentType
+from models.projects import Project
 from services.documents.chunker import chunk_text
 from services.documents.embeddings import embed_texts
 from services.documents.text_extractor import extract_text
+from utils.uuid import is_valid_uuid as _is_valid_uuid
 
 logger = logging.getLogger(__name__)
 
@@ -44,9 +45,10 @@ ALLOWED_CONTENT_TYPES: dict[str, DocumentType] = {
 }
 
 MAX_FILE_SIZE = 20 * 1024 * 1024
-CHUNK_SIZE = 500
-CHUNK_OVERLAP = 50
+CHUNK_SIZE = 1500
+CHUNK_OVERLAP = 150  # ~10 % of chunk size to preserve context at boundaries
 SUMMARY_PREVIEW_CHARS = 4000
+_PIPELINE_BATCH = 100  # chunks embedded + inserted per round-trip
 
 
 _WITH_PROJECT = lambda q: q.options(  # noqa: E731
@@ -59,9 +61,6 @@ class DocumentService:
         self.db = db
 
     async def list_documents(self, user_id: int) -> list[Document]:
-        from sqlalchemy import or_, and_
-        from models.projects import Project
-        from models.collaboration import WorkspaceMember
         accessible_project_ids = (
             select(Project.id)
             .join(WorkspaceMember, WorkspaceMember.workspace_id == Project.workspace_id)
@@ -80,8 +79,6 @@ class DocumentService:
         return list(result.scalars().all())
 
     async def list_by_project(self, project_id: int, user_id: int) -> list[Document]:
-        from models.collaboration import WorkspaceMember
-        from models.projects import Project
         is_member = await self.db.execute(
             select(WorkspaceMember.id)
             .join(Project, Project.workspace_id == WorkspaceMember.workspace_id)
@@ -96,9 +93,9 @@ class DocumentService:
         )
         return list(result.scalars().all())
 
-    async def list_by_workspace(self, workspace_id: int, user_id: int) -> list[Document]:
-        from models.collaboration import WorkspaceMember
-        from models.projects import Project
+    async def list_by_workspace(
+        self, workspace_id: int, user_id: int
+    ) -> list[Document]:
         accessible_project_ids = (
             select(Project.id)
             .join(WorkspaceMember, WorkspaceMember.workspace_id == Project.workspace_id)
@@ -227,9 +224,13 @@ async def _run_pipeline(db: AsyncSession, doc: Document) -> None:
 
         t = time.perf_counter()
         text, meta = await extract_text(content, doc.file_type.value)
+        del content  # release raw bytes — no longer needed after extraction
         logger.info(
             "[doc=%s] Text extraction %.2fs — %s words, %s pages",
-            doc.id, time.perf_counter() - t, meta.get("word_count"), meta.get("page_count"),
+            doc.id,
+            time.perf_counter() - t,
+            meta.get("word_count"),
+            meta.get("page_count"),
         )
 
         if not text.strip():
@@ -241,28 +242,44 @@ async def _run_pipeline(db: AsyncSession, doc: Document) -> None:
         t = time.perf_counter()
         chunks = chunk_text(text, chunk_size=CHUNK_SIZE, overlap=CHUNK_OVERLAP)
         doc.chunk_count = len(chunks)
-        logger.info("[doc=%s] Chunked into %s chunks %.3fs", doc.id, doc.chunk_count, time.perf_counter() - t)
-
-        t = time.perf_counter()
-        all_embeddings = await embed_texts(chunks)
-        logger.info("[doc=%s] Embedded %s chunks %.2fs", doc.id, len(chunks), time.perf_counter() - t)
-
-        t = time.perf_counter()
-        await db.execute(sa_delete(DocumentChunk).where(DocumentChunk.document_id == doc.id))
-        await db.execute(
-            insert(DocumentChunk),
-            [
-                {
-                    "document_id": doc.id,
-                    "chunk_index": idx,
-                    "content": chunk,
-                    "token_count": len(chunk.split()),
-                    "embedding": emb,
-                }
-                for idx, (chunk, emb) in enumerate(zip(chunks, all_embeddings))
-            ],
+        logger.info(
+            "[doc=%s] Chunked into %s chunks %.3fs",
+            doc.id,
+            doc.chunk_count,
+            time.perf_counter() - t,
         )
-        logger.info("[doc=%s] Persisted %s chunks %.2fs", doc.id, len(chunks), time.perf_counter() - t)
+
+        # Clear old chunks once before the batched insert loop.
+        await db.execute(
+            sa_delete(DocumentChunk).where(DocumentChunk.document_id == doc.id)
+        )
+
+        t = time.perf_counter()
+        for batch_start in range(0, len(chunks), _PIPELINE_BATCH):
+            batch = chunks[batch_start : batch_start + _PIPELINE_BATCH]
+            embeddings = await embed_texts(batch)
+            await db.execute(
+                insert(DocumentChunk),
+                [
+                    {
+                        "document_id": doc.id,
+                        "chunk_index": batch_start + idx,
+                        "content": chunk,
+                        "token_count": len(chunk.split()),
+                        "embedding": emb,
+                    }
+                    for idx, (chunk, emb) in enumerate(zip(batch, embeddings))
+                ],
+            )
+            await (
+                db.flush()
+            )  # write the batch; keeps the session from accumulating rows
+        logger.info(
+            "[doc=%s] Embedded+persisted %s chunks %.2fs",
+            doc.id,
+            len(chunks),
+            time.perf_counter() - t,
+        )
 
         t = time.perf_counter()
         doc.summary = await _generate_summary(text[:SUMMARY_PREVIEW_CHARS], doc.title)
@@ -270,7 +287,9 @@ async def _run_pipeline(db: AsyncSession, doc: Document) -> None:
 
         doc.status = DocumentStatus.ready
         doc.processed_at = datetime.now(UTC)
-        logger.info("[doc=%s] Pipeline complete in %.2fs", doc.id, time.perf_counter() - t0)
+        logger.info(
+            "[doc=%s] Pipeline complete in %.2fs", doc.id, time.perf_counter() - t0
+        )
 
     except Exception as exc:
         logger.error("[doc=%s] Pipeline failed: %s", doc.id, exc, exc_info=True)
@@ -312,13 +331,19 @@ async def _generate_summary(text_preview: str, title: str) -> str:
         return ""
 
 
+_s3_singleton: "boto3.client | None" = None
+
+
 def _s3_client():
-    return boto3.client(
-        "s3",
-        endpoint_url=settings.s3_endpoint_url,
-        aws_access_key_id=settings.s3_access_key_id.get_secret_value(),
-        aws_secret_access_key=settings.s3_secret_access_key.get_secret_value(),
-    )
+    global _s3_singleton
+    if _s3_singleton is None:
+        _s3_singleton = boto3.client(
+            "s3",
+            endpoint_url=settings.s3_endpoint_url,
+            aws_access_key_id=settings.s3_access_key_id.get_secret_value(),
+            aws_secret_access_key=settings.s3_secret_access_key.get_secret_value(),
+        )
+    return _s3_singleton
 
 
 def _s3_upload(content: bytes, key: str) -> None:

@@ -1,11 +1,6 @@
 <template>
   <div class="task-board">
     <div class="board-topbar">
-      <div class="board-topbar-left">
-        <font-awesome-icon :icon="['fas', 'table-columns']" class="board-icon" />
-        <span class="board-label">Board</span>
-        <span class="board-total">{{ taskStore.tasks.length }}</span>
-      </div>
       <button class="new-task-btn" :style="{ background: btnBg, color: btnColor }" @click="showModal = true">
         <font-awesome-icon :icon="['fas', 'plus']" />
         New Task
@@ -52,7 +47,7 @@
               :task="element"
               :can-drag="canDragTask(element)"
               :is-team="isTeam"
-              @select="selectedTask = $event"
+              @select="openTask($event)"
             />
           </template>
         </draggable>
@@ -64,19 +59,37 @@
       </div>
     </div>
 
+    <!-- Empty board nudge -->
+    <div v-if="!loading && totalTasks === 0" class="board-empty-nudge">
+      <span class="nudge-spark">✦</span>
+      <div class="nudge-text">
+        <strong>No tasks yet.</strong>
+        Let AI break this project into steps and create tasks automatically.
+      </div>
+      <button class="btn btn-sm nudge-plan-btn" @click="showPlanModal = true">Generate a plan</button>
+      <button class="btn btn-sm btn-ghost" @click="showModal = true">Add task manually</button>
+    </div>
+
     <TaskModal
       v-if="showModal"
       :project-id="projectId"
       @close="showModal = false"
       @saved="onTaskCreated"
     />
+
+    <CreatePlanModal
+      v-if="showPlanModal"
+      :project-id="projectId"
+      @close="showPlanModal = false"
+      @created="showPlanModal = false"
+    />
     <TaskDrawer
       v-if="selectedTask"
       :task="selectedTask"
       :workspace-id="workspaceId ?? null"
       :project-id="projectId"
-      @close="selectedTask = null"
-      @deleted="selectedTask = null; loadTasks()"
+      @close="closeTask"
+      @deleted="closeTask(); loadTasks()"
       @updated="onTaskUpdated"
     />
   </div>
@@ -86,6 +99,7 @@
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import draggable from 'vuedraggable'
 import { useTaskStore } from '../../stores/tasks'
+import { usePlanStore } from '../../stores/plans'
 import { useMembersStore } from '../../stores/members'
 import { useAuthStore } from '../../stores/auth'
 import { useTheme } from '../../composables/useTheme'
@@ -93,11 +107,22 @@ import type { Task, TaskStatus } from '../../types'
 import TaskCard from './TaskCard.vue'
 import TaskModal from './TaskModal.vue'
 import TaskDrawer from './TaskDrawer.vue'
+import CreatePlanModal from '../plan/CreatePlanModal.vue'
 import SkeletonBoard from '../common/SkeletonBoard.vue'
 
-const props = defineProps<{ projectId: number; workspaceId?: string }>()
+const props = defineProps<{
+  projectId: number
+  workspaceId?: string
+  openTaskUuid?: string | null
+}>()
+
+const emit = defineEmits<{
+  'task-open': [uuid: string]
+  'task-close': []
+}>()
 
 const taskStore = useTaskStore()
+const planStore = usePlanStore()
 const membersStore = useMembersStore()
 const auth = useAuthStore()
 const { isDark } = useTheme()
@@ -106,6 +131,7 @@ const btnBg = computed(() => isDark.value ? '#F7F9F9' : '#1c1c1e')
 const btnColor = computed(() => isDark.value ? '#15202B' : '#ffffff')
 
 const showModal = ref(false)
+const showPlanModal = ref(false)
 const loading = ref(false)
 const dropError = ref<string | null>(null)
 const selectedTask = ref<Task | null>(null)
@@ -113,7 +139,8 @@ const isSyncing = ref(false)
 
 const MEMBER_ALLOWED: Record<string, Set<TaskStatus>> = {
   todo:        new Set(['in_progress']),
-  in_progress: new Set(['review']),
+  in_progress: new Set(['todo', 'review']),
+  review:      new Set(['todo', 'in_progress']),
   blocked:     new Set(['todo', 'in_progress', 'review']),
 }
 
@@ -142,16 +169,42 @@ function syncFromStore() {
 
 watch(() => taskStore.tasks, syncFromStore, { deep: true, immediate: true })
 
+// Open a task and notify parent to update the URL
+function openTask(task: Task) {
+  selectedTask.value = task
+  emit('task-open', task.uuid)
+}
+
+function closeTask() {
+  selectedTask.value = null
+  emit('task-close')
+}
+
+// Respond to an externally-requested task UUID (from URL query param)
+watch(
+  [() => props.openTaskUuid, () => taskStore.tasks],
+  ([uuid]) => {
+    if (!uuid) { selectedTask.value = null; return }
+    if (selectedTask.value?.uuid === uuid) return
+    const match = taskStore.tasks.find(t => t.uuid === uuid)
+    if (match) selectedTask.value = match
+  },
+  { immediate: true },
+)
+
 const myRole = computed(() => membersStore.myMembership?.role ?? null)
 const isAdminOrOwner = computed(() => myRole.value === 'admin' || myRole.value === 'owner')
+const isSolo = computed(() => membersStore.members.length <= 1)
 const isTeam = computed(() => membersStore.members.length > 1)
+const totalTasks = computed(() => taskStore.tasks.length)
+
 const canDragAny = computed(() => {
-  if (isAdminOrOwner.value) return true
+  if (isAdminOrOwner.value || isSolo.value) return true
   return taskStore.tasks.some(t => t.assigned_to_id === auth.user?.id)
 })
 
 function canDragTask(task: Task): boolean {
-  if (isAdminOrOwner.value) return true
+  if (isAdminOrOwner.value || isSolo.value) return true
   return task.assigned_to_id === auth.user?.id
 }
 
@@ -204,8 +257,17 @@ async function onDragEnd(evt: any) {
   // No-op
   if (sameColumn && newIndex === oldIndex) return
 
+  // Block unassigned tasks in team workspaces — no exceptions
+  if (!isSolo.value && movedTask.assigned_to_id === null) {
+    showDropError(
+      'This task has no assignee. Assign it to a team member before moving it. ' +
+      'Tip: ask AI in Chat to assign tasks to the team automatically.'
+    )
+    syncFromStore(); return
+  }
+
   // Permission check — revert if not allowed
-  if (!isAdminOrOwner.value) {
+  if (!isAdminOrOwner.value && !isSolo.value) {
     if (movedTask.assigned_to_id !== auth.user?.id) {
       showDropError('You can only move tasks assigned to you.')
       syncFromStore(); return
@@ -220,8 +282,12 @@ async function onDragEnd(evt: any) {
   try {
     await taskStore.reorder(movedTask.uuid, newIndex, toStatus)
     await taskStore.fetchByProject(props.projectId)
-  } catch (e) {
-    console.error(e)
+    // If status changed, a linked plan step may have been synced — refresh plans
+    if (toStatus !== fromStatus) planStore.fetchByProject(props.projectId)
+  } catch (e: any) {
+    const msg = e?.response?.data?.detail ?? e?.message
+    if (msg) showDropError(msg)
+    else console.error(e)
     syncFromStore()
   } finally {
     isSyncing.value = false
@@ -234,25 +300,60 @@ async function onTaskCreated(data: Record<string, any>) {
 }
 
 function onTaskUpdated(updated: Task) {
+  const previous = taskStore.tasks.find((t) => t.id === updated.id)
+  const statusChanged = previous && previous.status !== updated.status
   const idx = taskStore.tasks.findIndex((t) => t.id === updated.id)
   if (idx !== -1) taskStore.tasks[idx] = updated
   selectedTask.value = updated
+  // If status changed, a linked plan step may have been synced — refresh plans
+  if (statusChanged) planStore.fetchByProject(props.projectId)
 }
 </script>
 
 <style scoped>
 .task-board { padding: 0; }
 
+/* ── Empty nudge ── */
+.board-empty-nudge {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.nudge-spark {
+  font-size: 16px;
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+.nudge-text {
+  flex: 1;
+  font-size: 13.5px;
+  color: var(--text-muted);
+  line-height: 1.5;
+  min-width: 200px;
+}
+.nudge-text strong { color: var(--text); font-weight: 700; }
+.nudge-plan-btn {
+  background: #1c1c1e;
+  color: #fff;
+  border-color: #1c1c1e;
+}
+.nudge-plan-btn:hover { background: #333; border-color: #333; }
+:global([data-theme="dark"]) .nudge-plan-btn { background: #F7F9F9; color: #15202B; border-color: #F7F9F9; }
+:global([data-theme="dark"]) .nudge-plan-btn:hover { background: #e0e0e0; }
+
 /* ── Board topbar ── */
 .board-topbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   margin-bottom: 18px;
 }
-.board-topbar-left { display: flex; align-items: center; gap: 8px; }
-.board-icon { color: var(--text-muted); font-size: 13px; }
-.board-label { font-size: 14px; font-weight: 700; color: var(--text); letter-spacing: -0.2px; }
 .board-total {
   background: var(--bg);
   border: 1.5px solid var(--border);

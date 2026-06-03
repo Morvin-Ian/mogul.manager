@@ -4,9 +4,7 @@
     <!-- Page heading -->
     <div class="profile-hdr">
       <button class="back-btn" @click="$router.back()">
-        <svg viewBox="0 0 20 20" fill="none" width="18" height="18">
-          <path d="M12 4L6 10l6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
+        <font-awesome-icon :icon="['fas', 'arrow-left']" />
       </button>
       <h1 class="profile-hdr-title">My Profile</h1>
     </div>
@@ -20,9 +18,7 @@
           <img v-if="auth.user?.profile_path" :src="auth.user.profile_path" class="pc-avatar-img" alt="Profile" />
           <div v-else class="pc-avatar-fallback">{{ initials }}</div>
           <label class="pc-camera-overlay" :class="{ loading: picLoading }" title="Change photo">
-            <svg v-if="!picLoading" viewBox="0 0 20 20" fill="currentColor" width="17" height="17">
-              <path fill-rule="evenodd" d="M4 5a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V7a2 2 0 00-2-2h-1.586a1 1 0 01-.707-.293l-1.121-1.121A2 2 0 0011.172 3H8.828a2 2 0 00-1.414.586L6.293 4.707A1 1 0 015.586 5H4zm6 9a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/>
-            </svg>
+            <font-awesome-icon v-if="!picLoading" :icon="['fas', 'camera']" />
             <span v-else class="spinner spinner-sm"></span>
             <input type="file" accept="image/*" @change="handlePicUpload" :disabled="picLoading" style="display:none" />
           </label>
@@ -31,7 +27,7 @@
         <!-- Identity -->
         <div class="pc-identity">
           <h2 class="pc-name">{{ auth.user?.username }}</h2>
-          <p class="pc-role">Member</p>
+          <p class="pc-role">{{ accountType }}</p>
         </div>
 
         <!-- Status -->
@@ -43,25 +39,16 @@
         <!-- Quick action buttons -->
         <div class="pc-actions">
           <button class="pc-action-btn" title="Email" @click="scrollTo('info-section')">
-            <svg viewBox="0 0 20 20" fill="none" width="17" height="17">
-              <path d="M2 5a2 2 0 012-2h12a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V5z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
-              <path d="M2 5l8 6 8-6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
+            <font-awesome-icon :icon="['fas', 'envelope']" />
           </button>
           <button class="pc-action-btn" title="Edit profile" @click="scrollTo('info-section')">
-            <svg viewBox="0 0 20 20" fill="none" width="17" height="17">
-              <path d="M13.586 3.586a2 2 0 112.828 2.828L7 15.828 3 17l1.172-4L13.586 3.586z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
+            <font-awesome-icon :icon="['fas', 'pen']" />
           </button>
           <button class="pc-action-btn" title="Security" @click="scrollTo('security-section')">
-            <svg viewBox="0 0 20 20" fill="none" width="17" height="17">
-              <path d="M5 9V7a5 5 0 0110 0v2M4 9h12a1 1 0 011 1v7a1 1 0 01-1 1H4a1 1 0 01-1-1v-7a1 1 0 011-1z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
+            <font-awesome-icon :icon="['fas', 'lock']" />
           </button>
           <button class="pc-action-btn" title="Danger zone" @click="scrollTo('danger-section')">
-            <svg viewBox="0 0 20 20" fill="none" width="17" height="17">
-              <path d="M10 18a8 8 0 100-16 8 8 0 000 16zM10 7v4M10 13h.01" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
+            <font-awesome-icon :icon="['fas', 'circle-exclamation']" />
           </button>
         </div>
 
@@ -103,38 +90,42 @@
                 <span class="info-value">{{ auth.user?.email }}</span>
               </div>
               <button class="info-icon-btn" title="Edit email">
-                <svg viewBox="0 0 16 16" fill="none" width="14" height="14">
-                  <path d="M1 3a1 1 0 011-1h12a1 1 0 011 1v9a1 1 0 01-1 1H2a1 1 0 01-1-1V3z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
-                  <path d="M1 3l7 5 7-5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
+                <font-awesome-icon :icon="['fas', 'envelope']" />
               </button>
             </div>
             <div class="info-row">
               <span class="info-dot"></span>
               <div class="info-content">
                 <span class="info-label">Account Type</span>
-                <span class="info-value">Free Member</span>
+                <span class="info-value">Free Plan</span>
               </div>
               <button class="info-icon-btn" title="Info">
-                <svg viewBox="0 0 16 16" fill="none" width="14" height="14">
-                  <circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.4"/>
-                  <path d="M8 7v4M8 5h.01" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
-                </svg>
+                <font-awesome-icon :icon="['fas', 'circle-info']" />
               </button>
             </div>
             <div class="info-row no-border">
-              <span class="info-dot"></span>
+              <span class="info-dot" :style="auth.user?.google_id ? 'background:#00BA7C' : ''"></span>
               <div class="info-content">
-                <span class="info-label">Google Linked</span>
-                <span class="info-value">{{ auth.user?.google_id ? 'Yes' : 'Not linked' }}</span>
+                <span class="info-label">Google Account</span>
+                <span class="info-value">{{ auth.user?.google_id ? 'Linked' : 'Not linked' }}</span>
               </div>
-              <button class="info-icon-btn" title="Account">
-                <svg viewBox="0 0 16 16" fill="none" width="14" height="14">
-                  <circle cx="8" cy="5" r="3" stroke="currentColor" stroke-width="1.4"/>
-                  <path d="M2 14c0-3.314 2.686-6 6-6s6 2.686 6 6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
-                </svg>
+              <button v-if="!auth.user?.google_id" class="info-action-btn" :disabled="googleLoading" title="Link your Google account" @click="linkGoogle">
+                <span v-if="googleLoading" class="spinner spinner-sm"></span>
+                <font-awesome-icon v-else :icon="['fab', 'google']" />
+                Link Google
               </button>
+              <div v-else class="google-linked-wrap">
+                <span class="info-linked-badge">
+                  <font-awesome-icon :icon="['fab', 'google']" />
+                  Connected
+                </span>
+                <button class="info-unlink-btn" :disabled="googleLoading" title="Unlink Google account" @click="unlinkGoogle">
+                  <span v-if="googleLoading" class="spinner spinner-sm"></span>
+                  <font-awesome-icon v-else :icon="['fas', 'xmark']" />
+                </button>
+              </div>
             </div>
+            <p v-if="googleError" class="form-error" style="margin: 0 24px 12px;">{{ googleError }}</p>
           </div>
 
           <div class="card-sep"></div>
@@ -173,9 +164,7 @@
                 <span class="info-value">Update your account password</span>
               </div>
               <button class="info-icon-btn" title="Change password">
-                <svg viewBox="0 0 16 16" fill="none" width="14" height="14">
-                  <path d="M4 7V5a4 4 0 118 0v2M3 7h10a1 1 0 011 1v6a1 1 0 01-1 1H3a1 1 0 01-1-1V8a1 1 0 011-1z" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
+                <font-awesome-icon :icon="['fas', 'lock']" />
               </button>
             </div>
           </div>
@@ -254,6 +243,7 @@ const auth = useAuthStore()
 const router = useRouter()
 
 const initials = computed(() => (auth.user?.username ?? '').slice(0, 2).toUpperCase())
+const accountType = computed(() => auth.user?.google_id ? 'Google Account' : 'Standard Account')
 
 function scrollTo(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -272,6 +262,25 @@ function syncProfile() {
 }
 onMounted(syncProfile)
 watch(() => auth.user, syncProfile)
+
+const googleLoading = ref(false)
+const googleError = ref<string | null>(null)
+
+function linkGoogle() {
+  window.location.href = '/api/auth/google'
+}
+
+async function unlinkGoogle() {
+  googleError.value = null
+  googleLoading.value = true
+  try {
+    await auth.unlinkGoogle()
+  } catch (e) {
+    googleError.value = (e as Error).message
+  } finally {
+    googleLoading.value = false
+  }
+}
 
 async function handleProfileSave() {
   profileError.value = null
@@ -448,7 +457,7 @@ async function handleDeleteAccount() {
   width: 88px;
   height: 88px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #ECEBF5 0%, #C2BEE0 100%);
+  background: linear-gradient(135deg, #E2E8F0 0%, #CBD5E1 100%);
   color: #4A4676;
   display: flex;
   align-items: center;
@@ -541,8 +550,8 @@ async function handleDeleteAccount() {
   transition: background 0.12s, border-color 0.12s, color 0.12s;
 }
 .pc-action-btn:hover {
-  background: #ECEBF5;
-  border-color: #C2BEE0;
+  background: #F1F5F9;
+  border-color: #CBD5E1;
   color: #4A4676;
 }
 
@@ -666,10 +675,34 @@ async function handleDeleteAccount() {
   transition: background 0.12s, border-color 0.12s, color 0.12s;
 }
 .info-icon-btn:hover {
-  background: #ECEBF5;
-  border-color: #C2BEE0;
+  background: #F1F5F9;
+  border-color: #CBD5E1;
   color: #4A4676;
 }
+
+.google-linked-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.info-unlink-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: 1.5px solid var(--border);
+  background: #fff;
+  color: var(--text-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 11px;
+  transition: background 0.12s, color 0.12s;
+}
+.info-unlink-btn:hover { background: #F5ECEC; color: #682828; border-color: #D8BCBC; }
+.info-unlink-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* Separator */
 .card-sep {

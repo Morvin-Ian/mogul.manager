@@ -28,6 +28,7 @@ class UserPublic(BaseModel):
 
 class UserPrivate(UserPublic):
     email: EmailStr
+    google_id: str | None = None
 
 
 class Token(BaseModel):

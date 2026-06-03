@@ -13,7 +13,7 @@
             <font-awesome-icon :icon="['fas', 'xmark']" />
           </button>
           <div class="drawer-header-actions">
-            <button v-if="isAdmin" class="hdr-btn" :class="{ 'hdr-btn--active': editMode }" @click="editMode = !editMode">
+            <button v-if="canEdit" class="hdr-btn" :class="{ 'hdr-btn--active': editMode }" @click="editMode = !editMode">
               <font-awesome-icon :icon="['fas', 'pen']" />
               {{ editMode ? 'Editing' : 'Edit' }}
             </button>
@@ -288,6 +288,10 @@ const isAdmin = computed(() => {
   return role === 'owner' || role === 'admin'
 })
 
+// Solo workspace = only one member → no restrictions, everyone can edit
+const isSolo = computed(() => membersStore.members.length <= 1)
+const canEdit = computed(() => isAdmin.value || isSolo.value)
+
 interface DrawerForm {
   title: string
   description: string
@@ -325,7 +329,8 @@ function statusLabel(s: TaskStatus) { return STATUS_LABELS[s] ?? s }
 
 const MEMBER_ALLOWED: Record<string, Set<TaskStatus>> = {
   todo:        new Set(['in_progress']),
-  in_progress: new Set(['review']),
+  in_progress: new Set(['todo', 'review']),
+  review:      new Set(['todo', 'in_progress']),
   blocked:     new Set(['todo', 'in_progress', 'review']),
 }
 
@@ -348,7 +353,7 @@ const GRADIENTS = [
   'linear-gradient(135deg, #10B981, #059669)',
   'linear-gradient(135deg, #F59E0B, #D97706)',
   'linear-gradient(135deg, #EF4444, #DC2626)',
-  'linear-gradient(135deg, #EC4899, #DB2777)',
+  'linear-gradient(135deg, #0D9488, #0891B2)',
 ]
 
 function memberGradient(name: string): string {

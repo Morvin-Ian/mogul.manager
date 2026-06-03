@@ -158,9 +158,20 @@ async function goToChat() {
 .fab-icon { font-size: 13px; }
 .fab-label { letter-spacing: -0.2px; }
 
-/* Dark mode FAB */
-:global([data-theme="dark"]) .ai-fab { background: #F7F9F9; color: #15202B; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
-:global([data-theme="dark"]) .ai-fab:hover { box-shadow: 0 8px 28px rgba(0,0,0,0.6); }
+/* Dark mode FAB — !important needed because scoped rules compile after
+   :global() rules and would otherwise win at equal specificity */
+:global([data-theme="dark"]) .ai-fab {
+  background: #F7F9F9 !important;
+  color: #15202B !important;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5) !important;
+}
+:global([data-theme="dark"]) .ai-fab:hover {
+  background: #E1E4E7 !important;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.6) !important;
+}
+:global([data-theme="dark"]) .ai-fab--open {
+  background: #D4D7DA !important;
+}
 
 /* Panel */
 .ai-fab-overlay {
@@ -205,7 +216,7 @@ async function goToChat() {
 }
 .fab-send:disabled { opacity: 0.35; cursor: not-allowed; }
 .fab-send:not(:disabled):hover { opacity: 0.82; }
-:global([data-theme="dark"]) .fab-send { background: #F7F9F9; color: #15202B; }
+:global([data-theme="dark"]) .fab-send { background: #F7F9F9 !important; color: #15202B !important; }
 
 .fab-prompts { display: flex; flex-direction: column; gap: 5px; }
 .fab-prompt-chip {

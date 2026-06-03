@@ -53,6 +53,14 @@
     <!-- Project creation modal -->
     <ProjectForm v-if="showProjectForm" @close="showProjectForm = false" @saved="handleProjectSaved" />
 
+    <!-- Post-creation plan prompt -->
+    <CreatePlanModal
+      v-if="newProjectIdForPlan"
+      :project-id="newProjectIdForPlan"
+      @close="newProjectIdForPlan = null"
+      @created="newProjectIdForPlan = null"
+    />
+
     <!-- Workspace create / edit modal -->
     <WorkspaceForm
       v-if="showWorkspaceForm"
@@ -74,6 +82,7 @@ import { get } from '../stores/client'
 import type { Task, Project, Workspace } from '../types'
 import ProjectForm from '../components/project/ProjectForm.vue'
 import WorkspaceForm from '../components/workspace/WorkspaceForm.vue'
+import CreatePlanModal from '../components/plan/CreatePlanModal.vue'
 
 import TasksPanel from '../components/dashboard/TasksPanel.vue'
 import ProjectsOverview from '../components/dashboard/ProjectsOverview.vue'
@@ -91,6 +100,7 @@ const auth = useAuthStore()
 const loading = ref(false)
 const searchQuery = ref('')
 const showProjectForm = ref(false)
+const newProjectIdForPlan = ref<number | null>(null)
 const showWorkspaceForm = ref(false)
 const editingWorkspace = ref<Workspace | null>(null)
 const allProjects = ref<Project[]>([])
@@ -159,9 +169,10 @@ async function handleProjectSaved(data: Record<string, any>) {
     const ws = await workspaceStore.create({ title: 'My Projects', description: null })
     wsId = ws.id
   }
-  await projectStore.create({ ...data, workspace_id: wsId } as any)
+  const project = await projectStore.create({ ...data, workspace_id: wsId } as any)
   showProjectForm.value = false
   await loadAllData()
+  newProjectIdForPlan.value = project.id   // trigger plan prompt
 }
 </script>
 

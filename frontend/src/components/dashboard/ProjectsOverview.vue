@@ -102,7 +102,7 @@ import type { Project } from '../../types'
 const props = defineProps<{ projects: Project[] }>()
 
 const PROJECT_COLORS = [
-  '#F59E0B', '#6B7280', '#EC4899', '#6366F1',
+  '#F59E0B', '#6B7280', '#0D9488', '#6366F1',
   '#10B981', '#EF4444', '#F97316', '#3B82F6',
 ]
 

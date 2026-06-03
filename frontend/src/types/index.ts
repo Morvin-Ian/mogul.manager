@@ -211,7 +211,6 @@ export interface Document {
   created_at: string
   processed_at: string | null
   workspace_id?: number | null
-  project_id?: number | null
   workspace_title?: string | null
   project_title?: string | null
 }
@@ -266,6 +265,73 @@ export interface AcceptInviteResponse {
   user_id: number
   role: MemberRole
   joined_at: string
+}
+
+// ── Plans ────────────────────────────────────────────────────────────────────
+
+export type PlanStatus = 'draft' | 'active' | 'completed' | 'cancelled'
+export type StepStatus = 'pending' | 'in_progress' | 'completed' | 'skipped'
+export type StepPriority = 'low' | 'medium' | 'high' | 'urgent'
+
+export interface PlanStep {
+  id: number
+  uuid: string
+  plan_id: number
+  title: string
+  description: string | null
+  step_order: number
+  priority: StepPriority
+  status: StepStatus
+  dependencies: number[] | null
+  linked_task_id: number | null
+  linked_task_uuid: string | null
+  linked_task_title: string | null
+  agent_notes: string | null
+  warning?: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface Plan {
+  id: number
+  uuid: string
+  project_id: number
+  project_title: string | null
+  user_id: number
+  title: string
+  description: string | null
+  status: PlanStatus
+  steps: PlanStep[]
+  created_at: string
+  updated_at: string
+}
+
+export interface PlanCreate {
+  title: string
+  description?: string | null
+  project_id: number
+}
+
+export interface PlanUpdate {
+  title?: string
+  description?: string | null
+  status?: PlanStatus
+}
+
+export interface StepUpdate {
+  title?: string
+  description?: string | null
+  status?: StepStatus
+  priority?: StepPriority
+  linked_task_id?: number | null
+  agent_notes?: string | null
+}
+
+export interface StepCreate {
+  title: string
+  description?: string | null
+  priority?: StepPriority
+  step_order?: number
 }
 
 export interface InvitationInfo {

@@ -122,6 +122,15 @@ export function postForm<T>(endpoint: string, body: URLSearchParams): Promise<T>
   })
 }
 
+export async function fetchBlob(endpoint: string): Promise<Blob> {
+  const token = localStorage.getItem('token')
+  const headers: Record<string, string> = {}
+  if (token) headers['Authorization'] = `Bearer ${token}`
+  const res = await fetch(`${BASE_URL}${endpoint}`, { headers, credentials: 'include' })
+  if (!res.ok) throw new Error(`Failed to fetch file: ${res.status}`)
+  return res.blob()
+}
+
 export function postFile<T>(endpoint: string, formData: FormData): Promise<T> {
   const token = localStorage.getItem('token')
   const headers: Record<string, string> = {}

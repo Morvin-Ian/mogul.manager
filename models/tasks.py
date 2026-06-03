@@ -4,7 +4,7 @@ from datetime import datetime
 from enum import Enum
 from typing import TYPE_CHECKING
 
-from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, Text, inspect
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -81,8 +81,7 @@ class Task(TimestampedModel):
     @property
     def project_uuid(self) -> str | None:
         try:
-            from sqlalchemy import inspect as _i
-            if 'project' in _i(self).unloaded:
+            if 'project' in inspect(self).unloaded:
                 return None
         except Exception:
             pass

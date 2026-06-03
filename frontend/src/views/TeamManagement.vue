@@ -1,6 +1,30 @@
 <template>
   <div class="team-page">
-    <Loading v-if="loading" label="Loading team…" />
+    <!-- Skeleton while loading -->
+    <template v-if="loading">
+      <div class="member-table">
+        <div class="table-head">
+          <span class="th th-member">Member</span>
+          <span class="th th-joined">Date joined</span>
+          <span class="th th-role">Role</span>
+          <span class="th th-actions"></span>
+        </div>
+        <div class="table-body">
+          <div v-for="n in 5" :key="n" class="table-row sk-row">
+            <div class="td td-member">
+              <div class="sk sk-avatar"></div>
+              <div class="sk-member-col">
+                <div class="sk sk-name"></div>
+                <div class="sk sk-email"></div>
+              </div>
+            </div>
+            <div class="td td-joined"><div class="sk sk-date"></div></div>
+            <div class="td td-role"><div class="sk sk-role"></div></div>
+            <div class="td td-actions"><div class="sk sk-action-btn"></div></div>
+          </div>
+        </div>
+      </div>
+    </template>
 
     <template v-else-if="workspace">
       <!-- Header -->
@@ -233,7 +257,6 @@ import { useMembersStore } from '../stores/members'
 import { useAuthStore } from '../stores/auth'
 import { useConfirm } from '../composables/useConfirm'
 import type { MemberRole } from '../types'
-import Loading from '../components/common/Loading.vue'
 import AiNudge from '../components/common/AiNudge.vue'
 
 const route = useRoute()
@@ -311,7 +334,7 @@ const AVATAR_GRADIENTS = [
   'linear-gradient(135deg,#10B981,#059669)',
   'linear-gradient(135deg,#F59E0B,#D97706)',
   'linear-gradient(135deg,#EF4444,#DC2626)',
-  'linear-gradient(135deg,#EC4899,#DB2777)',
+  'linear-gradient(135deg,#0D9488,#0891B2)',
 ]
 function avatarGradient(name: string): string {
   let hash = 0
@@ -803,4 +826,21 @@ async function handleRevoke(invitationId: number) {
   .controls-bar { flex-direction: column; align-items: stretch; }
   .search-wrap { max-width: 100%; }
 }
+
+/* ── Skeleton ── */
+@keyframes sk-shimmer { 0%{background-position:-600px 0} 100%{background-position:600px 0} }
+.sk {
+  background: linear-gradient(90deg, var(--bg) 25%, var(--border) 50%, var(--bg) 75%);
+  background-size: 600px 100%;
+  animation: sk-shimmer 1.5s ease-in-out infinite;
+  border-radius: 4px;
+}
+.sk-row { pointer-events: none; cursor: default; }
+.sk-avatar     { width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0; }
+.sk-member-col { display: flex; flex-direction: column; gap: 5px; flex: 1; }
+.sk-name       { height: 13px; width: 120px; }
+.sk-email      { height: 11px; width: 170px; }
+.sk-date       { height: 12px; width: 80px; }
+.sk-role       { height: 22px; width: 64px; border-radius: 99px; }
+.sk-action-btn { height: 28px; width: 80px; border-radius: 8px; }
 </style>

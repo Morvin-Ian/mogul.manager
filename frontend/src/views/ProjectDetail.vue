@@ -1,6 +1,41 @@
 <template>
   <div class="project-detail">
-    <Loading v-if="projectStore.loading" label="Loading project…" />
+    <!-- Skeleton while loading -->
+    <template v-if="projectStore.loading">
+      <div class="sk-page">
+        <!-- Header skeleton -->
+        <div class="sk-header">
+          <div class="sk sk-back"></div>
+          <div class="sk-head-row">
+            <div class="sk sk-h1"></div>
+            <div class="sk sk-pill"></div>
+          </div>
+          <div class="sk-meta-row">
+            <div class="sk sk-meta-chip"></div>
+            <div class="sk sk-meta-chip"></div>
+            <div class="sk sk-meta-chip sk-meta-wide"></div>
+          </div>
+        </div>
+        <!-- Tabs skeleton -->
+        <div class="sk-tabs-row">
+          <div v-for="n in 4" :key="n" class="sk sk-tab"></div>
+        </div>
+        <!-- Kanban columns skeleton -->
+        <div class="sk-board">
+          <div v-for="col in 4" :key="col" class="sk-col">
+            <div class="sk sk-col-title"></div>
+            <div v-for="card in [3,2,4,2][col-1]" :key="card" class="sk-task-card">
+              <div class="sk sk-task-line"></div>
+              <div class="sk sk-task-line sk-task-short"></div>
+              <div class="sk-task-foot">
+                <div class="sk sk-task-chip"></div>
+                <div class="sk sk-task-avatar"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </template>
 
     <template v-if="project">
       <div class="page-head">
@@ -90,6 +125,17 @@
             <rect x="13" y="1" width="0" height="0" rx="0"/>
           </svg>
           Board
+          <span v-if="taskStats.total" class="tab-count">{{ taskStats.total }}</span>
+        </button>
+        <button
+          class="proj-tab"
+          :class="{ active: activeTab === 'plan' }"
+          @click="activeTab = 'plan'"
+        >
+          <svg viewBox="0 0 14 14" fill="none" width="13" height="13">
+            <path d="M7 1l1.5 4H13l-3.5 2.5 1.5 4L7 9l-4 2.5 1.5-4L1 5h4.5L7 1z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>
+          </svg>
+          Plan
         </button>
         <button
           class="proj-tab"
@@ -107,7 +153,18 @@
 
       <!-- Board tab -->
       <div v-show="activeTab === 'board'">
-        <TaskBoard :project-id="project.id" :workspace-id="project.workspace_uuid" />
+        <TaskBoard
+          :project-id="project.id"
+          :workspace-id="project.workspace_uuid"
+          :open-task-uuid="openTaskUuid"
+          @task-open="onTaskOpen"
+          @task-close="onTaskClose"
+        />
+      </div>
+
+      <!-- Plan tab -->
+      <div v-show="activeTab === 'plan'">
+        <PlanPanel :project-id="project.id" />
       </div>
 
       <!-- Documents tab -->
@@ -194,7 +251,7 @@ import type { Project, ProjectStatus } from '../types'
 import TaskBoard from '../components/task/TaskBoard.vue'
 import AiNudge from '../components/common/AiNudge.vue'
 import ProjectForm from '../components/project/ProjectForm.vue'
-import Loading from '../components/common/Loading.vue'
+import PlanPanel from '../components/plan/PlanPanel.vue'
 
 const STATUS_LABELS: Record<ProjectStatus, string> = {
   planning: 'Planning', active: 'Active', on_hold: 'On Hold',
@@ -204,6 +261,15 @@ function statusLabel(s: ProjectStatus) { return STATUS_LABELS[s] ?? s }
 
 const route = useRoute()
 const router = useRouter()
+
+const openTaskUuid = computed(() => (route.query.task as string) || null)
+
+function onTaskOpen(uuid: string) {
+  if (route.query.task !== uuid) router.replace({ query: { task: uuid } })
+}
+function onTaskClose() {
+  if (route.query.task) router.replace({ query: {} })
+}
 const projectStore = useProjectStore()
 const membersStore = useMembersStore()
 const auth = useAuthStore()
@@ -211,7 +277,7 @@ const taskStore = useTaskStore()
 const docStore = useDocumentStore()
 const { confirm } = useConfirm()
 
-const activeTab = ref<'board' | 'docs'>('board')
+const activeTab = ref<'board' | 'plan' | 'docs'>('board')
 const projectDocs = ref<Document[]>([])
 
 // Document upload
@@ -629,4 +695,39 @@ async function handleDelete() {
 .ds-ready      { background: rgba(0,186,124,0.14); color: #00845A; }
 .ds-processing,.ds-pending { background: rgba(0,82,255,0.1); color: var(--primary); }
 .ds-failed     { background: rgba(207,32,47,0.1); color: #CF202F; }
+
+/* ── Skeleton ── */
+@keyframes sk-shimmer { 0%{background-position:-600px 0} 100%{background-position:600px 0} }
+.sk {
+  background: linear-gradient(90deg, var(--bg) 25%, var(--border) 50%, var(--bg) 75%);
+  background-size: 600px 100%;
+  animation: sk-shimmer 1.5s ease-in-out infinite;
+  border-radius: 4px;
+}
+.sk-page    { padding: 36px 40px 80px; }
+.sk-header  { margin-bottom: 28px; display: flex; flex-direction: column; gap: 10px; }
+.sk-back    { height: 24px; width: 100px; border-radius: 99px; }
+.sk-head-row{ display: flex; align-items: center; gap: 12px; margin-top: 4px; }
+.sk-h1      { height: 28px; width: 260px; }
+.sk-pill    { height: 22px; width: 80px; border-radius: 99px; }
+.sk-meta-row{ display: flex; gap: 8px; }
+.sk-meta-chip  { height: 20px; width: 70px; border-radius: 99px; }
+.sk-meta-wide  { width: 140px; }
+.sk-tabs-row{ display: flex; gap: 6px; margin-bottom: 24px; }
+.sk-tab     { height: 32px; width: 80px; border-radius: 8px; }
+.sk-board   { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+.sk-col     { display: flex; flex-direction: column; gap: 10px; }
+.sk-col-title { height: 18px; width: 80px; margin-bottom: 6px; }
+.sk-task-card {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.sk-task-line  { height: 13px; width: 100%; }
+.sk-task-short { width: 65%; }
+.sk-task-foot  { display: flex; align-items: center; justify-content: space-between; margin-top: 2px; }
+.sk-task-chip  { height: 16px; width: 50px; border-radius: 99px; }
+.sk-task-avatar{ width: 22px; height: 22px; border-radius: 50%; }
 </style>

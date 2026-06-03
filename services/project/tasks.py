@@ -1,7 +1,7 @@
 from typing import Annotated
 
 from fastapi import Depends
-from sqlalchemy import select
+from sqlalchemy import select, update as sa_update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
@@ -73,8 +73,6 @@ class TaskService:
         Move task to new_position within new_status column.
         Shifts surrounding tasks by ±1 so positions stay contiguous.
         """
-        from sqlalchemy import update as sa_update
-
         old_position = task.position
         old_status = task.status.value
 

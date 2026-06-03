@@ -188,7 +188,7 @@ function taskTitleFor(taskId: number): string {
   return props.tasks.find(t => t.id === taskId)?.title ?? 'Unknown task'
 }
 
-const COMMENT_COLORS = ['#F59E0B','#3B82F6','#10B981','#6366F1','#EC4899','#EF4444','#F97316']
+const COMMENT_COLORS = ['#F59E0B','#3B82F6','#10B981','#6366F1','#0D9488','#EF4444','#F97316']
 function commentColor(userId: number): string {
   return COMMENT_COLORS[userId % COMMENT_COLORS.length]
 }

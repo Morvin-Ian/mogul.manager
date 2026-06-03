@@ -358,7 +358,7 @@ a:hover { text-decoration: underline; }
 ══════════════════════════════════════════════════════════════ */
 [data-theme="dark"] {
   --primary:        #5B9BFF;
-  --primary-hover:  #7AAFFFF;
+  --primary-hover:  #7AAFFF;
   --primary-light:  rgba(91, 155, 255, 0.18);
   --primary-muted:  rgba(91, 155, 255, 0.12);
   --primary-border: rgba(91, 155, 255, 0.35);
@@ -1102,6 +1102,18 @@ html[data-theme="dark"] body {
 /* ══════════════════════════════════════════════════════════════
    DARK MODE POLISH — navy blue consistency + scroll flash fix
 ══════════════════════════════════════════════════════════════ */
+
+/* ── Strikethrough elements — make decoration subtle in dark mode ──
+   The browser UA gives <del>/<s> the same text colour as the strikethrough
+   line, so both render as the same hard bar on dark surfaces. Override to a
+   30%-opacity stripe so the intent is visible but not jarring. */
+[data-theme="dark"] del,
+[data-theme="dark"] s {
+  text-decoration: line-through;
+  text-decoration-color: rgba(110, 125, 140, 0.4);
+  text-decoration-thickness: 1px;
+  color: var(--text-light);
+}
 
 /* ── Custom scrollbars (Webkit) ── */
 [data-theme="dark"] ::-webkit-scrollbar          { width: 5px; height: 5px; }

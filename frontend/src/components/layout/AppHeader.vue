@@ -24,23 +24,16 @@
     <!-- Right: actions + user -->
     <div class="header-right">
       <button class="hdr-icon" title="Messages">
-        <svg viewBox="0 0 20 20" fill="currentColor" width="17" height="17">
-          <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"/>
-          <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"/>
-        </svg>
+        <font-awesome-icon :icon="['far', 'envelope']" style="font-size: 15px;" />
       </button>
       <button class="hdr-icon hdr-icon--badge" title="Notifications">
-        <svg viewBox="0 0 20 20" fill="currentColor" width="17" height="17">
-          <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z"/>
-        </svg>
+        <font-awesome-icon :icon="['far', 'bell']" style="font-size: 15px;" />
       </button>
 
       <router-link to="/settings" class="user-section" :title="auth.user?.username">
         <div class="user-avatar">
           <img v-if="auth.user?.profile_path" :src="auth.user.profile_path" class="avatar-img" :alt="auth.user?.username" />
-          <svg v-else viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
-            <path d="M12 12c2.7 0 5-2.3 5-5S14.7 2 12 2 7 4.3 7 7s2.3 5 5 5zm0 2c-3.3 0-10 1.7-10 5v1h20v-1c0-3.3-6.7-5-10-5z"/>
-          </svg>
+          <font-awesome-icon v-else :icon="['fas', 'user']" style="font-size: 14px;" />
         </div>
         <div class="user-text">
           <span class="user-name">{{ auth.user?.username ?? 'User' }}</span>

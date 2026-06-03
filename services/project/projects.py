@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 import models
+from models.collaboration import WorkspaceMember
 from database import get_db
 from utils.uuid import is_valid_uuid as _is_valid_uuid
 
@@ -75,10 +76,6 @@ class ProjectService:
     async def list_all_accessible(
         self, user_id: int, skip: int = 0, limit: int = 500
     ) -> list[models.Project]:
-        from sqlalchemy import or_
-
-        from models.collaboration import WorkspaceMember
-
         accessible_ws_ids = select(WorkspaceMember.workspace_id).where(
             WorkspaceMember.user_id == user_id
         )

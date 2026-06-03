@@ -3,19 +3,13 @@
     <div class="panel-hdr">
       <span class="panel-title">Workspaces</span>
       <button class="create-new-btn" @click="$emit('create')">
-        <svg viewBox="0 0 16 16" fill="none" width="11" height="11">
-          <path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-        </svg>
+        <font-awesome-icon :icon="['fas', 'plus']" />
         Create new
       </button>
     </div>
 
     <div v-if="workspaces.length === 0" class="ws-empty-state">
-      <svg viewBox="0 0 48 48" fill="none" width="36" height="36">
-        <rect x="8" y="6" width="32" height="36" rx="4" stroke="#C8C5DC" stroke-width="2"/>
-        <path d="M8 18h32M18 6v8M30 6v8" stroke="#C8C5DC" stroke-width="2" stroke-linecap="round"/>
-        <path d="M18 28h12M18 33h8" stroke="#C8C5DC" stroke-width="2" stroke-linecap="round"/>
-      </svg>
+      <font-awesome-icon :icon="['fas', 'folder-open']" style="font-size:32px;color:#C8C5DC;" />
       <p>No workspaces yet</p>
       <button class="create-new-btn" @click="$emit('create')">Get started</button>
     </div>
@@ -43,15 +37,11 @@
             >⋯</button>
             <div v-if="wsMenuOpenId === ws.id" class="ws-dropdown">
               <button class="ws-dd-item" @click.stop="handleEdit(ws)">
-                <svg viewBox="0 0 16 16" fill="none" width="13" height="13">
-                  <path d="M11.5 2.5a2.121 2.121 0 013 3L5 15H2v-3L11.5 2.5z" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
+                <font-awesome-icon :icon="['fas', 'pen']" />
                 Edit
               </button>
               <button class="ws-dd-item ws-dd-danger" @click.stop="handleDelete(ws.id)">
-                <svg viewBox="0 0 16 16" fill="none" width="13" height="13">
-                  <path d="M2 4h12M5 4V3a1 1 0 011-1h4a1 1 0 011 1v1M6 7v5M10 7v5M3 4l1 9a1 1 0 001 1h6a1 1 0 001-1l1-9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
+                <font-awesome-icon :icon="['fas', 'trash']" />
                 Delete
               </button>
             </div>
@@ -92,19 +82,19 @@ const { confirm } = useConfirm()
 const wsMenuOpenId = ref<number | null>(null)
 
 const WS_PALETTE = [
-  { bg: '#FCE7F3', border: '#F9A8D4', accent: '#9D174D', initBg: '#F472B6' },
+  { bg: '#EEF2FF', border: '#C7D2FE', accent: '#3730A3', initBg: '#818CF8' },
   { bg: '#D5EDF0', border: '#80C4C0', accent: '#1A7068', initBg: '#80C8C4' },
   { bg: '#F2E0CC', border: '#CFA070', accent: '#7A3410', initBg: '#D4A878' },
-  { bg: '#ECD8F8', border: '#C090DC', accent: '#6A2080', initBg: '#C090D8' },
+  { bg: '#F0F4F8', border: '#A0B8CC', accent: '#2A4A6A', initBg: '#8AAAC0' },
   { bg: '#D8F0D8', border: '#70C878', accent: '#1A5820', initBg: '#68CC80' },
   { bg: '#DCEAF8', border: '#90B8E0', accent: '#1A4090', initBg: '#A0C4EC' },
 ]
 
 const WS_PALETTE_DARK = [
-  { bg: 'rgba(157,23,77,0.22)', border: 'rgba(249,168,212,0.38)', accent: '#F9A8D4', initBg: 'rgba(244,114,182,0.22)' },
+  { bg: 'rgba(55,48,163,0.15)', border: 'rgba(165,180,252,0.3)', accent: '#A5B4FC', initBg: 'rgba(129,140,248,0.2)' },
   { bg: 'rgba(26,112,104,0.22)', border: 'rgba(128,200,196,0.38)', accent: '#80C8C4', initBg: 'rgba(128,200,196,0.22)' },
   { bg: 'rgba(122,52,16,0.22)', border: 'rgba(212,168,120,0.38)', accent: '#D4A878', initBg: 'rgba(212,168,120,0.22)' },
-  { bg: 'rgba(106,32,128,0.22)', border: 'rgba(192,144,216,0.38)', accent: '#C090D8', initBg: 'rgba(192,144,216,0.22)' },
+  { bg: 'rgba(42,74,106,0.22)', border: 'rgba(138,170,192,0.38)', accent: '#8AAAC0', initBg: 'rgba(138,170,192,0.22)' },
   { bg: 'rgba(26,88,32,0.22)', border: 'rgba(104,204,128,0.38)', accent: '#68CC80', initBg: 'rgba(104,204,128,0.22)' },
   { bg: 'rgba(26,64,144,0.22)', border: 'rgba(160,196,236,0.38)', accent: '#A0C4EC', initBg: 'rgba(160,196,236,0.22)' },
 ]

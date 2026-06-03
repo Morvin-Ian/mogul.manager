@@ -194,10 +194,9 @@ async def handle(name: str, args: dict, db: AsyncSession) -> str:
         task = await svc.get_by_id(task_id)
         if not task:
             return json.dumps({"error": f"Task {task_id} not found"})
-        from sqlalchemy import select as _select
         email = args["assigned_to_email"]
         user_result = await db.execute(
-            _select(models.User).where(models.User.email == email)
+            select(models.User).where(models.User.email == email)
         )
         user = user_result.scalars().first()
         if not user:

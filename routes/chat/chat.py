@@ -157,7 +157,9 @@ async def send_message(
         context = await service.get_context(conversation_id)
 
         agent = get_deepseek()
-        async for event in agent.stream_response(context, service.db, user_context):
+        async for event in agent.stream_response(
+            context, service.db, user_context, current_user.id
+        ):
             if event["type"] == "token":
                 collected.append(event["content"])
                 yield f"data: {json.dumps({'token': event['content']})}\n\n"

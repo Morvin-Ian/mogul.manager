@@ -12,6 +12,7 @@ from starlette.concurrency import run_in_threadpool
 try:
     import pytesseract
     from pdf2image import convert_from_bytes
+
     _OCR_AVAILABLE = True
 except ImportError:
     _OCR_AVAILABLE = False
@@ -57,7 +58,9 @@ def _extract_pdf(content: bytes) -> tuple[str, dict]:
 def _try_ocr(content: bytes) -> str:
     """Optional OCR via pytesseract + pdf2image. Returns empty string when unavailable."""
     if not _OCR_AVAILABLE:
-        logger.warning("OCR not available — install pytesseract and pdf2image for scanned PDF support")
+        logger.warning(
+            "OCR not available — install pytesseract and pdf2image for scanned PDF support"
+        )
         return ""
     try:
         images = convert_from_bytes(content, dpi=200)

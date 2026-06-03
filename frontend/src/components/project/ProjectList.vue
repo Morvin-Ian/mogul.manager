@@ -123,6 +123,14 @@
       @saved="onProjectSaved"
     />
 
+    <!-- Post-creation: plan prompt -->
+    <CreatePlanModal
+      v-if="showPlanModal && journeyProjectId"
+      :project-id="journeyProjectId"
+      @close="onPlanModalClose"
+      @created="onPlanCreated"
+    />
+
     <!-- Post-creation: document upload journey -->
     <Teleport to="body">
       <div v-if="showDocJourney" class="journey-overlay" @click.self="skipDocJourney">
@@ -168,6 +176,7 @@ import { useMembersStore } from '../../stores/members'
 import { useDocumentStore } from '../../stores/documents'
 import type { ProjectStatus } from '../../types'
 import ProjectForm from './ProjectForm.vue'
+import CreatePlanModal from '../plan/CreatePlanModal.vue'
 import SkeletonCard from '../common/SkeletonCard.vue'
 
 const props = defineProps<{ workspaceId: number }>()
@@ -179,6 +188,7 @@ const docStore = useDocumentStore()
 const showForm = ref(false)
 
 // Post-creation journey
+const showPlanModal = ref(false)
 const showDocJourney = ref(false)
 const journeyProjectTitle = ref('')
 const journeyProjectId = ref<number | null>(null)
@@ -203,10 +213,18 @@ function skipDocJourney() {
   showDocJourney.value = false
   docUploaded.value = false
   docFileName.value = ''
-  if (journeyProjectUuid.value) router.push(`/projects/${journeyProjectUuid.value}`)
+  showPlanModal.value = true        // offer plan prompt next
 }
 function goToProject() {
   showDocJourney.value = false
+  showPlanModal.value = true        // offer plan prompt next
+}
+function onPlanModalClose() {
+  showPlanModal.value = false
+  if (journeyProjectUuid.value) router.push(`/projects/${journeyProjectUuid.value}`)
+}
+function onPlanCreated() {
+  showPlanModal.value = false
   if (journeyProjectUuid.value) router.push(`/projects/${journeyProjectUuid.value}`)
 }
 

@@ -149,7 +149,7 @@ function initials(name: string): string {
 }
 
 const AVATAR_COLORS = [
-  '#2563EB', '#7C3AED', '#DB2777', '#D97706',
+  '#2563EB', '#7C3AED', '#0D9488', '#D97706',
   '#16A34A', '#0891B2', '#DC2626', '#9333EA',
 ]
 

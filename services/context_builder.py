@@ -2,6 +2,7 @@ import asyncio
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 import models
 from models.collaboration import WorkspaceMember
@@ -171,9 +172,6 @@ async def _fetch_active_tasks(user_id: int, db: AsyncSession) -> list[models.Tas
     Fetch in-progress / blocked / review tasks from ALL workspaces the user
     is a member of (not just workspaces they own).
     """
-    from models.collaboration import WorkspaceMember
-    from sqlalchemy.orm import selectinload
-
     accessible_ws_ids = (
         select(WorkspaceMember.workspace_id)
         .where(WorkspaceMember.user_id == user_id)

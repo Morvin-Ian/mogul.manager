@@ -7,7 +7,7 @@ from datetime import UTC, datetime, timedelta
 
 import httpx
 import jwt
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,7 +15,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import models
 from config import settings
 from database import get_db
-from services.auth import create_access_token, create_refresh_token, hash_password
+from services.auth import (
+    CurrentUser,
+    create_access_token,
+    create_refresh_token,
+    hash_password,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -144,7 +149,9 @@ async def google_callback(
     )
     refresh_token = create_refresh_token(data={"sub": str(user.id)})
 
-    response = RedirectResponse(url=f"{settings.frontend_url}/auth/callback?token={access_token}")
+    response = RedirectResponse(
+        url=f"{settings.frontend_url}/auth/callback?token={access_token}"
+    )
     response.set_cookie(
         key="refresh_token",
         value=refresh_token,
@@ -208,3 +215,16 @@ async def _unique_username(db: AsyncSession, base: str) -> str:
             return candidate
         candidate = f"{base}{suffix}"
         suffix += 1
+
+
+@router.post("/google/unlink", status_code=status.HTTP_200_OK)
+async def google_unlink(
+    current_user: CurrentUser,
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    if not current_user.google_id:
+        raise HTTPException(status_code=400, detail="No Google account is linked.")
+    current_user.google_id = None
+    await db.commit()
+    await db.refresh(current_user)
+    return {"message": "Google account unlinked successfully."}

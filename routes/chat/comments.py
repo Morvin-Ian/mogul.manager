@@ -17,9 +17,7 @@ router = APIRouter(
 
 
 async def _verify_task_ownership(task_id: int, user_id: int, db) -> None:
-    result = await db.execute(
-        select(models.Task).where(models.Task.id == task_id)
-    )
+    result = await db.execute(select(models.Task).where(models.Task.id == task_id))
     task = result.scalars().first()
     if not task:
         raise HTTPException(

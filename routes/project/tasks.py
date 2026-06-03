@@ -2,7 +2,7 @@ import logging
 from typing import Annotated
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
@@ -10,6 +10,7 @@ import models
 from config import settings
 from database import get_db
 from models.collaboration import MemberRole
+from models.plans import StepStatus
 from schemas.project.tasks import TaskCreate, TaskRead, TaskUpdate
 from services.auth import CurrentUser
 from services.project.tasks import TaskService
@@ -28,10 +29,44 @@ ASSIGNEE_EDITABLE_FIELDS = {"status", "actual_hours", "metadata_json"}
 
 # Status transitions a member (assignee) is allowed to make
 MEMBER_ALLOWED_TRANSITIONS: dict[str, set[str]] = {
-    "todo":        {"in_progress"},
-    "in_progress": {"review"},
-    "blocked":     {"todo", "in_progress", "review"},
+    "todo": {"in_progress"},
+    "in_progress": {"todo", "review"},
+    "review": {"todo", "in_progress"},
+    "blocked": {"todo", "in_progress", "review"},
 }
+
+
+async def _workspace_is_solo(workspace_id: int, db: AsyncSession) -> bool:
+    """Return True when the workspace has only one member (personal workspace)."""
+    result = await db.execute(
+        select(func.count())
+        .select_from(models.WorkspaceMember)
+        .where(models.WorkspaceMember.workspace_id == workspace_id)
+    )
+    return (result.scalar_one() or 0) <= 1
+
+
+async def _sync_step_from_task(
+    task: models.Task, new_status: str, db: AsyncSession
+) -> None:
+    """When a task status changes, push the equivalent status to any linked plan step."""
+    TASK_TO_STEP: dict[str, str] = {
+        "in_progress": "in_progress",
+        "completed": "completed",
+        "todo": "pending",
+    }
+    target = TASK_TO_STEP.get(new_status)
+    if not target:
+        return
+    result = await db.execute(
+        select(models.PlanStep).where(models.PlanStep.linked_task_id == task.id)
+    )
+    steps = result.scalars().all()
+    for step in steps:
+        if step.status.value != target:
+            step.status = StepStatus(target)
+    if steps:
+        await db.commit()
 
 
 async def _get_project_or_404(project_id: int, db: AsyncSession) -> models.Project:
@@ -58,9 +93,7 @@ async def _get_task_or_404(task_id: str, service: TaskService) -> models.Task:
 async def _resolve_assignee_email(data: dict, db: AsyncSession) -> dict:
     email = data.pop("assigned_to_email", None)
     if email:
-        result = await db.execute(
-            select(models.User).where(models.User.email == email)
-        )
+        result = await db.execute(select(models.User).where(models.User.email == email))
         user = result.scalars().first()
         if not user:
             raise HTTPException(
@@ -147,7 +180,9 @@ async def create_task(
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     project = await _get_project_or_404(task.project_id, db)
-    member = await collab.require_access(project.workspace_id, current_user.id, min_role="member")
+    member = await collab.require_access(
+        project.workspace_id, current_user.id, min_role="member"
+    )
 
     data = await _resolve_assignee_email(task.model_dump(exclude_unset=True), db)
 
@@ -179,12 +214,18 @@ async def list_tasks(
 ):
     if workspace_id is not None:
         await collab.require_access(workspace_id, current_user.id, min_role="member")
-        tasks = await service.list_by_workspace(workspace_id, status=status, skip=skip, limit=limit)
+        tasks = await service.list_by_workspace(
+            workspace_id, status=status, skip=skip, limit=limit
+        )
         return [_to_read(t) for t in tasks]
     if project_id is None:
-        raise HTTPException(status_code=400, detail="Either project_id or workspace_id is required")
+        raise HTTPException(
+            status_code=400, detail="Either project_id or workspace_id is required"
+        )
     project = await _get_project_or_404(project_id, db)
-    await collab.require_access(project.workspace_id, current_user.id, min_role="member")
+    await collab.require_access(
+        project.workspace_id, current_user.id, min_role="member"
+    )
     tasks = await service.list_by_project(project_id, skip=skip, limit=limit)
     return [_to_read(t) for t in tasks]
 
@@ -199,7 +240,9 @@ async def get_task(
 ):
     task = await _get_task_or_404(task_id, service)
     project = await _get_project_or_404(task.project_id, db)
-    await collab.require_access(project.workspace_id, current_user.id, min_role="member")
+    await collab.require_access(
+        project.workspace_id, current_user.id, min_role="member"
+    )
     return _to_read(task)
 
 
@@ -215,25 +258,42 @@ async def update_task(
 ):
     task = await _get_task_or_404(task_id, service)
     project = await _get_project_or_404(task.project_id, db)
-    member = await collab.require_access(project.workspace_id, current_user.id, min_role="member")
+    member = await collab.require_access(
+        project.workspace_id, current_user.id, min_role="member"
+    )
+    solo = await _workspace_is_solo(project.workspace_id, db)
 
     data = task_update.model_dump(exclude_unset=True)
 
-    if member.role == MemberRole.member:
-        # Regular members may only update their own assigned tasks
+    # Block status changes on unassigned tasks in team workspaces — no role exceptions
+    new_status_check = data.get("status")
+    if (
+        not solo
+        and task.assigned_to_id is None
+        and new_status_check
+        and new_status_check != task.status.value
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=(
+                "This task has no assignee. Assign it to a team member before changing its status. "
+                "Tip: ask AI in Chat to assign tasks to the team automatically."
+            ),
+        )
+
+    if not solo and member.role == MemberRole.member:
+        # Multi-member workspace: regular members may only update tasks assigned to them
         if task.assigned_to_id != current_user.id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="You can only update tasks assigned to you",
             )
-        # Restrict which fields they can change
         disallowed = set(data.keys()) - ASSIGNEE_EDITABLE_FIELDS
         if disallowed:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Members may only change: {', '.join(sorted(ASSIGNEE_EDITABLE_FIELDS))}",
             )
-        # Restrict which status transitions are allowed
         new_status = data.get("status")
         if new_status and new_status != task.status:
             allowed = MEMBER_ALLOWED_TRANSITIONS.get(task.status, set())
@@ -244,10 +304,17 @@ async def update_task(
                 )
 
     was_assigned_to = task.assigned_to_id
+    old_status = task.status.value
     data = await _resolve_assignee_email(data, db)
     updated = await service.update(task, data)
     if updated.assigned_to_id and updated.assigned_to_id != was_assigned_to:
         await _schedule_notification(bt, updated, current_user, db)
+
+    # Sync any linked plan step when status changed
+    new_status_val = data.get("status")
+    if new_status_val and new_status_val != old_status:
+        await _sync_step_from_task(updated, new_status_val, db)
+
     return _to_read(updated)
 
 
@@ -283,10 +350,35 @@ async def reorder_task(
 
     task = await _get_task_or_404(uuid, service)
     project = await _get_project_or_404(task.project_id, db)
-    await collab.require_access(project.workspace_id, current_user.id, min_role="member")
+    member = await collab.require_access(
+        project.workspace_id, current_user.id, min_role="member"
+    )
+    solo = await _workspace_is_solo(project.workspace_id, db)
 
+    # Block unassigned tasks in team workspaces — no role exceptions
+    if not solo and task.assigned_to_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=(
+                "This task has no assignee. Assign it to a team member before moving it. "
+                "Tip: ask AI in Chat to assign tasks to the team automatically."
+            ),
+        )
+
+    if not solo and member.role == MemberRole.member:
+        if task.assigned_to_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You can only move tasks assigned to you",
+            )
+
+    old_status = task.status.value
     target_status = new_status or task.status.value
     await service.reorder_task(task, int(new_position), target_status)
+
+    # Sync plan step if status changed via drag
+    if target_status != old_status:
+        await _sync_step_from_task(task, target_status, db)
 
 
 def _to_read(task: models.Task) -> TaskRead:

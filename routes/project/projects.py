@@ -1,7 +1,7 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import func, case, select
+from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import models
@@ -12,8 +12,15 @@ from services.auth import CurrentUser
 from services.project.projects import ProjectService
 from services.workspace.collaboration import CollaborationService
 
+router = APIRouter(
+    prefix="/api/projects",
+    tags=["Projects"],
+)
 
-async def _attach_task_counts(projects: list[models.Project], db: AsyncSession) -> list[ProjectRead]:
+
+async def _attach_task_counts(
+    projects: list[models.Project], db: AsyncSession
+) -> list[ProjectRead]:
     """Bulk-fetch task counts and inject them into ProjectRead objects."""
     ids = [p.id for p in projects]
     counts: dict[int, dict] = {}
@@ -23,25 +30,25 @@ async def _attach_task_counts(projects: list[models.Project], db: AsyncSession) 
                 models.Task.project_id,
                 func.count().label("task_count"),
                 func.sum(
-                    case((models.Task.status == models.TaskStatus.COMPLETED, 1), else_=0)
+                    case(
+                        (models.Task.status == models.TaskStatus.COMPLETED, 1), else_=0
+                    )
                 ).label("completed_count"),
             )
             .where(models.Task.project_id.in_(ids))
             .group_by(models.Task.project_id)
         )
         counts = {
-            row.project_id: {"task_count": row.task_count, "completed_count": row.completed_count}
+            row.project_id: {
+                "task_count": row.task_count,
+                "completed_count": row.completed_count,
+            }
             for row in rows.all()
         }
     return [
         ProjectRead.model_validate(p).model_copy(update=counts.get(p.id, {}))
         for p in projects
     ]
-
-router = APIRouter(
-    prefix="/api/projects",
-    tags=["Projects"],
-)
 
 
 async def _require_workspace_member(
@@ -93,9 +100,13 @@ async def list_projects(
     limit: int = Query(100, ge=1, le=500),
 ):
     if workspace_id is None:
-        projects = await service.list_all_accessible(current_user.id, skip=skip, limit=limit)
+        projects = await service.list_all_accessible(
+            current_user.id, skip=skip, limit=limit
+        )
     else:
-        await _require_workspace_member(workspace_id, current_user, collab, min_role="member")
+        await _require_workspace_member(
+            workspace_id, current_user, collab, min_role="member"
+        )
         projects = await service.list_by_workspace(workspace_id, skip=skip, limit=limit)
     return await _attach_task_counts(projects, db)
 
@@ -109,7 +120,9 @@ async def get_project(
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     project = await _get_project_or_404(project_id, service)
-    await _require_workspace_member(project.workspace_id, current_user, collab, min_role="member")
+    await _require_workspace_member(
+        project.workspace_id, current_user, collab, min_role="member"
+    )
     result = await _attach_task_counts([project], db)
     return result[0]
 

@@ -7,7 +7,34 @@
       </div>
     </div>
 
-    <Loading v-if="loading" label="Loading workspaces…" />
+    <!-- Skeleton table while loading -->
+    <template v-if="loading">
+      <div class="ws-table">
+        <div class="ws-table-head">
+          <span class="th th-workspace">Workspace</span>
+          <span class="th th-created">Created</span>
+          <span class="th th-role">Your role</span>
+          <span class="th th-actions"></span>
+        </div>
+        <div class="ws-table-body">
+          <div v-for="n in 4" :key="n" class="ws-row sk-row">
+            <div class="td td-workspace">
+              <div class="sk sk-avatar"></div>
+              <div class="sk-info-col">
+                <div class="sk sk-ws-name"></div>
+                <div class="sk sk-ws-desc"></div>
+              </div>
+            </div>
+            <div class="td td-created"><div class="sk sk-date"></div></div>
+            <div class="td td-role"><div class="sk sk-role"></div></div>
+            <div class="td td-actions">
+              <div class="sk sk-btn"></div>
+              <div class="sk sk-btn sk-btn-wide"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </template>
 
     <template v-else>
       <div v-if="workspaces.length === 0" class="empty-state">
@@ -80,7 +107,6 @@
 import { computed, onMounted, ref } from 'vue'
 import { useWorkspaceStore } from '../stores/workspaces'
 import { useAuthStore } from '../stores/auth'
-import Loading from '../components/common/Loading.vue'
 
 const workspaceStore = useWorkspaceStore()
 const auth = useAuthStore()
@@ -269,4 +295,22 @@ function formatDate(d: string) {
   .ws-row { grid-template-columns: 1fr; gap: 10px; }
   .td-created { display: none; }
 }
+
+/* ── Skeleton ── */
+@keyframes sk-shimmer { 0%{background-position:-600px 0} 100%{background-position:600px 0} }
+.sk {
+  background: linear-gradient(90deg, var(--bg) 25%, var(--border) 50%, var(--bg) 75%);
+  background-size: 600px 100%;
+  animation: sk-shimmer 1.5s ease-in-out infinite;
+  border-radius: 4px;
+}
+.sk-row { pointer-events: none; cursor: default; }
+.sk-avatar    { width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0; }
+.sk-info-col  { display: flex; flex-direction: column; gap: 5px; flex: 1; }
+.sk-ws-name   { height: 14px; width: 140px; }
+.sk-ws-desc   { height: 11px; width: 90px; }
+.sk-date      { height: 12px; width: 70px; }
+.sk-role      { height: 20px; width: 64px; border-radius: 99px; }
+.sk-btn       { height: 28px; width: 56px; border-radius: 8px; }
+.sk-btn-wide  { width: 110px; }
 </style>

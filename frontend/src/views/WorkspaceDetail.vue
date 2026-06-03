@@ -116,7 +116,41 @@
       </div>
     </template>
 
-    <Loading v-if="workspaceStore.loading" label="Loading workspace…" />
+    <!-- Skeleton while loading workspace detail -->
+    <template v-if="workspaceStore.loading">
+      <div class="sk-page">
+        <div class="sk sk-back"></div>
+        <div class="sk-head">
+          <div class="sk sk-avatar"></div>
+          <div class="sk-head-text">
+            <div class="sk sk-ws-title"></div>
+            <div class="sk sk-ws-desc"></div>
+          </div>
+        </div>
+        <div class="sk-actions-row">
+          <div class="sk sk-action-btn"></div>
+          <div class="sk sk-action-btn"></div>
+        </div>
+        <div class="sk-tabs-row">
+          <div v-for="n in 3" :key="n" class="sk sk-tab"></div>
+        </div>
+        <!-- Project cards grid -->
+        <div class="sk-card-grid">
+          <div v-for="n in 6" :key="n" class="sk-proj-card">
+            <div class="sk-card-head">
+              <div class="sk sk-card-title"></div>
+              <div class="sk sk-card-status"></div>
+            </div>
+            <div class="sk sk-card-desc"></div>
+            <div class="sk sk-card-desc sk-card-desc-short"></div>
+            <div class="sk-card-foot">
+              <div class="sk sk-card-chip"></div>
+              <div class="sk sk-card-chip"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </template>
 
     <!-- Single workspace view -->
     <template v-if="currentWorkspace && !workspaceStore.loading">
@@ -208,7 +242,6 @@ import WorkspaceCard from '../components/workspace/WorkspaceCard.vue'
 import WorkspaceForm from '../components/workspace/WorkspaceForm.vue'
 import ProjectList from '../components/project/ProjectList.vue'
 import AiNudge from '../components/common/AiNudge.vue'
-import Loading from '../components/common/Loading.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -622,5 +655,32 @@ async function handleDelete() {
   align-items: center;
 }
 
-
+/* ── Skeleton ── */
+@keyframes sk-shimmer { 0%{background-position:-600px 0} 100%{background-position:600px 0} }
+.sk {
+  background: linear-gradient(90deg, var(--bg) 25%, var(--border) 50%, var(--bg) 75%);
+  background-size: 600px 100%;
+  animation: sk-shimmer 1.5s ease-in-out infinite;
+  border-radius: 4px;
+}
+.sk-page         { padding: 36px 40px 80px; display: flex; flex-direction: column; gap: 16px; }
+.sk-back         { height: 26px; width: 90px; border-radius: 99px; }
+.sk-head         { display: flex; align-items: center; gap: 14px; margin: 8px 0; }
+.sk-avatar       { width: 48px; height: 48px; border-radius: 12px; flex-shrink: 0; }
+.sk-head-text    { display: flex; flex-direction: column; gap: 7px; }
+.sk-ws-title     { height: 22px; width: 200px; }
+.sk-ws-desc      { height: 13px; width: 280px; }
+.sk-actions-row  { display: flex; gap: 8px; }
+.sk-action-btn   { height: 32px; width: 100px; border-radius: 8px; }
+.sk-tabs-row     { display: flex; gap: 6px; }
+.sk-tab          { height: 32px; width: 80px; border-radius: 8px; }
+.sk-card-grid    { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; margin-top: 8px; }
+.sk-proj-card    { background: var(--surface); border: 1.5px solid var(--border); border-radius: 14px; padding: 16px 18px; display: flex; flex-direction: column; gap: 9px; }
+.sk-card-head    { display: flex; align-items: center; justify-content: space-between; }
+.sk-card-title   { height: 15px; width: 55%; }
+.sk-card-status  { height: 18px; width: 60px; border-radius: 99px; }
+.sk-card-desc    { height: 12px; width: 100%; }
+.sk-card-desc-short { width: 70%; }
+.sk-card-foot    { display: flex; gap: 6px; margin-top: 4px; }
+.sk-card-chip    { height: 18px; width: 64px; border-radius: 99px; }
 </style>
