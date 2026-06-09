@@ -1,4 +1,6 @@
+from collections import defaultdict
 from datetime import UTC, datetime, timedelta
+from time import monotonic
 from typing import Annotated
 
 from botocore.exceptions import ClientError
@@ -49,6 +51,21 @@ from utils.image import (
     upload_profile_image,
 )
 
+_AUTH_RATE_WINDOW = 60.0
+_AUTH_RATE_MAX = 10
+_auth_timestamps: dict[str, list[float]] = defaultdict(list)
+
+
+def _check_auth_rate_limit(key: str) -> bool:
+    now = monotonic()
+    ts = [t for t in _auth_timestamps[key] if now - t < _AUTH_RATE_WINDOW]
+    _auth_timestamps[key] = ts
+    if len(ts) >= _AUTH_RATE_MAX:
+        return False
+    _auth_timestamps[key].append(now)
+    return True
+
+
 router = APIRouter(
     prefix="/api/users",
     tags=["Users"],
@@ -61,6 +78,10 @@ router = APIRouter(
     status_code=status.HTTP_201_CREATED,
 )
 async def create_user(user: UserCreate, db: Annotated[AsyncSession, Depends(get_db)]):
+    if not _check_auth_rate_limit(f"register:{user.username.lower()}"):
+        raise HTTPException(
+            status_code=429, detail="Too many registration attempts. Please wait."
+        )
     result = await db.execute(
         select(models.User).where(
             func.lower(models.User.username) == user.username.lower()
@@ -113,6 +134,10 @@ async def login_for_access_token(
     response: Response,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
+    if not _check_auth_rate_limit(f"login:{form_data.username.lower()}"):
+        raise HTTPException(
+            status_code=429, detail="Too many login attempts. Please wait."
+        )
     result = await db.execute(
         select(models.User).where(
             func.lower(models.User.email) == form_data.username.lower(),
@@ -186,6 +211,8 @@ async def forgot_password(
     background_tasks: BackgroundTasks,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
+    if not _check_auth_rate_limit(f"forgot:{request_data.email.lower()}"):
+        raise HTTPException(status_code=429, detail="Too many requests. Please wait.")
     result = await db.execute(
         select(models.User).where(
             func.lower(models.User.email) == request_data.email.lower(),

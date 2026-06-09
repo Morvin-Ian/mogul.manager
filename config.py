@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     database_url: str
 
     secret_key: SecretStr
+    refresh_secret_key: SecretStr | None = None
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 60
     refresh_token_expire_days: int = 30

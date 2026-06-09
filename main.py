@@ -12,6 +12,7 @@ from models.documents import Document, DocumentStatus
 from routes.chat import comments_router
 from routes.chat import router as chat_router
 from routes.documents import router as documents_router
+from routes.notifications import router as notifications_router
 from routes.project import plans_router, tasks_router
 from routes.project import router as projects_router
 from routes.user import google_router
@@ -96,4 +97,4 @@ app.include_router(comments_router)
 app.include_router(documents_router)
 app.include_router(members_router)
 app.include_router(invitations_router)
-app.include_router(google_router)
+app.include_router(notifications_router)

@@ -4,6 +4,7 @@ from .collaboration import Invitation, InvitationStatus, MemberRole, WorkspaceMe
 from .comments import Comment
 from .documents import Document, DocumentChunk, DocumentStatus, DocumentType
 from .memory import Memory
+from .notifications import Notification
 from .plans import Plan, PlanStatus, PlanStep, StepPriority, StepStatus
 from .projects import Project, ProjectStatus
 from .tasks import Task, TaskPriority, TaskStatus
@@ -25,6 +26,7 @@ __all__ = [
     "MemberRole",
     "Memory",
     "Message",
+    "Notification",
     "Plan",
     "PlanStatus",
     "PlanStep",

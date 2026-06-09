@@ -41,7 +41,7 @@ async def build_context(user_id: int, db: AsyncSession, query: str | None = None
         ws_svc.list_by_user(user_id),
         _fetch_active_tasks(user_id, db),
         mem_svc.list_by_user(user_id, limit=_MEMORY_LIMIT),
-        doc_svc.list_documents(user_id),
+        doc_svc.list_documents(user_id, limit=_DOC_DISPLAY_LIMIT),
     )
 
     active_workspaces = [ws for ws in workspaces if not ws.is_archived]

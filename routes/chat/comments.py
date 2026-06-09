@@ -7,8 +7,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import models
 from database import get_db
 from schemas.chat.comments import CommentCreate, CommentRead, CommentUpdate
+from config import settings
 from services.auth import CurrentUser
 from services.chat.comments import CommentService
+from services.notifications import NotificationService, emit_notification_event
 
 router = APIRouter(
     prefix="/api/comments",
@@ -65,7 +67,32 @@ async def create_comment(
     await _verify_task_ownership(comment.task_id, current_user.id, db)
     data = comment.model_dump(exclude_unset=True)
     data["user_id"] = current_user.id
-    return await service.create(data)
+    created = await service.create(data)
+
+    # Notify task assignee about the new comment (unless they wrote it)
+    task_result = await db.execute(
+        select(models.Task).where(models.Task.id == comment.task_id)
+    )
+    task = task_result.scalars().first()
+    if task and task.assigned_to_id and task.assigned_to_id != current_user.id:
+        proj_result = await db.execute(select(models.Project.uuid).where(models.Project.id == task.project_id))
+        project_uuid = proj_result.scalar() or ""
+        notif_svc = NotificationService(db)
+        notif = await notif_svc.create_and_notify(
+            user_id=task.assigned_to_id,
+            notification_type="comment_added",
+            title=f"New comment on \"{task.title}\"",
+            message=f"{current_user.username} commented on \"{task.title}\": {comment.content[:200]}",
+            link=f"{settings.frontend_url}/projects/{project_uuid}?task={task.uuid}",
+            metadata_json={
+                "task_uuid": task.uuid,
+                "task_id": task.id,
+                "comment_id": created.id,
+            },
+        )
+        await emit_notification_event(task.assigned_to_id, notif)
+
+    return created
 
 
 @router.get("", response_model=list[CommentRead])

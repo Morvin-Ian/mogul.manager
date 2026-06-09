@@ -49,12 +49,12 @@ This link will expire in 1 hour.
 If you didn't request this, you can safely ignore this email.
 
 Best regards,
-The FastAPI Blog Team
+mogul.manager Team
 """
 
     await send_email(
         to_email=to_email,
-        subject="Reset Your Password - FastAPI Blog",
+        subject="Reset Your Password - mogul.manager",
         plain_text=plain_text,
         html_content=html_content,
     )
@@ -91,6 +91,9 @@ async def send_task_assignment_email(
 Priority: {priority} | Status: {status.replace('_', ' ').title()}
 
 View it here: {task_url}
+
+Best regards,
+mogul.manager Team
 """
 
     await send_email(
@@ -128,11 +131,37 @@ Click the link below to accept:
 This invitation expires in 48 hours.
 
 If you weren't expecting this invitation, you can safely ignore this email.
+
+Best regards,
+mogul.manager Team
 """
 
     await send_email(
         to_email=to_email,
         subject=f"You're invited to join {workspace_title}",
+        plain_text=plain_text,
+        html_content=html_content,
+    )
+
+
+async def send_notification_email(
+    to_email: str,
+    subject: str,
+    title: str,
+    message: str,
+    link: str | None = None,
+) -> None:
+    template = templates.env.get_template("notification_email.html")
+    html_content = template.render(title=title, message=message, link=link)
+
+    plain_text = f"{title}\n\n{message}"
+    if link:
+        plain_text += f"\n\nView it here: {link}"
+    plain_text += "\n\nBest regards,\nmogul.manager Team"
+
+    await send_email(
+        to_email=to_email,
+        subject=subject,
         plain_text=plain_text,
         html_content=html_content,
     )

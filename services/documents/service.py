@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import threading
 import time
 import uuid as _uuid_mod
 from datetime import UTC, datetime
@@ -51,23 +52,24 @@ SUMMARY_PREVIEW_CHARS = 4000
 _PIPELINE_BATCH = 100  # chunks embedded + inserted per round-trip
 
 
-_WITH_PROJECT = lambda q: q.options(  # noqa: E731
-    selectinload(Document.project).selectinload(models.Project.workspace)
-)
+def _with_project(q):
+    return q.options(
+        selectinload(Document.project).selectinload(models.Project.workspace)
+    )
 
 
 class DocumentService:
     def __init__(self, db: Annotated[AsyncSession, Depends(get_db)]):
         self.db = db
 
-    async def list_documents(self, user_id: int) -> list[Document]:
+    async def list_documents(self, user_id: int, skip: int = 0, limit: int = 50) -> list[Document]:
         accessible_project_ids = (
             select(Project.id)
             .join(WorkspaceMember, WorkspaceMember.workspace_id == Project.workspace_id)
             .where(WorkspaceMember.user_id == user_id)
         )
         result = await self.db.execute(
-            _WITH_PROJECT(select(Document))
+            _with_project(select(Document))
             .where(
                 or_(
                     and_(Document.user_id == user_id, Document.project_id.is_(None)),
@@ -75,10 +77,12 @@ class DocumentService:
                 )
             )
             .order_by(Document.created_at.desc())
+            .offset(skip)
+            .limit(limit)
         )
         return list(result.scalars().all())
 
-    async def list_by_project(self, project_id: int, user_id: int) -> list[Document]:
+    async def list_by_project(self, project_id: int, user_id: int, skip: int = 0, limit: int = 50) -> list[Document]:
         is_member = await self.db.execute(
             select(WorkspaceMember.id)
             .join(Project, Project.workspace_id == WorkspaceMember.workspace_id)
@@ -87,14 +91,16 @@ class DocumentService:
         if not is_member.scalars().first():
             return []
         result = await self.db.execute(
-            _WITH_PROJECT(select(Document))
+            _with_project(select(Document))
             .where(Document.project_id == project_id)
             .order_by(Document.created_at.desc())
+            .offset(skip)
+            .limit(limit)
         )
         return list(result.scalars().all())
 
     async def list_by_workspace(
-        self, workspace_id: int, user_id: int
+        self, workspace_id: int, user_id: int, skip: int = 0, limit: int = 50
     ) -> list[Document]:
         accessible_project_ids = (
             select(Project.id)
@@ -105,21 +111,35 @@ class DocumentService:
             )
         )
         result = await self.db.execute(
-            _WITH_PROJECT(select(Document))
+            _with_project(select(Document))
             .where(Document.project_id.in_(accessible_project_ids))
             .order_by(Document.created_at.desc())
+            .offset(skip)
+            .limit(limit)
         )
         return list(result.scalars().all())
 
     async def get_by_uuid(self, document_uuid: str, user_id: int) -> Document | None:
         if not _is_valid_uuid(document_uuid):
             return None
-        result = await self.db.execute(
-            _WITH_PROJECT(select(Document)).where(
-                Document.uuid == document_uuid, Document.user_id == user_id
-            )
+        doc = await self.db.execute(
+            _with_project(select(Document)).where(Document.uuid == document_uuid)
         )
-        return result.scalars().first()
+        doc = doc.scalars().first()
+        if not doc:
+            return None
+        if doc.user_id == user_id:
+            return doc
+        if doc.project_id:
+            result = await self.db.execute(
+                select(WorkspaceMember.id).where(
+                    WorkspaceMember.workspace_id == doc.project.workspace_id,
+                    WorkspaceMember.user_id == user_id,
+                )
+            )
+            if result.scalars().first():
+                return doc
+        return None
 
     async def get_by_uuid_any(self, document_uuid: str) -> Document | None:
         if not _is_valid_uuid(document_uuid):
@@ -186,7 +206,7 @@ class DocumentService:
         # Reload with project→workspace so the response schema can access
         # project_title, workspace_id, workspace_title without lazy-loading.
         result = await self.db.execute(
-            _WITH_PROJECT(select(Document)).where(Document.id == doc.id)
+            _with_project(select(Document)).where(Document.id == doc.id)
         )
         return result.scalars().first() or doc
 
@@ -332,17 +352,20 @@ async def _generate_summary(text_preview: str, title: str) -> str:
 
 
 _s3_singleton: "boto3.client | None" = None
+_s3_lock = threading.Lock()
 
 
 def _s3_client():
     global _s3_singleton
     if _s3_singleton is None:
-        _s3_singleton = boto3.client(
-            "s3",
-            endpoint_url=settings.s3_endpoint_url,
-            aws_access_key_id=settings.s3_access_key_id.get_secret_value(),
-            aws_secret_access_key=settings.s3_secret_access_key.get_secret_value(),
-        )
+        with _s3_lock:
+            if _s3_singleton is None:
+                _s3_singleton = boto3.client(
+                    "s3",
+                    endpoint_url=settings.s3_endpoint_url,
+                    aws_access_key_id=settings.s3_access_key_id.get_secret_value(),
+                    aws_secret_access_key=settings.s3_secret_access_key.get_secret_value(),
+                )
     return _s3_singleton
 
 

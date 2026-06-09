@@ -13,9 +13,9 @@ from models.collaboration import MemberRole
 from models.plans import StepStatus
 from schemas.project.tasks import TaskCreate, TaskRead, TaskUpdate
 from services.auth import CurrentUser
+from services.notifications import NotificationService, emit_notification_event
 from services.project.tasks import TaskService
 from services.workspace.collaboration import CollaborationService
-from utils.email import send_task_assignment_email
 
 logger = logging.getLogger(__name__)
 
@@ -104,34 +104,6 @@ async def _resolve_assignee_email(data: dict, db: AsyncSession) -> dict:
     return data
 
 
-async def _notify_assignment_background(
-    to_email: str,
-    assignee_name: str,
-    assigned_by_name: str,
-    task_title: str,
-    task_description: str | None,
-    project_name: str,
-    priority: str,
-    task_status: str,
-    task_uuid: str,
-) -> None:
-    task_url = f"{settings.frontend_url}/tasks/{task_uuid}"
-    try:
-        await send_task_assignment_email(
-            to_email=to_email,
-            assignee_name=assignee_name,
-            assigned_by_name=assigned_by_name,
-            task_title=task_title,
-            task_description=task_description,
-            project_name=project_name,
-            priority=priority,
-            status=task_status,
-            task_url=task_url,
-        )
-    except Exception as exc:
-        logger.warning("Failed to send task assignment email to %s: %s", to_email, exc)
-
-
 async def _schedule_notification(
     bt: BackgroundTasks,
     task: models.Task,
@@ -155,19 +127,30 @@ async def _schedule_notification(
     )
     project = result.unique().scalars().first()
     project_name = project.title if project else "Unknown"
+
     priority_map = {1: "Low", 2: "Medium", 3: "High", 4: "Urgent"}
-    bt.add_task(
-        _notify_assignment_background,
-        to_email=assignee.email,
-        assignee_name=assignee.username,
-        assigned_by_name=assigned_by.username,
-        task_title=task.title,
-        task_description=task.description,
-        project_name=project_name,
-        priority=priority_map.get(task.priority, "Medium"),
-        task_status=task.status,
-        task_uuid=task.uuid,
+    priority_label = priority_map.get(task.priority, "Medium")
+
+    project_uuid = project.uuid if project else ""
+    task_url = f"{settings.frontend_url}/projects/{project_uuid}?task={task.uuid}"
+    notif_svc = NotificationService(db)
+
+    notif = await notif_svc.create_and_notify(
+        user_id=assignee.id,
+        notification_type="task_assigned",
+        title=f"Task assigned: {task.title}",
+        message=f"{assigned_by.username} assigned you \"{task.title}\" in {project_name} (Priority: {priority_label})",
+        link=task_url,
+        metadata_json={
+            "task_uuid": task.uuid,
+            "project_id": task.project_id,
+            "assigned_by": assigned_by.username,
+            "priority": priority_label,
+        },
+        email_to=assignee.email,
+        email_subject=f"Task assigned: {task.title}",
     )
+    await emit_notification_event(assignee.id, notif)
 
 
 @router.post("", response_model=TaskRead, status_code=status.HTTP_201_CREATED)
@@ -314,6 +297,22 @@ async def update_task(
     new_status_val = data.get("status")
     if new_status_val and new_status_val != old_status:
         await _sync_step_from_task(updated, new_status_val, db)
+
+        # Notify assignee of status change (unless they changed it themselves)
+        if updated.assigned_to_id and updated.assigned_to_id != current_user.id:
+            proj_result = await db.execute(select(models.Project.uuid).where(models.Project.id == updated.project_id))
+            project_uuid = proj_result.scalar() or ""
+            status_labels = {"todo": "To Do", "in_progress": "In Progress", "review": "In Review", "blocked": "Blocked", "completed": "Completed"}
+            notif_svc = NotificationService(db)
+            notif = await notif_svc.create_and_notify(
+                user_id=updated.assigned_to_id,
+                notification_type="task_status_changed",
+                title=f"Task status changed: {updated.title}",
+                message=f"{current_user.username} moved \"{updated.title}\" from {status_labels.get(old_status, old_status)} to {status_labels.get(new_status_val, new_status_val)}",
+                link=f"{settings.frontend_url}/projects/{project_uuid}?task={updated.uuid}",
+                metadata_json={"task_uuid": updated.uuid, "old_status": old_status, "new_status": new_status_val},
+            )
+            await emit_notification_event(updated.assigned_to_id, notif)
 
     return _to_read(updated)
 

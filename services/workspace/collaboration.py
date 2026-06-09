@@ -27,6 +27,14 @@ class CollaborationService:
     def __init__(self, db: Annotated[AsyncSession, Depends(get_db)]):
         self.db = db
 
+    async def member_count(self, workspace_id: int) -> int:
+        result = await self.db.execute(
+            select(models.WorkspaceMember.id).where(
+                models.WorkspaceMember.workspace_id == workspace_id
+            )
+        )
+        return len(result.all())
+
     async def get_member(
         self, workspace_id: int, user_id: int
     ) -> models.WorkspaceMember | None:

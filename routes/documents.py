@@ -45,13 +45,15 @@ async def list_documents(
     db: AsyncSession = Depends(get_db),
     project_id: int | None = Query(None),
     workspace_id: int | None = Query(None),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
 ):
     svc = DocumentService(db)
     if project_id is not None:
-        return await svc.list_by_project(project_id, current_user.id)
+        return await svc.list_by_project(project_id, current_user.id, skip=skip, limit=limit)
     if workspace_id is not None:
-        return await svc.list_by_workspace(workspace_id, current_user.id)
-    return await svc.list_documents(current_user.id)
+        return await svc.list_by_workspace(workspace_id, current_user.id, skip=skip, limit=limit)
+    return await svc.list_documents(current_user.id, skip=skip, limit=limit)
 
 
 @router.post("", response_model=DocumentResponse, status_code=201)

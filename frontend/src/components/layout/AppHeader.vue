@@ -26,9 +26,15 @@
       <button class="hdr-icon" title="Messages">
         <font-awesome-icon :icon="['far', 'envelope']" style="font-size: 15px;" />
       </button>
-      <button class="hdr-icon hdr-icon--badge" title="Notifications">
+      <button
+        class="hdr-icon"
+        :class="{ 'hdr-icon--badge': notifStore.hasUnread }"
+        title="Notifications"
+        @click.stop="toggleNotifs"
+      >
         <font-awesome-icon :icon="['far', 'bell']" style="font-size: 15px;" />
       </button>
+      <NotificationDropdown :open="showNotifs" @close="showNotifs = false" />
 
       <router-link to="/settings" class="user-section" :title="auth.user?.username">
         <div class="user-avatar">
@@ -51,14 +57,25 @@ import { useAuthStore } from '../../stores/auth'
 import { useWorkspaceStore } from '../../stores/workspaces'
 import { useTaskStore } from '../../stores/tasks'
 import { useMembersStore } from '../../stores/members'
+import { useNotificationStore } from '../../stores/notifications'
+import NotificationDropdown from '../common/NotificationDropdown.vue'
 
 const auth = useAuthStore()
 const route = useRoute()
 const workspaceStore = useWorkspaceStore()
 const taskStore = useTaskStore()
 const membersStore = useMembersStore()
+const notifStore = useNotificationStore()
 
 const reviewCount = ref(0)
+const showNotifs = ref(false)
+
+function toggleNotifs() {
+  showNotifs.value = !showNotifs.value
+  if (showNotifs.value) {
+    notifStore.fetchNotifications()
+  }
+}
 
 const navItems = computed(() => [
   { label: 'Home',       to: '/',           icon: ['fas', 'house'],              activeOn: ['/']           },
@@ -88,7 +105,11 @@ async function loadReviewCount() {
   } catch { /* non-critical */ }
 }
 
-onMounted(loadReviewCount)
+onMounted(() => {
+  loadReviewCount()
+  notifStore.connectSSE()
+  notifStore.fetchUnreadCount()
+})
 </script>
 
 <style scoped>

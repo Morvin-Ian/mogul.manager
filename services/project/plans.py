@@ -80,7 +80,7 @@ class PlanService:
             goal_parts.append(f"Additional context: {description}")
         goal = "\n".join(goal_parts)
 
-        from agents.deepseek import DeepSeekAgent  # local import avoids circular dependency
+        from agents.deepseek import DeepSeekAgent
         raw_steps = await DeepSeekAgent().decompose(
             goal=goal,
             existing_tasks=existing_tasks,
@@ -298,9 +298,6 @@ class PlanService:
             return
         terminal = {StepStatus.COMPLETED, StepStatus.SKIPPED}
         if all(s.status in terminal for s in steps):
-            await self.db.execute(
-                select(models.Plan).where(models.Plan.id == plan_id)
-            )
             plan_result = await self.db.execute(
                 select(models.Plan).where(models.Plan.id == plan_id)
             )

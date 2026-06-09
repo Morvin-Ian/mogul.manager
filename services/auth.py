@@ -4,7 +4,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
 import jwt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Query, status
 from fastapi.security import OAuth2PasswordBearer
 from pwdlib import PasswordHash
 from sqlalchemy import select
@@ -52,8 +52,9 @@ def create_refresh_token(data: dict) -> str:
     to_encode = data.copy()
     expire = datetime.now(UTC) + timedelta(days=settings.refresh_token_expire_days)
     to_encode.update({"exp": expire, "token_type": "refresh"})
+    refresh_key = settings.refresh_secret_key.get_secret_value() if settings.refresh_secret_key else settings.secret_key.get_secret_value()
     return jwt.encode(
-        to_encode, settings.secret_key.get_secret_value(), algorithm=settings.algorithm
+        to_encode, refresh_key, algorithm=settings.algorithm
     )
 
 
@@ -70,11 +71,15 @@ def verify_access_token(token: str) -> str | None:
         return None
 
 
+def _get_refresh_key() -> str:
+    return settings.refresh_secret_key.get_secret_value() if settings.refresh_secret_key else settings.secret_key.get_secret_value()
+
+
 def verify_refresh_token(token: str) -> str | None:
     try:
         payload = jwt.decode(
             token,
-            settings.secret_key.get_secret_value(),
+            _get_refresh_key(),
             algorithms=[settings.algorithm],
             options={"require": ["exp", "sub"]},
         )
@@ -120,3 +125,33 @@ async def get_current_user(
 
 
 CurrentUser = Annotated[models.User, Depends(get_current_user)]
+
+
+async def get_current_user_from_query(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    token: str = Query(...),
+) -> models.User:
+    """Auth dependency that reads the token from a query parameter (for SSE where EventSource can't set headers)."""
+    user_id = verify_access_token(token)
+    if user_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token",
+        )
+    try:
+        user_id_int = int(user_id)
+    except (TypeError, ValueError):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token",
+        )
+    result = await db.execute(
+        select(models.User).where(models.User.id == user_id_int),
+    )
+    user = result.scalars().first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found",
+        )
+    return user

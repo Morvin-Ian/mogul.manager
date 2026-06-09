@@ -1,7 +1,7 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import models
@@ -20,15 +20,6 @@ from services.project.plans import PlanService
 from services.workspace.collaboration import CollaborationService
 
 router = APIRouter(prefix="/api/plans", tags=["Plans"])
-
-
-async def _workspace_member_count(workspace_id: int, db: AsyncSession) -> int:
-    result = await db.execute(
-        select(func.count())
-        .select_from(models.WorkspaceMember)
-        .where(models.WorkspaceMember.workspace_id == workspace_id)
-    )
-    return result.scalar_one() or 0
 
 
 async def _get_project_or_404(project_id: int, db: AsyncSession) -> models.Project:
@@ -201,7 +192,7 @@ async def update_step(
             status_code=status.HTTP_404_NOT_FOUND, detail="Step not found"
         )
 
-    member_count = await _workspace_member_count(project.workspace_id, db)
+    member_count = await collab.member_count(project.workspace_id)
     is_solo = member_count <= 1
     warning: str | None = None
 

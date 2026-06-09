@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>You're Invited!</title>
+  <title>{{ title }}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 </head>
@@ -17,7 +17,7 @@
             <td style="padding: 28px 32px; background: #0052FF;">
               <table role="presentation" cellspacing="0" cellpadding="0">
                 <tr>
-                  <td style="font-size: 26px; font-weight: 700; color: #ffffff; letter-spacing: -1px; line-height: 1;">mogul<span style="color: rgba(255,255,255,0.8);">.</span></td>
+                  <td style="font-size: 26px; font-weight: 700; color: #ffffff; letter-spacing: -1px; line-height: 1;">mogul<span style="color: #ffffff; opacity: 0.8;">.</span></td>
                   <td style="font-size: 11px; font-weight: 500; color: rgba(255,255,255,0.65); letter-spacing: 0.3px; padding-left: 4px; vertical-align: baseline;">manager</td>
                 </tr>
               </table>
@@ -26,25 +26,23 @@
           <!-- Body -->
           <tr>
             <td style="padding: 36px 32px;">
-              <h1 style="margin: 0 0 16px 0; font-size: 22px; font-weight: 700; color: #0A0B0D; letter-spacing: -0.4px;">You're invited!</h1>
-              <p style="margin: 0 0 20px 0; font-size: 15px; line-height: 1.6; color: #5B616E;"><strong style="color: #0A0B0D;">{{ invited_by_username }}</strong> has invited you to join the workspace <strong style="color: #0A0B0D;">{{ workspace_title }}</strong> as a <strong style="color: #0A0B0D;">{{ role }}</strong>.</p>
-              <p style="margin: 0 0 28px 0; font-size: 14px; line-height: 1.5; color: #8A919E;">This invitation expires in <strong style="color: #5B616E;">48 hours</strong>.</p>
-              <!-- Button -->
-              <table role="presentation" cellspacing="0" cellpadding="0" style="margin: 0 auto 28px 0;">
+              <h1 style="margin: 0 0 16px 0; font-size: 20px; font-weight: 700; color: #0A0B0D; letter-spacing: -0.3px;">{{ title }}</h1>
+              <p style="margin: 0 0 20px 0; font-size: 15px; line-height: 1.6; color: #5B616E;">{{ message }}</p>
+              {% if link %}
+              <table role="presentation" cellspacing="0" cellpadding="0">
                 <tr>
                   <td style="background: #0052FF; border-radius: 9999px;">
-                    <a href="{{ invite_link }}" style="display: inline-block; padding: 14px 32px; color: #ffffff; text-decoration: none; font-size: 15px; font-weight: 600; letter-spacing: 0.2px;">Accept Invitation</a>
+                    <a href="{{ link }}" style="display: inline-block; padding: 12px 28px; color: #ffffff; text-decoration: none; font-size: 15px; font-weight: 600; letter-spacing: 0.2px;">View Details</a>
                   </td>
                 </tr>
               </table>
-              <!-- Fallback link -->
-              <p style="margin: 24px 0 0 0; font-size: 13px; line-height: 1.5; color: #A8ABB4;">If the button doesn't work, copy and paste this link into your browser:<br /><a href="{{ invite_link }}" style="color: #0052FF; word-break: break-all;">{{ invite_link }}</a></p>
+              {% endif %}
             </td>
           </tr>
           <!-- Footer -->
           <tr>
             <td style="padding: 20px 32px; border-top: 1px solid #D8D9DE;">
-              <p style="margin: 0; font-size: 13px; color: #8A919E; text-align: center;">This is an automated message from <strong style="color: #5B616E;">mogul.manager</strong></p>
+              <p style="margin: 0; font-size: 13px; color: #8A919E; text-align: center;">Sent from <strong style="color: #5B616E;">mogul.manager</strong></p>
             </td>
           </tr>
         </table>
