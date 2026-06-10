@@ -23,7 +23,11 @@ async def list_milestones(
     project_id: int,
     current_user: CurrentUser,
     service: Annotated[MilestoneService, Depends()],
+    collab: Annotated[CollaborationService, Depends()],
+    db: Annotated[AsyncSession, Depends(get_db)],
 ):
+    project = await _get_project_or_404(project_id, db)
+    await collab.require_access(project.workspace_id, current_user.id, min_role="member")
     return await service.list_by_project(project_id)
 
 

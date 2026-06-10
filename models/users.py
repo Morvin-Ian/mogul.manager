@@ -53,3 +53,24 @@ class PasswordResetToken(Base):
         DateTime(timezone=True), default=lambda: datetime.now(UTC)
     )
     user: Mapped["User"] = relationship(back_populates="reset_tokens")
+
+
+class RefreshToken(Base):
+    """Server-side record of an issued refresh token, keyed by JWT jti.
+
+    Enables rotation (old jti revoked on every refresh) and revocation on
+    logout. Reuse of a revoked jti is treated as theft and kills all of the
+    user's sessions.
+    """
+    __tablename__ = "refresh_tokens"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    jti: Mapped[str] = mapped_column(String(64), nullable=False, unique=True, index=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )

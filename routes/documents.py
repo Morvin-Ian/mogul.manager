@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from pathlib import Path
 
 from fastapi import (
@@ -19,7 +20,7 @@ import models
 from config import settings
 from database import get_db
 from models.collaboration import MemberRole, WorkspaceMember
-from models.documents import DocumentChunk
+from models.documents import DocumentChunk, DocumentStatus
 from schemas.documents import (
     DocumentResponse,
     DocumentUpdate,
@@ -118,6 +119,9 @@ async def delete_document(
         raise HTTPException(404, "Document not found")
 
 
+_REPROCESS_COOLDOWN_SECONDS = 120
+
+
 @router.post("/{document_id}/reprocess", response_model=DocumentResponse)
 async def reprocess_document(
     document_id: str,
@@ -129,6 +133,14 @@ async def reprocess_document(
     doc = await svc.get_by_uuid(document_id, current_user.id)
     if not doc:
         raise HTTPException(404, "Document not found")
+    if doc.status in (DocumentStatus.pending, DocumentStatus.processing):
+        raise HTTPException(429, "Document is already queued for processing")
+    age = (datetime.now(UTC) - doc.updated_at).total_seconds()
+    if age < _REPROCESS_COOLDOWN_SECONDS:
+        raise HTTPException(
+            429,
+            f"Document was processed moments ago — try again in {int(_REPROCESS_COOLDOWN_SECONDS - age)}s",
+        )
     background_tasks.add_task(process_document_bg, doc.id)
     return doc
 

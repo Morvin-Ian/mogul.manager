@@ -43,6 +43,9 @@ class InvitationResponse(BaseModel):
     invited_by_id: int | None = None
     expires_at: datetime
     created_at: datetime
+    # False when the invite email could not be delivered — the invitation
+    # still exists, but the caller should share the link manually.
+    email_sent: bool = True
 
 
 class InvitationInfoResponse(BaseModel):

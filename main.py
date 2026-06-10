@@ -1,12 +1,17 @@
 import asyncio
 import contextlib
+import hashlib
 import logging
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
+from time import monotonic
 
-from fastapi import FastAPI
-from sqlalchemy import select
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from sqlalchemy import or_, select
 
+from config import settings
 from database import AsyncSessionLocal
 from models.documents import Document, DocumentStatus
 from routes.activity import router as activity_router
@@ -53,15 +58,24 @@ async def _periodic_document_check(interval_seconds: int = 1800) -> None:
             logger.error("Periodic document check error: %s", exc)
 
 
+# Failed documents are retried automatically until this many attempts.
+_MAX_PROCESSING_ATTEMPTS = 3
+
+
 async def _requeue_pending_documents() -> None:
-    """Requeue documents stuck in pending/processing for longer than the staleness threshold."""
+    """Requeue stuck (pending/processing) and retryable failed documents."""
     cutoff = datetime.now(UTC) - timedelta(seconds=_STUCK_THRESHOLD_SECONDS)
 
     async with AsyncSessionLocal() as db:
         result = await db.execute(
             select(Document.id).where(
-                Document.status.in_(
-                    [DocumentStatus.pending, DocumentStatus.processing]
+                or_(
+                    Document.status.in_(
+                        [DocumentStatus.pending, DocumentStatus.processing]
+                    ),
+                    # Transient failures get a bounded number of retries
+                    (Document.status == DocumentStatus.failed)
+                    & (Document.processing_attempts < _MAX_PROCESSING_ATTEMPTS),
                 ),
                 Document.updated_at < cutoff,
             )
@@ -70,7 +84,7 @@ async def _requeue_pending_documents() -> None:
 
     if doc_ids:
         logger.info(
-            "Requeueing %d stuck document(s) (older than %ds)",
+            "Requeueing %d stuck/failed document(s) (older than %ds)",
             len(doc_ids),
             _STUCK_THRESHOLD_SECONDS,
         )
@@ -80,6 +94,11 @@ async def _requeue_pending_documents() -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    if settings.refresh_secret_key is None:
+        logger.warning(
+            "REFRESH_SECRET_KEY is not set — falling back to SECRET_KEY for "
+            "refresh tokens. Set a separate secret in production."
+        )
     await warmup_embeddings()
     await _requeue_pending_documents()
     periodic_task = asyncio.create_task(_periodic_document_check())
@@ -90,6 +109,56 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[settings.frontend_url.rstrip("/")],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+# ── Write rate limiting ─────────────────────────────────────────────
+# In-memory sliding window per caller (Authorization header hash, else IP).
+# Generous ceiling — meant to stop abuse/runaway scripts, not real usage.
+# Note: per-process only; use a shared store (e.g. Redis) if scaled out.
+_WRITE_METHODS = {"POST", "PATCH", "PUT", "DELETE"}
+_WRITE_RATE_WINDOW = 60.0
+_WRITE_RATE_MAX = 240
+_write_timestamps: dict[str, list[float]] = {}
+
+
+@app.middleware("http")
+async def write_rate_limit(request: Request, call_next):
+    if request.method in _WRITE_METHODS and request.url.path.startswith("/api"):
+        auth_header = request.headers.get("authorization")
+        if auth_header:
+            key = hashlib.sha256(auth_header.encode()).hexdigest()[:16]
+        else:
+            key = request.client.host if request.client else "unknown"
+        now = monotonic()
+        ts = [t for t in _write_timestamps.get(key, []) if now - t < _WRITE_RATE_WINDOW]
+        if len(ts) >= _WRITE_RATE_MAX:
+            _write_timestamps[key] = ts
+            return JSONResponse(
+                status_code=429,
+                content={"detail": "Too many requests. Please slow down."},
+            )
+        ts.append(now)
+        _write_timestamps[key] = ts
+    return await call_next(request)
+
+
+@app.get("/health")
+async def healthcheck():
+    """Liveness/readiness probe — verifies the DB connection."""
+    try:
+        async with AsyncSessionLocal() as db:
+            await db.execute(select(1))
+    except Exception:
+        return JSONResponse(status_code=503, content={"status": "degraded", "database": "unreachable"})
+    return {"status": "ok"}
 
 app.include_router(users_router)
 app.include_router(google_router)

@@ -13,7 +13,7 @@ from .projects import Project, ProjectStatus
 from .tags import Tag
 from .tasks import Task, TaskPriority, TaskStatus
 from .templates import ProjectTemplate
-from .users import PasswordResetToken, User
+from .users import PasswordResetToken, RefreshToken, User
 from .workspaces import Workspace
 
 __all__ = [
@@ -22,6 +22,7 @@ __all__ = [
     "TimestampedModel",
     "User",
     "PasswordResetToken",
+    "RefreshToken",
     "Comment",
     "Conversation",
     "Document",

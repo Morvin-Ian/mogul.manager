@@ -104,6 +104,7 @@ async def invite_member(
         invited_by_id=current_user.id,
     )
 
+    email_sent = True
     try:
         await send_invite_email(
             to_email=invitation.email,
@@ -113,9 +114,12 @@ async def invite_member(
             invited_by_username=current_user.username,
         )
     except Exception as exc:
+        email_sent = False
         logger.warning("Invite email failed but invitation was created: %s", exc)
 
-    return InvitationResponse.model_validate(invitation)
+    return InvitationResponse.model_validate(invitation).model_copy(
+        update={"email_sent": email_sent}
+    )
 
 
 @router.get("/invitations", response_model=list[InvitationResponse])

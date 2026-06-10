@@ -467,7 +467,26 @@ async def bulk_update_tasks(
     # All tasks must be accessible (same project) for the operation to proceed
     if len(project_ids) > 1:
         raise HTTPException(status_code=400, detail="All tasks must be in the same project")
-    await collab.require_access(project.workspace_id, current_user.id, min_role="member")
+    member = await collab.require_access(
+        project.workspace_id, current_user.id, min_role="member"
+    )
+
+    # Mirror the single-task rules so bulk ops can't bypass them
+    solo = await _workspace_is_solo(project.workspace_id, db)
+    if not solo and member.role == MemberRole.member:
+        not_mine = [t for t in tasks if t.assigned_to_id != current_user.id]
+        if not_mine:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You can only bulk-update tasks assigned to you",
+            )
+    if body.status is not None and not solo and body.assigned_to_id is None:
+        unassigned = [t for t in tasks if t.assigned_to_id is None]
+        if unassigned:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Some tasks have no assignee. Assign them before changing status.",
+            )
 
     update_data = {}
     if body.status is not None:

@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import models
 from database import get_db
 from schemas.notifications import NotificationRead, UnreadCountResponse
-from services.auth import CurrentUser, get_current_user_from_query
+from services.auth import CurrentUser, create_stream_token, get_current_user_from_query
 from services.notifications import (
     NotificationService,
     get_pending_events,
@@ -64,6 +64,19 @@ async def mark_all_as_read(
     await service.mark_all_as_read(current_user.id)
 
 
+@router.post("/stream-token")
+async def create_sse_stream_token(current_user: CurrentUser):
+    """Issue a short-lived (60s) token for opening the SSE stream.
+
+    EventSource can't set headers, so the stream authenticates via query
+    param — this keeps the long-lived access token out of URLs and logs.
+    """
+    return {"token": create_stream_token(current_user.id)}
+
+
+_SSE_HEARTBEAT_SECONDS = 25
+
+
 @router.get("/stream")
 async def notification_stream(
     current_user: Annotated[models.User, Depends(get_current_user_from_query)],
@@ -73,11 +86,19 @@ async def notification_stream(
     sub_id = subscribe_to_sse(current_user.id)
 
     async def event_generator():
+        # Heartbeat keeps proxies from killing idle connections and lets us
+        # detect disconnected clients (the dead yield raises and cleans up).
+        loop = asyncio.get_running_loop()
+        last_beat = loop.time()
         try:
             while True:
                 events = await get_pending_events(current_user.id)
                 for event in events:
                     yield f"data: {event}\n\n"
+                    last_beat = loop.time()
+                if loop.time() - last_beat >= _SSE_HEARTBEAT_SECONDS:
+                    yield ": ping\n\n"
+                    last_beat = loop.time()
                 await asyncio.sleep(1)
         finally:
             unsubscribe_from_sse(current_user.id, sub_id)

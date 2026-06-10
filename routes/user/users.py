@@ -18,6 +18,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from PIL import UnidentifiedImageError
 from sqlalchemy import delete as sql_delete
 from sqlalchemy import func, select
+from sqlalchemy import update as sql_update
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.concurrency import run_in_threadpool
 
@@ -37,10 +38,10 @@ from schemas.users import (
 from services.auth import (
     CurrentUser,
     create_access_token,
-    create_refresh_token,
     generate_reset_token,
     hash_password,
     hash_reset_token,
+    issue_refresh_cookie,
     verify_password,
     verify_refresh_token,
 )
@@ -115,16 +116,12 @@ async def create_user(user: UserCreate, db: Annotated[AsyncSession, Depends(get_
     return new_user
 
 
-def _set_refresh_cookie(response: Response, user_id: int) -> None:
-    refresh_token = create_refresh_token(data={"sub": str(user_id)})
-    response.set_cookie(
-        key="refresh_token",
-        value=refresh_token,
-        httponly=True,
-        secure=False,  # set True when serving over HTTPS
-        samesite="lax",
-        max_age=settings.refresh_token_expire_days * 24 * 3600,
-        path="/",
+async def _cleanup_expired_refresh_tokens(user_id: int, db: AsyncSession) -> None:
+    await db.execute(
+        sql_delete(models.RefreshToken).where(
+            models.RefreshToken.user_id == user_id,
+            models.RefreshToken.expires_at < datetime.now(UTC),
+        )
     )
 
 
@@ -156,13 +153,15 @@ async def login_for_access_token(
         data={"sub": str(user.id)},
         expires_delta=timedelta(minutes=settings.access_token_expire_minutes),
     )
-    _set_refresh_cookie(response, user.id)
+    await _cleanup_expired_refresh_tokens(user.id, db)
+    await issue_refresh_cookie(response, user.id, db)
     return Token(access_token=access_token, token_type="bearer")
 
 
 @router.post("/refresh", response_model=Token)
 async def refresh_access_token(
     request: Request,
+    response: Response,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     token = request.cookies.get("refresh_token")
@@ -171,8 +170,35 @@ async def refresh_access_token(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="No refresh token"
         )
 
-    user_id = verify_refresh_token(token)
-    if not user_id:
+    verified = verify_refresh_token(token)
+    if not verified:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired refresh token",
+        )
+    user_id, jti = verified
+
+    now = datetime.now(UTC)
+    result = await db.execute(
+        select(models.RefreshToken).where(models.RefreshToken.jti == jti)
+    )
+    record = result.scalars().first()
+    if not record or record.expires_at < now:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired refresh token",
+        )
+    if record.revoked_at is not None:
+        # A rotated-out token came back — likely theft. Kill every session.
+        await db.execute(
+            sql_update(models.RefreshToken)
+            .where(
+                models.RefreshToken.user_id == record.user_id,
+                models.RefreshToken.revoked_at.is_(None),
+            )
+            .values(revoked_at=now)
+        )
+        await db.commit()
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired refresh token",
@@ -185,6 +211,10 @@ async def refresh_access_token(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found"
         )
 
+    # Rotate: retire this token, issue a fresh one
+    record.revoked_at = now
+    await issue_refresh_cookie(response, user.id, db)
+
     access_token = create_access_token(
         data={"sub": str(user.id)},
         expires_delta=timedelta(minutes=settings.access_token_expire_minutes),
@@ -193,7 +223,22 @@ async def refresh_access_token(
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
-async def logout(response: Response):
+async def logout(
+    request: Request,
+    response: Response,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    token = request.cookies.get("refresh_token")
+    if token:
+        verified = verify_refresh_token(token)
+        if verified:
+            _, jti = verified
+            await db.execute(
+                sql_update(models.RefreshToken)
+                .where(models.RefreshToken.jti == jti)
+                .values(revoked_at=datetime.now(UTC))
+            )
+            await db.commit()
     response.delete_cookie(key="refresh_token", path="/")
     return None
 

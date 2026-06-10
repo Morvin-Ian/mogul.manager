@@ -1,7 +1,7 @@
 from typing import Annotated
 
 from fastapi import Depends
-from sqlalchemy import select, update as sa_update
+from sqlalchemy import select, text, update as sa_update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
@@ -75,6 +75,13 @@ class TaskService:
         Move task to new_position within new_status column.
         Shifts surrounding tasks by ±1 so positions stay contiguous.
         """
+        # Serialize concurrent reorders per project — the multi-row position
+        # shifts below interleave badly without this. Lock releases on commit.
+        await self.db.execute(
+            text("SELECT pg_advisory_xact_lock(:key)"),
+            {"key": task.project_id},
+        )
+
         old_position = task.position
         old_status = task.status.value
 

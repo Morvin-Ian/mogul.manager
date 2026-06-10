@@ -232,6 +232,7 @@ async def _run_pipeline(db: AsyncSession, doc: Document) -> None:
     t0 = time.perf_counter()
     logger.info("[doc=%s] Pipeline start — %s", doc.id, doc.original_filename)
     doc.status = DocumentStatus.processing
+    doc.processing_attempts = (doc.processing_attempts or 0) + 1
     await db.commit()
 
     try:

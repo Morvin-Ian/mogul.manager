@@ -1,10 +1,11 @@
 import hashlib
 import secrets
+import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
 import jwt
-from fastapi import Depends, HTTPException, Query, status
+from fastapi import Depends, HTTPException, Query, Response, status
 from fastapi.security import OAuth2PasswordBearer
 from pwdlib import PasswordHash
 from sqlalchemy import select
@@ -48,13 +49,42 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None) -> s
     )
 
 
-def create_refresh_token(data: dict) -> str:
-    to_encode = data.copy()
-    expire = datetime.now(UTC) + timedelta(days=settings.refresh_token_expire_days)
-    to_encode.update({"exp": expire, "token_type": "refresh"})
-    refresh_key = settings.refresh_secret_key.get_secret_value() if settings.refresh_secret_key else settings.secret_key.get_secret_value()
-    return jwt.encode(
-        to_encode, refresh_key, algorithm=settings.algorithm
+def cookie_secure() -> bool:
+    """Whether auth cookies should carry the Secure flag.
+
+    Explicit COOKIE_SECURE setting wins; otherwise inferred from whether the
+    app is served over HTTPS (frontend_url scheme).
+    """
+    if settings.cookie_secure is not None:
+        return settings.cookie_secure
+    return settings.frontend_url.lower().startswith("https")
+
+
+async def issue_refresh_cookie(
+    response: Response, user_id: int, db: AsyncSession
+) -> None:
+    """Create a refresh token (JWT + server-side record) and set it as a cookie.
+
+    The DB record makes tokens revocable: logout and rotation mark the row,
+    so a stolen cookie can be killed server-side.
+    """
+    jti = uuid.uuid4().hex
+    expires_at = datetime.now(UTC) + timedelta(days=settings.refresh_token_expire_days)
+    token = jwt.encode(
+        {"sub": str(user_id), "jti": jti, "exp": expires_at, "token_type": "refresh"},
+        _get_refresh_key(),
+        algorithm=settings.algorithm,
+    )
+    db.add(models.RefreshToken(jti=jti, user_id=user_id, expires_at=expires_at))
+    await db.commit()
+    response.set_cookie(
+        key="refresh_token",
+        value=token,
+        httponly=True,
+        secure=cookie_secure(),
+        samesite="lax",
+        max_age=settings.refresh_token_expire_days * 24 * 3600,
+        path="/",
     )
 
 
@@ -75,7 +105,8 @@ def _get_refresh_key() -> str:
     return settings.refresh_secret_key.get_secret_value() if settings.refresh_secret_key else settings.secret_key.get_secret_value()
 
 
-def verify_refresh_token(token: str) -> str | None:
+def verify_refresh_token(token: str) -> tuple[str, str] | None:
+    """Return (user_id, jti) if the token is a valid refresh JWT, else None."""
     try:
         payload = jwt.decode(
             token,
@@ -84,6 +115,38 @@ def verify_refresh_token(token: str) -> str | None:
             options={"require": ["exp", "sub"]},
         )
         if payload.get("token_type") != "refresh":
+            return None
+        jti = payload.get("jti")
+        if not jti:
+            return None
+        return payload["sub"], jti
+    except jwt.PyJWTError:
+        return None
+
+
+# ── Short-lived stream tokens (SSE auth without long-lived tokens in URLs) ──
+
+_STREAM_TOKEN_TTL_SECONDS = 60
+
+
+def create_stream_token(user_id: int) -> str:
+    expire = datetime.now(UTC) + timedelta(seconds=_STREAM_TOKEN_TTL_SECONDS)
+    return jwt.encode(
+        {"sub": str(user_id), "exp": expire, "token_type": "stream"},
+        settings.secret_key.get_secret_value(),
+        algorithm=settings.algorithm,
+    )
+
+
+def verify_stream_token(token: str) -> str | None:
+    try:
+        payload = jwt.decode(
+            token,
+            settings.secret_key.get_secret_value(),
+            algorithms=[settings.algorithm],
+            options={"require": ["exp", "sub"]},
+        )
+        if payload.get("token_type") != "stream":
             return None
         return payload.get("sub")
     except jwt.PyJWTError:
@@ -131,8 +194,12 @@ async def get_current_user_from_query(
     db: Annotated[AsyncSession, Depends(get_db)],
     token: str = Query(...),
 ) -> models.User:
-    """Auth dependency that reads the token from a query parameter (for SSE where EventSource can't set headers)."""
-    user_id = verify_access_token(token)
+    """Auth dependency for SSE, where EventSource can't set headers.
+
+    Only accepts short-lived (60s) single-purpose stream tokens — never the
+    main access token, which would otherwise end up in proxy/access logs.
+    """
+    user_id = verify_stream_token(token)
     if user_id is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

@@ -55,6 +55,9 @@ class Document(TimestampedModel):
     chunk_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     processed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    processing_attempts: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
 
     project: Mapped["Project | None"] = relationship("Project", foreign_keys=[project_id], lazy="select")
 

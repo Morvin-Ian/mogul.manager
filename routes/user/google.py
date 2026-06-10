@@ -18,8 +18,8 @@ from database import get_db
 from services.auth import (
     CurrentUser,
     create_access_token,
-    create_refresh_token,
     hash_password,
+    issue_refresh_cookie,
 )
 
 logger = logging.getLogger(__name__)
@@ -147,20 +147,11 @@ async def google_callback(
         data={"sub": str(user.id)},
         expires_delta=timedelta(minutes=settings.access_token_expire_minutes),
     )
-    refresh_token = create_refresh_token(data={"sub": str(user.id)})
 
     response = RedirectResponse(
         url=f"{settings.frontend_url}/auth/callback?token={access_token}"
     )
-    response.set_cookie(
-        key="refresh_token",
-        value=refresh_token,
-        httponly=True,
-        secure=False,
-        samesite="lax",
-        max_age=settings.refresh_token_expire_days * 24 * 3600,
-        path="/",
-    )
+    await issue_refresh_cookie(response, user.id, db)
     return response
 
 
