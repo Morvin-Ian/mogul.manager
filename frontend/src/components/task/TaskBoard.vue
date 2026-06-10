@@ -1,15 +1,24 @@
 <template>
   <div class="task-board">
     <div class="board-topbar">
-      <button class="new-task-btn" :style="{ background: btnBg, color: btnColor }" @click="showModal = true">
+      <button class="new-task-btn" @click="showModal = true">
         <font-awesome-icon :icon="['fas', 'plus']" />
         New Task
       </button>
     </div>
 
-    <div v-if="dropError" class="drop-error">
+    <div v-if="dropError" class="drop-error" role="alert">
       <font-awesome-icon :icon="['fas', 'circle-exclamation']" />
-      {{ dropError }}
+      <span class="drop-error-msg">{{ dropError }}</span>
+      <button class="drop-error-dismiss" aria-label="Dismiss error" @click="dropError = null">
+        <font-awesome-icon :icon="['fas', 'xmark']" />
+      </button>
+    </div>
+
+    <div v-if="loadError" class="error-state">
+      <font-awesome-icon :icon="['fas', 'circle-exclamation']" />
+      <span class="error-state-msg">Couldn't load tasks. Check your connection and try again.</span>
+      <button class="btn btn-sm" @click="loadTasks">Retry</button>
     </div>
 
     <SkeletonBoard v-if="loading" />
@@ -103,7 +112,7 @@ import { useTagStore } from '../../stores/tags'
 import { usePlanStore } from '../../stores/plans'
 import { useMembersStore } from '../../stores/members'
 import { useAuthStore } from '../../stores/auth'
-import { useTheme } from '../../composables/useTheme'
+import { useToast } from '../../composables/useToast'
 import type { Task, TaskStatus } from '../../types'
 import TaskCard from './TaskCard.vue'
 import TaskModal from './TaskModal.vue'
@@ -113,7 +122,7 @@ import SkeletonBoard from '../common/SkeletonBoard.vue'
 
 const props = defineProps<{
   projectId: number
-  workspaceId?: string
+  workspaceId?: string | null
   openTaskUuid?: string | null
 }>()
 
@@ -127,14 +136,12 @@ const tagStore = useTagStore()
 const planStore = usePlanStore()
 const membersStore = useMembersStore()
 const auth = useAuthStore()
-const { isDark } = useTheme()
-
-const btnBg = computed(() => isDark.value ? '#F7F9F9' : '#1c1c1e')
-const btnColor = computed(() => isDark.value ? '#15202B' : '#ffffff')
+const toast = useToast()
 
 const showModal = ref(false)
 const showPlanModal = ref(false)
 const loading = ref(false)
+const loadError = ref(false)
 const dropError = ref<string | null>(null)
 const selectedTask = ref<Task | null>(null)
 const isSyncing = ref(false)
@@ -212,8 +219,14 @@ function canDragTask(task: Task): boolean {
 
 async function loadTasks() {
   loading.value = true
-  await taskStore.fetchByProject(props.projectId)
-  loading.value = false
+  loadError.value = false
+  try {
+    await taskStore.fetchByProject(props.projectId)
+  } catch {
+    loadError.value = true
+  } finally {
+    loading.value = false
+  }
 }
 
 onMounted(async () => {
@@ -297,13 +310,18 @@ async function onDragEnd(evt: any) {
 }
 
 async function onTaskCreated(data: Record<string, any>) {
-  const created = await taskStore.create(data as any)
-  const tags: { id: number }[] = data.tags || []
-  for (const t of tags) {
-    await tagStore.attachToTask(created.id, t.id)
+  try {
+    const created = await taskStore.create(data as any)
+    const tags: { id: number }[] = data.tags || []
+    for (const t of tags) {
+      await tagStore.attachToTask(created.id, t.id)
+    }
+    showModal.value = false
+    toast.success('Task created')
+    await taskStore.fetchByProject(props.projectId)
+  } catch (e: any) {
+    toast.error(e?.message || 'Failed to create task')
   }
-  showModal.value = false
-  await taskStore.fetchByProject(props.projectId)
 }
 
 function onTaskUpdated(updated: Task) {
@@ -346,13 +364,14 @@ function onTaskUpdated(updated: Task) {
 }
 .nudge-text strong { color: var(--text); font-weight: 700; }
 .nudge-plan-btn {
-  background: #1c1c1e;
-  color: #fff;
-  border-color: #1c1c1e;
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
+  border-color: var(--btn-primary-bg);
 }
-.nudge-plan-btn:hover { background: #333; border-color: #333; }
-:global([data-theme="dark"]) .nudge-plan-btn { background: #F7F9F9; color: #15202B; border-color: #F7F9F9; }
-:global([data-theme="dark"]) .nudge-plan-btn:hover { background: #e0e0e0; }
+.nudge-plan-btn:hover {
+  background: var(--btn-primary-bg-hover);
+  border-color: var(--btn-primary-bg-hover);
+}
 
 /* ── Board topbar ── */
 .board-topbar {
@@ -377,8 +396,8 @@ function onTaskUpdated(updated: Task) {
   align-items: center;
   gap: 7px;
   padding: 8px 18px;
-  background: #1c1c1e;
-  color: #ffffff;
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
   border: none;
   border-radius: 999px;
   font-size: 13px;
@@ -406,6 +425,21 @@ function onTaskUpdated(updated: Task) {
   font-weight: 500;
   margin-bottom: 12px;
 }
+.drop-error-msg { flex: 1; min-width: 0; }
+.drop-error-dismiss {
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  font-size: 13px;
+  padding: 3px 6px;
+  border-radius: 6px;
+  flex-shrink: 0;
+  display: flex;
+  opacity: 0.7;
+  transition: opacity 0.12s, background 0.12s;
+}
+.drop-error-dismiss:hover { opacity: 1; background: rgba(0,0,0,0.06); }
 :global([data-theme="dark"]) .drop-error {
   background: rgba(190,18,60,0.15);
   border-color: rgba(254,205,211,0.3);

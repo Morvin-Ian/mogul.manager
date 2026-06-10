@@ -11,7 +11,7 @@
           </span>
           <h3>Generate a Plan</h3>
         </div>
-        <button class="modal-close" @click="$emit('close')">
+        <button class="modal-close" aria-label="Close dialog" @click="$emit('close')">
           <svg viewBox="0 0 14 14" fill="none" width="12" height="12">
             <path d="M2 2l10 10M12 2L2 12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
           </svg>

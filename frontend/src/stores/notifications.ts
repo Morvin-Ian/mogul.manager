@@ -44,11 +44,23 @@ export const useNotificationStore = defineStore('notifications', () => {
     unreadCount.value = 0
   }
 
-  function connectSSE() {
+  async function connectSSE() {
     const auth = useAuthStore()
     if (!auth.token || eventSource) return
 
-    eventSource = new EventSource(`/api/notifications/stream?token=${auth.token}`)
+    // Exchange the access token for a short-lived stream token so the
+    // long-lived token never appears in the URL (proxy/access logs).
+    let streamToken: string
+    try {
+      const res = await post<{ token: string }>('/notifications/stream-token')
+      streamToken = res.token
+    } catch {
+      setTimeout(() => connectSSE(), 10000)
+      return
+    }
+    if (eventSource) return
+
+    eventSource = new EventSource(`/api/notifications/stream?token=${streamToken}`)
 
     eventSource.onmessage = (event) => {
       try {

@@ -4,7 +4,11 @@
     <div class="app-body">
       <AppSidebar />
       <main class="app-content">
-        <router-view />
+        <router-view v-slot="{ Component }">
+          <Transition name="route-fade" mode="out-in">
+            <component :is="Component" />
+          </Transition>
+        </router-view>
       </main>
     </div>
     <ConfirmDialog />

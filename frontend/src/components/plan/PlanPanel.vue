@@ -130,7 +130,7 @@
       <div class="modal-dialog step-edit-dialog">
         <div class="modal-header">
           <h3>Edit Step</h3>
-          <button class="modal-close" @click="editingStep = null">
+          <button class="modal-close" aria-label="Close dialog" @click="editingStep = null">
             <svg viewBox="0 0 14 14" fill="none" width="12" height="12">
               <path d="M2 2l10 10M12 2L2 12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
             </svg>

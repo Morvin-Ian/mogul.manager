@@ -143,8 +143,9 @@ function handleTaskUpdated(task: Task) {
 }
 
 async function handleWorkspaceSaved(data: { title: string; description: string }) {
+  // Backend resolves workspaces by uuid, not numeric id
   if (editingWorkspace.value) {
-    await workspaceStore.update(editingWorkspace.value.id, data)
+    await workspaceStore.update(editingWorkspace.value.uuid, data)
     editingWorkspace.value = null
   } else {
     await workspaceStore.create(data)
@@ -159,7 +160,9 @@ function openEditWorkspace(ws: Workspace) {
 }
 
 async function deleteWorkspace(id: number) {
-  await workspaceStore.remove(id)
+  const ws = workspaceStore.workspaces.find(w => w.id === id)
+  if (!ws) return
+  await workspaceStore.remove(ws.uuid)
   await loadAllData()
 }
 

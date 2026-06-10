@@ -75,7 +75,7 @@ watch(() => state.open, (v) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 9999;
+  z-index: var(--z-confirm);
   outline: none;
 }
 
@@ -201,7 +201,7 @@ watch(() => state.open, (v) => {
 }
 
 .cd-confirm-primary {
-  background: #0052FF;
+  background: var(--primary);
   color: #fff;
   box-shadow: 0 2px 8px rgba(0, 82, 255, 0.25);
 }

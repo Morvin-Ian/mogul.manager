@@ -1,19 +1,30 @@
 <template>
   <div class="attachments-tab">
     <div class="upload-area">
-      <label class="upload-btn" :class="{ 'upload-btn--disabled': uploading }">
-        <font-awesome-icon :icon="['fas', 'upload']" />
+      <label class="btn btn-sm btn-primary upload-btn" :class="{ 'upload-btn--disabled': uploading }">
+        <span v-if="uploading" class="ai-spinner" />
+        <font-awesome-icon v-else :icon="['fas', 'upload']" />
         {{ uploading ? 'Uploading…' : 'Upload file' }}
         <input type="file" class="upload-input" @change="handleUpload" :disabled="uploading" />
       </label>
     </div>
 
     <div v-if="store.loading" class="feed-empty">Loading attachments…</div>
-    <div v-else-if="store.items.length === 0" class="feed-empty">No attachments yet.</div>
+
+    <div v-else-if="store.items.length === 0" class="empty-state">
+      <div class="empty-state-glyph">
+        <font-awesome-icon :icon="['fas', 'paperclip']" />
+      </div>
+      <div class="empty-state-title">No attachments yet</div>
+      <div class="empty-state-hint">Share context with your team — upload specs, screenshots, or related files.</div>
+    </div>
 
     <div v-else class="attachment-list">
       <div v-for="att in store.items" :key="att.id" class="attachment-row">
-        <div class="att-icon">
+        <a v-if="att.mime_type.startsWith('image/')" :href="att.url" target="_blank" class="att-thumb">
+          <img :src="att.url" :alt="att.original_filename" loading="lazy" />
+        </a>
+        <div v-else class="att-icon">
           <font-awesome-icon :icon="['fas', fileIcon(att.mime_type)]" />
         </div>
         <div class="att-info">
@@ -23,7 +34,11 @@
             <span v-if="att.uploader_name"> · {{ att.uploader_name }}</span>
           </div>
         </div>
-        <button class="att-delete" title="Delete" @click="handleDelete(att)">
+        <button
+          class="icon-btn icon-btn--danger"
+          :aria-label="`Delete ${att.original_filename}`"
+          @click="handleDelete(att)"
+        >
           <font-awesome-icon :icon="['fas', 'trash-can']" />
         </button>
       </div>
@@ -35,9 +50,13 @@
 import { onMounted, ref } from 'vue'
 import type { TaskAttachment } from '../../types'
 import { useAttachmentStore } from '../../stores/attachments'
+import { useConfirm } from '../../composables/useConfirm'
+import { useToast } from '../../composables/useToast'
 
 const props = defineProps<{ taskId: number }>()
 const store = useAttachmentStore()
+const { confirm } = useConfirm()
+const toast = useToast()
 const uploading = ref(false)
 
 onMounted(() => store.fetchByTask(props.taskId))
@@ -60,73 +79,104 @@ async function handleUpload(e: Event) {
   uploading.value = true
   try {
     await store.upload(props.taskId, file)
+    toast.success(`Uploaded "${file.name}"`)
+  } catch (err: any) {
+    toast.error(err?.message || `Failed to upload "${file.name}"`, {
+      actionLabel: 'Retry',
+      onAction: () => retryUpload(file),
+    })
   } finally {
     uploading.value = false
     input.value = ''
   }
 }
 
+async function retryUpload(file: File) {
+  uploading.value = true
+  try {
+    await store.upload(props.taskId, file)
+    toast.success(`Uploaded "${file.name}"`)
+  } catch (err: any) {
+    toast.error(err?.message || `Failed to upload "${file.name}"`)
+  } finally {
+    uploading.value = false
+  }
+}
+
 async function handleDelete(att: TaskAttachment) {
-  if (!confirm(`Delete "${att.original_filename}"?`)) return
-  await store.remove(props.taskId, att.id)
+  const ok = await confirm({
+    title: 'Delete attachment?',
+    message: `"${att.original_filename}" will be permanently removed from this task.`,
+    confirmLabel: 'Delete',
+    danger: true,
+  })
+  if (!ok) return
+  try {
+    await store.remove(props.taskId, att.id)
+    toast.success('Attachment deleted')
+  } catch (err: any) {
+    toast.error(err?.message || 'Failed to delete attachment')
+  }
 }
 </script>
 
 <style scoped>
-.attachments-tab { padding: 1rem 0; }
-.upload-area { margin-bottom: 1rem; }
-.upload-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  background: var(--accent);
-  color: #fff;
-  border-radius: 6px;
+.attachments-tab { padding: 16px 0; }
+.upload-area { margin-bottom: 16px; }
+.upload-btn { position: relative; overflow: hidden; }
+.upload-btn--disabled { opacity: 0.6; pointer-events: none; }
+.upload-input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
   cursor: pointer;
-  font-size: 0.875rem;
-  transition: opacity 0.2s;
 }
-.upload-btn:hover { opacity: 0.85; }
-.upload-btn--disabled { opacity: 0.5; pointer-events: none; }
-.upload-input { display: none; }
-.attachment-list { display: flex; flex-direction: column; gap: 0.5rem; }
+
+.attachment-list { display: flex; flex-direction: column; gap: 8px; }
 .attachment-row {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.5rem 0.75rem;
-  border-radius: 6px;
-  background: var(--surface2);
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
 }
+
 .att-icon {
-  width: 2rem;
-  text-align: center;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: var(--text-muted);
-  font-size: 1.25rem;
+  font-size: 18px;
+  flex-shrink: 0;
 }
+.att-thumb {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  overflow: hidden;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  display: block;
+}
+.att-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
 .att-info { flex: 1; min-width: 0; }
 .att-name {
   display: block;
-  font-size: 0.875rem;
-  font-weight: 500;
+  font-size: 13.5px;
+  font-weight: 600;
   color: var(--text);
   text-decoration: none;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.att-name:hover { color: var(--accent); text-decoration: underline; }
-.att-meta { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.125rem; }
-.att-delete {
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  padding: 0.25rem;
-  border-radius: 4px;
-  font-size: 0.875rem;
-}
-.att-delete:hover { color: var(--danger, #e74c3c); background: var(--surface3); }
-.feed-empty { text-align: center; padding: 2rem 0; color: var(--text-muted); font-size: 0.875rem; }
+.att-name:hover { color: var(--primary); text-decoration: underline; }
+.att-meta { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+.feed-empty { text-align: center; padding: 32px 0; color: var(--text-muted); font-size: 13.5px; }
 </style>

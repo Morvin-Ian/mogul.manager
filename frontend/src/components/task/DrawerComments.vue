@@ -59,6 +59,7 @@ import { ref, watch } from 'vue'
 import { useAuthStore } from '../../stores/auth'
 import { useTaskStore } from '../../stores/tasks'
 import { useConfirm } from '../../composables/useConfirm'
+import { useToast } from '../../composables/useToast'
 import type { Comment } from '../../types'
 
 const props = defineProps<{ taskId: number }>()
@@ -67,6 +68,7 @@ const emit = defineEmits<{ countChange: [number] }>()
 const auth = useAuthStore()
 const taskStore = useTaskStore()
 const { confirm } = useConfirm()
+const toast = useToast()
 
 const comments = ref<Comment[]>([])
 const newComment = ref('')
@@ -123,8 +125,8 @@ async function addComment() {
     comments.value.push(c)
     newComment.value = ''
     emit('countChange', comments.value.length)
-  } catch (e) {
-    console.error(e)
+  } catch (e: any) {
+    toast.error(e?.message || 'Failed to post comment')
   } finally {
     postingComment.value = false
   }
@@ -138,9 +140,13 @@ async function handleDeleteComment(id: number) {
     danger: true,
   })
   if (!ok) return
-  await taskStore.deleteComment(id)
-  comments.value = comments.value.filter((c) => c.id !== id)
-  emit('countChange', comments.value.length)
+  try {
+    await taskStore.deleteComment(id)
+    comments.value = comments.value.filter((c) => c.id !== id)
+    emit('countChange', comments.value.length)
+  } catch (e: any) {
+    toast.error(e?.message || 'Failed to delete comment')
+  }
 }
 </script>
 

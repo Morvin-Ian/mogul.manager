@@ -17,19 +17,17 @@
       >
         <font-awesome-icon :icon="item.icon" class="nav-pill-icon" />
         {{ item.label }}
-        <span v-if="item.count" class="nav-pill-dot"></span>
       </router-link>
     </nav>
 
     <!-- Right: actions + user -->
     <div class="header-right">
-      <button class="hdr-icon" title="Messages">
-        <font-awesome-icon :icon="['far', 'envelope']" style="font-size: 15px;" />
-      </button>
       <button
         class="hdr-icon"
         :class="{ 'hdr-icon--badge': notifStore.hasUnread }"
         title="Notifications"
+        :aria-label="notifStore.hasUnread ? 'Notifications (unread)' : 'Notifications'"
+        :aria-expanded="showNotifs"
         @click.stop="toggleNotifs"
       >
         <font-awesome-icon :icon="['far', 'bell']" style="font-size: 15px;" />

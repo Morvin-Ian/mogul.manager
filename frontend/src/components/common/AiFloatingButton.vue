@@ -8,7 +8,7 @@
             <div class="ai-fab-panel">
               <div class="fab-panel-header">
                 <span class="fab-logo">mogul<span class="fab-dot">.</span>manager</span>
-                <button class="fab-close" @click="open = false">
+                <button class="fab-close" aria-label="Close AI panel" @click="open = false">
                   <font-awesome-icon :icon="['fas', 'xmark']" />
                 </button>
               </div>
@@ -22,7 +22,7 @@
                   @keydown.enter="sendQuery"
                   @keydown.esc="open = false"
                 />
-                <button class="fab-send" :disabled="!fabQuery.trim()" @click="sendQuery">
+                <button class="fab-send" aria-label="Send question" :disabled="!fabQuery.trim()" @click="sendQuery">
                   <font-awesome-icon :icon="['fas', 'arrow-right']" />
                 </button>
               </div>
@@ -43,7 +43,14 @@
         </Transition>
 
         <!-- The button itself -->
-        <button class="ai-fab" :class="{ 'ai-fab--open': open }" @click="toggle" :title="open ? 'Close' : 'Ask AI'">
+        <button
+          class="ai-fab"
+          :class="{ 'ai-fab--open': open }"
+          :aria-label="open ? 'Close AI panel' : 'Ask AI'"
+          :aria-expanded="open"
+          @click="toggle"
+          :title="open ? 'Close' : 'Ask AI'"
+        >
           <font-awesome-icon v-if="open" :icon="['fas', 'xmark']" />
           <template v-else>
             <font-awesome-icon :icon="['fas', 'wand-magic-sparkles']" class="fab-icon" />
@@ -126,7 +133,7 @@ async function goToChat() {
   position: fixed;
   bottom: 28px;
   right: 28px;
-  z-index: 900;
+  z-index: var(--z-fab);
   display: flex;
   flex-direction: column;
   align-items: flex-end;
@@ -139,8 +146,8 @@ async function goToChat() {
   align-items: center;
   gap: 8px;
   padding: 10px 20px;
-  background: #1c1c1e;
-  color: #fff;
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
   border: none;
   border-radius: var(--radius-full);
   font-size: 13.5px;
@@ -153,24 +160,10 @@ async function goToChat() {
 }
 .ai-fab:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(10,11,13,0.35); }
 .ai-fab:active { transform: scale(0.97); }
-.ai-fab--open { background: #3a3a3c; }
+.ai-fab--open { background: var(--btn-primary-bg-hover); }
 .fab-icon { font-size: 13px; }
 .fab-label { letter-spacing: -0.2px; }
-
-/* Dark mode FAB — !important needed because scoped rules compile after
-   :global() rules and would otherwise win at equal specificity */
-:global([data-theme="dark"]) .ai-fab {
-  background: #F7F9F9 !important;
-  color: #15202B !important;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.5) !important;
-}
-:global([data-theme="dark"]) .ai-fab:hover {
-  background: #E1E4E7 !important;
-  box-shadow: 0 8px 28px rgba(0,0,0,0.6) !important;
-}
-:global([data-theme="dark"]) .ai-fab--open {
-  background: #D4D7DA !important;
-}
+/* Dark mode handled by --btn-primary-* tokens */
 
 /* Panel */
 .ai-fab-overlay {
@@ -209,13 +202,12 @@ async function goToChat() {
 .fab-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-muted); }
 .fab-send {
   width: 36px; height: 36px; border-radius: var(--radius-sm);
-  background: #1c1c1e; color: #fff; border: none; cursor: pointer;
+  background: var(--btn-primary-bg); color: var(--btn-primary-text); border: none; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
   transition: opacity 0.14s; flex-shrink: 0;
 }
 .fab-send:disabled { opacity: 0.35; cursor: not-allowed; }
 .fab-send:not(:disabled):hover { opacity: 0.82; }
-:global([data-theme="dark"]) .fab-send { background: #F7F9F9 !important; color: #15202B !important; }
 
 .fab-prompts { display: flex; flex-direction: column; gap: 5px; }
 .fab-prompt-chip {

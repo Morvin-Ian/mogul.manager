@@ -159,10 +159,10 @@ function formatDate(d: string) {
   letter-spacing: 0.1px;
   flex-shrink: 0;
 }
-.pb-1 { background: #DCFCE7; color: #16A34A; }
-.pb-2 { background: #FEF3C7; color: #D97706; }
-.pb-3 { background: #FEE2E2; color: #DC2626; }
-.pb-4 { background: #FEE2E2; color: #991B1B; }
+.pb-1 { background: var(--priority-1-bg); color: var(--priority-1-text); }
+.pb-2 { background: var(--priority-2-bg); color: var(--priority-2-text); }
+.pb-3 { background: var(--priority-3-bg); color: var(--priority-3-text); }
+.pb-4 { background: var(--priority-4-bg); color: var(--priority-4-text); }
 
 /* Estimated hours */
 .est-hours {
@@ -321,9 +321,5 @@ function formatDate(d: string) {
 :global([data-theme="dark"]) .card-divider { background: rgba(91,155,255,0.12); }
 :global([data-theme="dark"]) .assignee-pill { background: rgba(255,255,255,0.05); border-color: rgba(91,155,255,0.2); }
 :global([data-theme="dark"]) .assignee-name { color: #8BAFC8; }
-
-:global([data-theme="dark"]) .pb-1 { background: rgba(22,163,74,0.22);  color: #4ADE80; }
-:global([data-theme="dark"]) .pb-2 { background: rgba(217,119,6,0.22);  color: #FBB040; }
-:global([data-theme="dark"]) .pb-3 { background: rgba(220,38,38,0.22);  color: #F87171; }
-:global([data-theme="dark"]) .pb-4 { background: rgba(153,27,27,0.22);  color: #FCA5A5; }
+/* Priority badge dark values come from --priority-* tokens */
 </style>

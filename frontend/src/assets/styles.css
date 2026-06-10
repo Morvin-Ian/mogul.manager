@@ -45,7 +45,30 @@ html, body { overscroll-behavior-y: none; }
   --danger-border: #FECDD3;
 
   /* Success */
-  --success:       #05B169;
+  --success:        #05B169;
+  --success-bg:     #ECFDF5;
+  --success-border: #A7F3D0;
+
+  /* Primary action pill (dark in light mode, inverts to white in dark mode) */
+  --btn-primary-bg:        #1c1c1e;
+  --btn-primary-bg-hover:  #2e2e30;
+  --btn-primary-bg-active: #111113;
+  --btn-primary-text:      #ffffff;
+
+  /* Task priority (1=low … 4=urgent) */
+  --priority-1-bg: #DCFCE7;  --priority-1-text: #16A34A;
+  --priority-2-bg: #FEF3C7;  --priority-2-text: #D97706;
+  --priority-3-bg: #FEE2E2;  --priority-3-text: #DC2626;
+  --priority-4-bg: #FEE2E2;  --priority-4-text: #991B1B;
+
+  /* Z-index scale — keep all stacking on these steps */
+  --z-header:   20;
+  --z-dropdown: 600;
+  --z-fab:      900;
+  --z-modal:    1000;
+  --z-overlay:  1100;  /* journey / drawer overlays */
+  --z-confirm:  1200;
+  --z-toast:    1300;
 
   /* Radii */
   --radius-xs:   4px;
@@ -73,6 +96,12 @@ html, body { overscroll-behavior-y: none; }
 body { min-height: 100vh; background: var(--bg); }
 a { color: var(--primary); text-decoration: none; font-weight: 500; }
 a:hover { text-decoration: underline; }
+
+/* Keyboard focus ring — everywhere, light mode (dark mode has its own below) */
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
 
 ::selection { background: var(--primary-light); color: var(--primary); }
 
@@ -115,22 +144,22 @@ a:hover { text-decoration: underline; }
 .btn:disabled { opacity: 0.42; cursor: not-allowed; box-shadow: none; }
 
 .btn-primary {
-  background: #1c1c1e;
-  color: #fff;
-  border-color: #1c1c1e;
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
+  border-color: var(--btn-primary-bg);
   border-radius: var(--radius-full);
   font-weight: 600;
   box-shadow: 0 1px 4px rgba(10,11,13,0.22);
   text-shadow: none;
 }
 .btn-primary:hover:not(:disabled) {
-  background: #2e2e30;
-  border-color: #2e2e30;
+  background: var(--btn-primary-bg-hover);
+  border-color: var(--btn-primary-bg-hover);
   box-shadow: 0 2px 8px rgba(10,11,13,0.28);
 }
 .btn-primary:active:not(:disabled) {
-  background: #111113;
-  border-color: #111113;
+  background: var(--btn-primary-bg-active);
+  border-color: var(--btn-primary-bg-active);
   box-shadow: 0 1px 2px rgba(10,11,13,0.2);
 }
 /* keep pill shape even on small-sized primary buttons */
@@ -242,7 +271,7 @@ a:hover { text-decoration: underline; }
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: var(--z-modal);
   padding: 20px;
 }
 .modal {
@@ -353,6 +382,83 @@ a:hover { text-decoration: underline; }
 }
 .hdr-link:hover { background: var(--primary-muted); }
 
+/* ── Icon-only button (header icons, drawer close, row actions) ── */
+.icon-btn {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  flex-shrink: 0;
+  font-size: 14px;
+  line-height: 1;
+}
+.icon-btn:hover {
+  background: var(--surface);
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+.icon-btn--danger:hover {
+  background: var(--danger-bg);
+  border-color: var(--danger-border);
+  color: var(--danger);
+}
+
+/* ── Standard empty state (icon + title + hint + optional CTA) ── */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 6px;
+  padding: 36px 24px;
+}
+.empty-state-glyph {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  color: var(--text-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  margin-bottom: 6px;
+}
+.empty-state-title { font-size: 14px; font-weight: 700; color: var(--text); letter-spacing: -0.2px; }
+.empty-state-hint  { font-size: 13px; color: var(--text-muted); line-height: 1.5; max-width: 280px; }
+.empty-state .btn  { margin-top: 10px; }
+
+/* ── Standard inline error state with retry ── */
+.error-state {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--danger-bg);
+  border: 1.5px solid var(--danger-border);
+  color: var(--danger);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+.error-state-msg { flex: 1; min-width: 0; }
+.error-state .btn { flex-shrink: 0; }
+
+/* ── Route transition (inner router-view) ── */
+.route-fade-enter-active { transition: opacity 0.16s ease, transform 0.16s ease; }
+.route-fade-leave-active { transition: opacity 0.1s ease; }
+.route-fade-enter-from { opacity: 0; transform: translateY(6px); }
+.route-fade-leave-to { opacity: 0; }
+
 /* ══════════════════════════════════════════════════════════════
    DARK MODE  —  Twitter-style deep navy
 ══════════════════════════════════════════════════════════════ */
@@ -376,8 +482,21 @@ a:hover { text-decoration: underline; }
   --danger-bg:     rgba(255, 107, 120, 0.15);
   --danger-border: rgba(255, 107, 120, 0.3);
 
-  --success: #00BA7C;
+  --success:        #00BA7C;
+  --success-bg:     rgba(0,186,124,0.15);
+  --success-border: rgba(0,186,124,0.3);
   --card-bg: #1A2D42;  /* softer navy — same family as surface/bg, less blue pop */
+
+  /* Primary action pill inverts to white */
+  --btn-primary-bg:        #F7F9F9;
+  --btn-primary-bg-hover:  #E1E4E7;
+  --btn-primary-bg-active: #CDD0D3;
+  --btn-primary-text:      #15202B;
+
+  --priority-1-bg: rgba(22,163,74,0.22);   --priority-1-text: #4ADE80;
+  --priority-2-bg: rgba(217,119,6,0.22);   --priority-2-text: #FBB040;
+  --priority-3-bg: rgba(220,38,38,0.22);   --priority-3-text: #F87171;
+  --priority-4-bg: rgba(153,27,27,0.22);   --priority-4-text: #FCA5A5;
 
   --shadow-xs: 0 1px 3px rgba(0,0,0,0.4);
   --shadow-sm: 0 2px 10px rgba(0,0,0,0.45), 0 1px 3px rgba(0,0,0,0.3);
@@ -427,24 +546,7 @@ html[data-theme="dark"] body {
   box-shadow: 0 1px 2px rgba(0,0,0,0.3), inset 0 1px 3px rgba(0,0,0,0.2);
 }
 
-/* Primary inverts to white pill on dark bg */
-[data-theme="dark"] .btn-primary {
-  background: #F7F9F9;
-  color: #15202B;
-  border-color: #F7F9F9;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.35);
-}
-[data-theme="dark"] .btn-primary:hover:not(:disabled) {
-  background: #E1E4E7;
-  border-color: #E1E4E7;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
-}
-[data-theme="dark"] .btn-primary:active:not(:disabled) {
-  background: #CDD0D3;
-  border-color: #CDD0D3;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.3);
-}
-[data-theme="dark"] .btn-sm.btn-primary { border-radius: var(--radius-full); }
+/* Primary pill inversion handled by --btn-primary-* tokens above */
 
 [data-theme="dark"] .btn-ghost {
   background: transparent;
@@ -996,7 +1098,7 @@ html[data-theme="dark"] body {
 
 /* ── Journey overlays (post-creation prompts) ── */
 .journey-overlay {
-  position: fixed; inset: 0; z-index: 1100;
+  position: fixed; inset: 0; z-index: var(--z-overlay);
   background: rgba(10,11,13,0.52);
   backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
   display: flex; align-items: center; justify-content: center; padding: 20px;
@@ -1094,10 +1196,7 @@ html[data-theme="dark"] body {
 [data-theme="dark"] .board-column .task-card .est-hours     { color: #8BAFC8 !important; }
 [data-theme="dark"] .board-column .task-card .card-divider  { background: rgba(91,155,255,0.12) !important; }
 [data-theme="dark"] .board-column .task-card .avatar-chip   { border-color: #1A2D42 !important; }
-[data-theme="dark"] .board-column .task-card .pb-1 { background: rgba(22,163,74,0.22) !important;  color: #4ADE80 !important; }
-[data-theme="dark"] .board-column .task-card .pb-2 { background: rgba(217,119,6,0.22) !important;  color: #FBB040 !important; }
-[data-theme="dark"] .board-column .task-card .pb-3 { background: rgba(220,38,38,0.22) !important;  color: #F87171 !important; }
-[data-theme="dark"] .board-column .task-card .pb-4 { background: rgba(153,27,27,0.22) !important;  color: #FCA5A5 !important; }
+/* Priority badge dark values come from --priority-* tokens */
 
 /* ══════════════════════════════════════════════════════════════
    DARK MODE POLISH — navy blue consistency + scroll flash fix

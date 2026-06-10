@@ -114,7 +114,7 @@ export const useChatStore = defineStore('chat', () => {
     if (token) headers['Authorization'] = `Bearer ${token}`
 
     if (current.value) {
-      current.value.messages.push({ role: 'user', content, id: 0, conversation_id: conversationId, created_at: new Date().toISOString() })
+      current.value.messages.push({ role: 'user', content, id: 0, uuid: '', conversation_id: conversationId, created_at: new Date().toISOString() })
     }
 
     try {

@@ -57,6 +57,7 @@ export interface Project {
   uuid: string;
   workspace_uuid: string | null;
   workspace_id: number;
+  workspace_title: string | null;
   created_by_id: number | null;
   title: string;
   description: string | null;

@@ -9,7 +9,7 @@
 
         <!-- ── Header ── -->
         <div class="drawer-header">
-          <button class="drawer-close" @click="emit('close')" title="Close">
+          <button class="drawer-close" @click="emit('close')" title="Close" aria-label="Close task drawer">
             <font-awesome-icon :icon="['fas', 'xmark']" />
           </button>
           <div class="drawer-header-actions">
@@ -249,11 +249,6 @@
           <DrawerComments v-if="task" :task-id="task.id" @count-change="commentCount = $event" />
         </div>
 
-        <!-- ── Review Links tab ── -->
-        <div v-if="activeTab === 'review'" class="tab-content">
-          <DrawerReviewLinks v-if="task" :task="task" @updated="emit('updated', $event)" />
-        </div>
-
         <!-- ── Attachments tab ── -->
         <div v-if="activeTab === 'attachments'" class="tab-content">
           <DrawerAttachments v-if="task" :task-id="task.id" />
@@ -265,8 +260,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, watch, onMounted } from 'vue'
+import { ref, reactive, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useConfirm } from '../../composables/useConfirm'
+import { useToast } from '../../composables/useToast'
 import { useTaskStore } from '../../stores/tasks'
 import { useMembersStore } from '../../stores/members'
 import { useAuthStore } from '../../stores/auth'
@@ -278,7 +274,7 @@ import DrawerComments from './DrawerComments.vue'
 
 const props = defineProps<{
   task: Task | null
-  workspaceId: number | null
+  workspaceId: string | null
   projectId: number
 }>()
 
@@ -292,10 +288,11 @@ const taskStore = useTaskStore()
 const membersStore = useMembersStore()
 const auth = useAuthStore()
 const { confirm } = useConfirm()
+const toast = useToast()
 
 const editMode = ref(false)
 const saving = ref(false)
-const activeTab = ref<'description' | 'comments'>('description')
+const activeTab = ref<'description' | 'comments' | 'attachments'>('description')
 const showAssigneePicker = ref(false)
 const commentCount = ref(0)
 
@@ -436,9 +433,9 @@ async function handleStatusChange(toStatus: TaskStatus) {
   try {
     const updated = await patch<Task>(`/tasks/${props.task.uuid}`, { status: toStatus })
     emit('updated', updated)
-  } catch (e) {
+  } catch (e: any) {
     form.status = props.task.status
-    console.error(e)
+    toast.error(e?.message || 'Failed to update status')
   }
 }
 
@@ -459,8 +456,9 @@ async function handleSave() {
     const updated = await patch<Task>(`/tasks/${props.task.uuid}`, payload)
     editMode.value = false
     emit('updated', updated)
-  } catch (e) {
-    console.error(e)
+    toast.success('Task updated')
+  } catch (e: any) {
+    toast.error(e?.message || 'Failed to save task')
   } finally {
     saving.value = false
   }
@@ -476,15 +474,18 @@ async function handleDelete() {
     danger: true,
   })
   if (!ok) return
-  await taskStore.remove(props.task.uuid)
-  emit('deleted')
+  try {
+    await taskStore.remove(props.task.uuid)
+    toast.success('Task deleted')
+    emit('deleted')
+  } catch (e: any) {
+    toast.error(e?.message || 'Failed to delete task')
+  }
 }
 
-onMounted(() => {
-  const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') emit('close') }
-  window.addEventListener('keydown', handler)
-  return () => window.removeEventListener('keydown', handler)
-})
+const escHandler = (e: KeyboardEvent) => { if (e.key === 'Escape') emit('close') }
+onMounted(() => window.addEventListener('keydown', escHandler))
+onUnmounted(() => window.removeEventListener('keydown', escHandler))
 
 </script>
 

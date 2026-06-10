@@ -10,9 +10,12 @@
 
         <div v-if="store.loading" class="nd-center"><div class="nd-spinner" /></div>
 
-        <div v-else-if="store.notifications.length === 0" class="nd-center nd-empty">
-          <font-awesome-icon :icon="['far', 'bell']" class="nd-empty-icon" />
-          <span>No notifications yet</span>
+        <div v-else-if="store.notifications.length === 0" class="empty-state">
+          <div class="empty-state-glyph">
+            <font-awesome-icon :icon="['far', 'bell']" />
+          </div>
+          <div class="empty-state-title">You're all caught up</div>
+          <div class="empty-state-hint">Mentions, assignments, and team activity will show up here.</div>
         </div>
 
         <div v-else class="nd-list">
@@ -72,7 +75,7 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
 .nd-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 100;
+  z-index: var(--z-dropdown);
   display: flex;
   justify-content: flex-end;
   padding: 72px 32px 0 0;

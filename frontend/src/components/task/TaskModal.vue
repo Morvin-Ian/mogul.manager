@@ -3,7 +3,7 @@
     <div class="modal">
       <div class="modal-header">
         <h2>{{ task ? 'Edit Task' : 'New Task' }}</h2>
-        <button type="button" class="modal-close" @click="$emit('close')">
+        <button type="button" class="modal-close" aria-label="Close dialog" @click="$emit('close')">
           <svg viewBox="0 0 16 16" fill="none" width="16" height="16"><path d="M12 4L4 12M4 4l8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
         </button>
       </div>

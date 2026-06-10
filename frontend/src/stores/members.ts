@@ -10,7 +10,7 @@ export const useMembersStore = defineStore('members', () => {
   const loading = ref(false)
   const error = ref<string | null>(null)
 
-  async function fetchMembers(workspaceId: string) {
+  async function fetchMembers(workspaceId: number | string) {
     loading.value = true
     error.value = null
     try {
@@ -22,7 +22,7 @@ export const useMembersStore = defineStore('members', () => {
     }
   }
 
-  async function fetchInvitations(workspaceId: string) {
+  async function fetchInvitations(workspaceId: number | string) {
     loading.value = true
     error.value = null
     try {
@@ -35,7 +35,7 @@ export const useMembersStore = defineStore('members', () => {
     }
   }
 
-  async function invite(workspaceId: string, email: string, role: MemberRole) {
+  async function invite(workspaceId: number | string, email: string, role: MemberRole) {
     error.value = null
     try {
       const inv = await post<Invitation>(`/workspaces/${workspaceId}/members/invite`, { email, role })
@@ -47,7 +47,7 @@ export const useMembersStore = defineStore('members', () => {
     }
   }
 
-  async function removeMember(workspaceId: string, userId: number) {
+  async function removeMember(workspaceId: number | string, userId: number) {
     error.value = null
     try {
       await del(`/workspaces/${workspaceId}/members/${userId}`)
@@ -58,7 +58,7 @@ export const useMembersStore = defineStore('members', () => {
     }
   }
 
-  async function updateRole(workspaceId: string, userId: number, role: MemberRole) {
+  async function updateRole(workspaceId: number | string, userId: number, role: MemberRole) {
     error.value = null
     try {
       const updated = await patch<WorkspaceMember>(`/workspaces/${workspaceId}/members/${userId}/role`, { role })
@@ -70,7 +70,7 @@ export const useMembersStore = defineStore('members', () => {
     }
   }
 
-  async function revokeInvitation(workspaceId: string, invitationId: number) {
+  async function revokeInvitation(workspaceId: number | string, invitationId: number) {
     error.value = null
     try {
       await del(`/workspaces/${workspaceId}/members/invitations/${invitationId}`)
@@ -81,7 +81,7 @@ export const useMembersStore = defineStore('members', () => {
     }
   }
 
-  async function fetchMyMembership(workspaceId: string) {
+  async function fetchMyMembership(workspaceId: number | string) {
     try {
       myMembership.value = await get<MyMembershipResponse>(`/workspaces/${workspaceId}/members/me`)
       return myMembership.value

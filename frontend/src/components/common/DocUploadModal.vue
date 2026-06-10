@@ -3,7 +3,7 @@
     <div class="modal upload-modal">
       <div class="modal-header">
         <h2>Upload Document</h2>
-        <button class="modal-close" @click="$emit('close')">×</button>
+        <button class="modal-close" aria-label="Close dialog" @click="$emit('close')">×</button>
       </div>
 
       <div
@@ -21,7 +21,7 @@
           <p class="dropzone-hint">PDF · DOCX · TXT · CSV · max 20 MB</p>
         </template>
         <template v-else>
-          <svg viewBox="0 0 24 24" fill="none" width="22" height="22" style="color:#68CC80">
+          <svg viewBox="0 0 24 24" fill="none" width="22" height="22">
             <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
             <path d="M14 2v6h6M9 13l2 2 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
@@ -138,7 +138,7 @@ function submit() {
 }
 .modal-dropzone p { font-size: 13px; margin: 0; }
 .modal-dropzone-over { border-color: var(--primary); background: var(--primary-light); color: var(--primary); }
-.modal-dropzone.has-file { border-color: #70C878; background: #F0FAF0; color: #1A5820; }
+.modal-dropzone.has-file { border-color: var(--success); background: var(--success-bg); color: var(--success); }
 
 .browse-link {
   color: var(--primary);
@@ -150,7 +150,7 @@ function submit() {
 .pending-file-name {
   font-size: 13.5px;
   font-weight: 600;
-  color: #1A5820;
+  color: inherit;
   word-break: break-all;
 }
 
@@ -239,18 +239,14 @@ function submit() {
   padding: 18px 24px 24px;
 }
 
+/* Colors come from .btn-primary tokens; only adjust sizing here */
 .upload-submit-btn {
-  background: #1c1c1e;
-  color: #fff;
   border: none;
-  border-radius: var(--radius-full);
   font-size: 13px;
-  font-weight: 600;
   padding: 9px 22px;
   box-shadow: none;
 }
-.upload-submit-btn:hover:not(:disabled) { background: #2e2e30; box-shadow: none; }
-.upload-submit-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.upload-submit-btn:hover:not(:disabled) { box-shadow: none; }
 
 .spinner { display: inline-block; width: 12px; height: 12px; border: 2px solid rgba(0,0,0,.1); border-top-color: var(--primary); border-radius: 50%; animation: spin .65s linear infinite; }
 .spinner-white { border-color: rgba(255,255,255,.3); border-top-color: #fff; }
