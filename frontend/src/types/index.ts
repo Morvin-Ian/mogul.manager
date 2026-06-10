@@ -110,6 +110,7 @@ export interface Task {
   position: number | null;
   parent_task_id: number | null;
   metadata_json: Record<string, unknown> | null;
+  tags: Tag[];
   estimated_hours: number | null;
   actual_hours: number | null;
   due_date: string | null;
@@ -365,6 +366,79 @@ export interface Notification {
 
 export interface UnreadCount {
   count: number;
+}
+
+export type MilestoneStatus = "pending" | "achieved" | "cancelled";
+
+export interface Milestone {
+  id: number;
+  uuid: string;
+  project_id: number;
+  name: string;
+  description: string | null;
+  status: MilestoneStatus;
+  due_date: string | null;
+  achieved_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MilestoneCreate {
+  name: string;
+  description?: string | null;
+  due_date?: string | null;
+}
+
+export interface MilestoneUpdate {
+  name?: string;
+  description?: string | null;
+  status?: MilestoneStatus;
+  due_date?: string | null;
+}
+
+export interface TaskAttachment {
+  id: number;
+  uuid: string;
+  task_id: number;
+  user_id: number;
+  original_filename: string;
+  file_size: number;
+  mime_type: string;
+  url: string;
+  uploader_name: string | null;
+  created_at: string;
+}
+
+export interface AttachmentList {
+  items: TaskAttachment[];
+  total: number;
+}
+
+export interface ProjectTemplate {
+  id: number;
+  uuid: string;
+  workspace_id: number;
+  user_id: number;
+  name: string;
+  description: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateFromTemplate {
+  workspace_id: number;
+  name: string;
+  description?: string | null;
+}
+
+export interface Tag {
+  id: number;
+  uuid: string;
+  project_id: number;
+  name: string;
+  color: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface InvitationInfo {

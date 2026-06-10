@@ -9,11 +9,16 @@ from sqlalchemy import select
 
 from database import AsyncSessionLocal
 from models.documents import Document, DocumentStatus
+from routes.activity import router as activity_router
+from routes.attachments import router as attachments_router
 from routes.chat import comments_router
+from routes.dependencies import router as dependencies_router
 from routes.chat import router as chat_router
 from routes.documents import router as documents_router
 from routes.notifications import router as notifications_router
-from routes.project import plans_router, tasks_router
+from routes.reports import router as reports_router
+from routes.templates import router as templates_router
+from routes.project import milestones_router, plans_router, tags_router, tasks_router
 from routes.project import router as projects_router
 from routes.user import google_router
 from routes.user import router as users_router
@@ -92,9 +97,16 @@ app.include_router(workspaces_router)
 app.include_router(projects_router)
 app.include_router(tasks_router)
 app.include_router(plans_router)
+app.include_router(tags_router)
+app.include_router(milestones_router)
 app.include_router(chat_router)
+app.include_router(dependencies_router)
 app.include_router(comments_router)
 app.include_router(documents_router)
 app.include_router(members_router)
 app.include_router(invitations_router)
 app.include_router(notifications_router)
+app.include_router(activity_router)
+app.include_router(attachments_router)
+app.include_router(templates_router)
+app.include_router(reports_router)

@@ -9,10 +9,14 @@ from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from models.base import TimestampedModel
+from models.dependencies import task_dependencies
+from models.tags import task_tags
 
 if TYPE_CHECKING:
+    from .attachments import TaskAttachment
     from .comments import Comment
     from .projects import Project
+    from .tags import Tag
     from .users import User
 
 
@@ -74,6 +78,30 @@ class Task(TimestampedModel):
     )
     comments: Mapped[list["Comment"]] = relationship(
         "Comment",
+        back_populates="task",
+        cascade="all, delete-orphan",
+    )
+    tags: Mapped[list["Tag"]] = relationship(
+        "Tag",
+        secondary=task_tags,
+        back_populates="tasks",
+    )
+    dependencies: Mapped[list["Task"]] = relationship(
+        "Task",
+        secondary=task_dependencies,
+        primaryjoin=lambda: Task.id == task_dependencies.c.task_id,
+        secondaryjoin=lambda: Task.id == task_dependencies.c.depends_on_task_id,
+        back_populates="dependent_tasks",
+    )
+    dependent_tasks: Mapped[list["Task"]] = relationship(
+        "Task",
+        secondary=task_dependencies,
+        primaryjoin=lambda: Task.id == task_dependencies.c.depends_on_task_id,
+        secondaryjoin=lambda: Task.id == task_dependencies.c.task_id,
+        back_populates="dependencies",
+    )
+    attachments: Mapped[list["TaskAttachment"]] = relationship(
+        "TaskAttachment",
         back_populates="task",
         cascade="all, delete-orphan",
     )

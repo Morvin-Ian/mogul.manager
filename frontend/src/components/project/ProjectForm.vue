@@ -12,6 +12,24 @@
 
       <form @submit.prevent="handleSubmit">
 
+        <!-- Template selector — only shown when creating -->
+        <div v-if="!project" class="form-group">
+          <label for="p-template">From template (optional)</label>
+          <select id="p-template" v-model="selectedTemplateId" @change="applyTemplate">
+            <option value="">— No template —</option>
+            <option v-for="t in templateStore.templates" :key="t.id" :value="t.id">
+              {{ t.name }}
+            </option>
+          </select>
+          <button
+            v-if="!templateStore.loading && templateStore.templates.length === 0"
+            type="button"
+            class="btn btn-xs"
+            @click="loadTemplates"
+          >Load templates</button>
+          <span v-if="templateStore.loading" class="hint">Loading templates…</span>
+        </div>
+
         <!-- Workspace selector — only shown when creating and multiple workspaces exist -->
         <div v-if="showWorkspacePicker" class="form-group">
           <label for="p-workspace">Workspace</label>
@@ -84,6 +102,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { useWorkspaceStore } from '../../stores/workspaces'
+import { useTemplateStore } from '../../stores/templates'
 import type { Project } from '../../types'
 import { useAiSuggest } from '../../composables/useAiSuggest'
 
@@ -99,6 +118,7 @@ const emit = defineEmits<{
 
 const workspaceStore = useWorkspaceStore()
 const workspaces = computed(() => workspaceStore.workspaces)
+const templateStore = useTemplateStore()
 
 // Show workspace picker only when: creating (not editing) AND no fixed workspaceId AND >1 workspaces
 const showWorkspacePicker = computed(() =>
@@ -113,8 +133,23 @@ const form = reactive({
   workspace_id: '' as number | '',
 })
 
+const selectedTemplateId = ref<number | ''>('')
 const saving = ref(false)
 const error = ref<string | null>(null)
+
+async function loadTemplates() {
+  const wsId = props.workspaceId || (form.workspace_id as number)
+  if (wsId) await templateStore.fetchByWorkspace(wsId)
+}
+
+function applyTemplate() {
+  const t = templateStore.templates.find((x) => x.id === selectedTemplateId.value)
+  if (t) {
+    form.title = t.name
+    form.description = t.description || ''
+  }
+}
+
 const { suggest, loading: aiLoading } = useAiSuggest()
 
 async function suggestDescription() {
@@ -125,6 +160,19 @@ async function suggestDescription() {
 onMounted(async () => {
   if (workspaces.value.length === 0) {
     await workspaceStore.fetchAll()
+  }
+})
+
+// Auto-load templates when creating
+watch(() => form.workspace_id, (wsId) => {
+  if (!props.project && wsId) {
+    templateStore.fetchByWorkspace(wsId as number)
+  }
+})
+// Also try after workspaces load if workspace_id is already set
+watch(workspaces, () => {
+  if (!props.project && form.workspace_id) {
+    templateStore.fetchByWorkspace(form.workspace_id as number)
   }
 })
 
@@ -169,6 +217,7 @@ async function handleSubmit() {
   }
   if (form.due_date) payload.due_date = form.due_date
   if (form.workspace_id) payload.workspace_id = form.workspace_id
+  if (selectedTemplateId.value) payload.template_id = selectedTemplateId.value
 
   emit('saved', payload)
   saving.value = false

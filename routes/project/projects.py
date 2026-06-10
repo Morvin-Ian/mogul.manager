@@ -8,6 +8,7 @@ import models
 from database import get_db
 from models.collaboration import MemberRole
 from schemas.project.projects import ProjectCreate, ProjectRead, ProjectUpdate
+from services.activity import ActivityService
 from services.auth import CurrentUser
 from services.project.projects import ProjectService
 from services.workspace.collaboration import CollaborationService
@@ -80,13 +81,24 @@ async def create_project(
     current_user: CurrentUser,
     service: Annotated[ProjectService, Depends()],
     collab: Annotated[CollaborationService, Depends()],
+    activity: Annotated[ActivityService, Depends()],
 ):
     await _require_workspace_member(
         project.workspace_id, current_user, collab, min_role="admin"
     )
     data = project.model_dump(exclude_unset=True)
     data["created_by_id"] = current_user.id
-    return await service.create(data)
+    created = await service.create(data)
+    await activity.log(
+        user_id=current_user.id,
+        entity_type="project",
+        entity_id=created.id,
+        action="created",
+        workspace_id=created.workspace_id,
+        project_id=created.id,
+        summary=f"created project \"{created.title}\"",
+    )
+    return created
 
 
 @router.get("", response_model=list[ProjectRead])
@@ -134,6 +146,7 @@ async def update_project(
     current_user: CurrentUser,
     service: Annotated[ProjectService, Depends()],
     collab: Annotated[CollaborationService, Depends()],
+    activity: Annotated[ActivityService, Depends()],
 ):
     project = await _get_project_or_404(project_id, service)
     member = await _require_workspace_member(
@@ -145,7 +158,20 @@ async def update_project(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only the project creator or an admin can edit this project",
         )
-    return await service.update(project, project_update.model_dump(exclude_unset=True))
+    data = project_update.model_dump(exclude_unset=True)
+    updated = await service.update(project, data)
+    if data:
+        await activity.log(
+            user_id=current_user.id,
+            entity_type="project",
+            entity_id=updated.id,
+            action="updated",
+            workspace_id=updated.workspace_id,
+            project_id=updated.id,
+            summary=f"updated project \"{updated.title}\"",
+            changes=data,
+        )
+    return updated
 
 
 @router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -154,9 +180,19 @@ async def delete_project(
     current_user: CurrentUser,
     service: Annotated[ProjectService, Depends()],
     collab: Annotated[CollaborationService, Depends()],
+    activity: Annotated[ActivityService, Depends()],
 ):
     project = await _get_project_or_404(project_id, service)
     await _require_workspace_member(
         project.workspace_id, current_user, collab, min_role="admin"
+    )
+    await activity.log(
+        user_id=current_user.id,
+        entity_type="project",
+        entity_id=project.id,
+        action="deleted",
+        workspace_id=project.workspace_id,
+        project_id=project.id,
+        summary=f"deleted project \"{project.title}\"",
     )
     await service.delete(project)

@@ -25,7 +25,7 @@ class TaskService:
     async def get_by_id(self, task_id: int) -> models.Task | None:
         result = await self.db.execute(
             select(models.Task)
-            .options(joinedload(models.Task.assignee))
+            .options(joinedload(models.Task.assignee), selectinload(models.Task.tags))
             .where(models.Task.id == task_id)
         )
         return result.unique().scalars().first()
@@ -38,6 +38,7 @@ class TaskService:
             .join(models.Project, models.Task.project_id == models.Project.id)
             .options(
                 joinedload(models.Task.assignee),
+                selectinload(models.Task.tags),
                 selectinload(models.Task.project).selectinload(models.Project.workspace),
             )
             .where(models.Project.workspace_id == workspace_id)
@@ -54,6 +55,7 @@ class TaskService:
             select(models.Task)
             .options(
                 joinedload(models.Task.assignee),
+                selectinload(models.Task.tags),
                 selectinload(models.Task.project).selectinload(models.Project.workspace),
             )
             .where(models.Task.project_id == project_id)
@@ -163,7 +165,7 @@ class TaskService:
     async def _load_assignee(self, task: models.Task) -> models.Task:
         result = await self.db.execute(
             select(models.Task)
-            .options(joinedload(models.Task.assignee))
+            .options(joinedload(models.Task.assignee), selectinload(models.Task.tags))
             .where(models.Task.id == task.id)
         )
         loaded = result.unique().scalars().first()
@@ -176,6 +178,7 @@ class TaskService:
             select(models.Task)
             .options(
                 joinedload(models.Task.assignee),
+                selectinload(models.Task.tags),
                 selectinload(models.Task.project).selectinload(models.Project.workspace),
             )
             .where(models.Task.uuid == uuid)

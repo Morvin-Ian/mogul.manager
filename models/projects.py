@@ -11,7 +11,9 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from models.base import TimestampedModel
 
 if TYPE_CHECKING:
+    from .milestones import Milestone
     from .plans import Plan
+    from .tags import Tag
     from .tasks import Task
     from .users import User
     from .workspaces import Workspace
@@ -55,6 +57,16 @@ class Project(TimestampedModel):
     )
     plans: Mapped[list["Plan"]] = relationship(
         "Plan",
+        back_populates="project",
+        cascade="all, delete-orphan",
+    )
+    tags: Mapped[list["Tag"]] = relationship(
+        "Tag",
+        back_populates="project",
+        cascade="all, delete-orphan",
+    )
+    milestones: Mapped[list["Milestone"]] = relationship(
+        "Milestone",
         back_populates="project",
         cascade="all, delete-orphan",
     )

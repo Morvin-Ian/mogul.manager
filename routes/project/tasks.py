@@ -11,7 +11,9 @@ from config import settings
 from database import get_db
 from models.collaboration import MemberRole
 from models.plans import StepStatus
+from schemas.bulk import BulkTaskDelete, BulkTaskUpdate
 from schemas.project.tasks import TaskCreate, TaskRead, TaskUpdate
+from services.activity import ActivityService
 from services.auth import CurrentUser
 from services.notifications import NotificationService, emit_notification_event
 from services.project.tasks import TaskService
@@ -160,6 +162,7 @@ async def create_task(
     bt: BackgroundTasks,
     service: Annotated[TaskService, Depends()],
     collab: Annotated[CollaborationService, Depends()],
+    activity: Annotated[ActivityService, Depends()],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     project = await _get_project_or_404(task.project_id, db)
@@ -180,6 +183,18 @@ async def create_task(
 
     created = await service.create(data)
     await _schedule_notification(bt, created, current_user, db)
+
+    await activity.log(
+        user_id=current_user.id,
+        entity_type="task",
+        entity_id=created.id,
+        action="created",
+        workspace_id=project.workspace_id,
+        project_id=created.project_id,
+        task_id=created.id,
+        summary=f"created task \"{created.title}\"",
+    )
+
     return _to_read(created)
 
 
@@ -237,6 +252,7 @@ async def update_task(
     bt: BackgroundTasks,
     service: Annotated[TaskService, Depends()],
     collab: Annotated[CollaborationService, Depends()],
+    activity: Annotated[ActivityService, Depends()],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     task = await _get_task_or_404(task_id, service)
@@ -314,6 +330,31 @@ async def update_task(
             )
             await emit_notification_event(updated.assigned_to_id, notif)
 
+    changed_fields = {k: v for k, v in data.items() if v is not None}
+    if changed_fields:
+        summary_parts = []
+        if "status" in changed_fields:
+            summary_parts.append(f"changed status to {changed_fields['status']}")
+        if "assigned_to_id" in changed_fields:
+            summary_parts.append("changed assignee")
+        if "title" in changed_fields:
+            summary_parts.append("renamed task")
+        if "priority" in changed_fields:
+            summary_parts.append(f"changed priority to {changed_fields['priority']}")
+        if not summary_parts:
+            summary_parts.append("updated task")
+        await activity.log(
+            user_id=current_user.id,
+            entity_type="task",
+            entity_id=updated.id,
+            action="updated",
+            workspace_id=project.workspace_id,
+            project_id=updated.project_id,
+            task_id=updated.id,
+            summary=f"{summary_parts[0]} \"{updated.title}\"",
+            changes=changed_fields,
+        )
+
     return _to_read(updated)
 
 
@@ -323,12 +364,23 @@ async def delete_task(
     current_user: CurrentUser,
     service: Annotated[TaskService, Depends()],
     collab: Annotated[CollaborationService, Depends()],
+    activity: Annotated[ActivityService, Depends()],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     task = await _get_task_or_404(task_id, service)
     project = await _get_project_or_404(task.project_id, db)
     # Only admins and owners can delete tasks
     await collab.require_access(project.workspace_id, current_user.id, min_role="admin")
+    await activity.log(
+        user_id=current_user.id,
+        entity_type="task",
+        entity_id=task.id,
+        action="deleted",
+        workspace_id=project.workspace_id,
+        project_id=task.project_id,
+        task_id=task.id,
+        summary=f"deleted task \"{task.title}\"",
+    )
     await service.delete(task)
 
 
@@ -338,6 +390,7 @@ async def reorder_task(
     current_user: CurrentUser,
     service: Annotated[TaskService, Depends()],
     collab: Annotated[CollaborationService, Depends()],
+    activity: Annotated[ActivityService, Depends()],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     """Move a task to a new position (and optionally a new status column)."""
@@ -378,6 +431,109 @@ async def reorder_task(
     # Sync plan step if status changed via drag
     if target_status != old_status:
         await _sync_step_from_task(task, target_status, db)
+        await activity.log(
+            user_id=current_user.id,
+            entity_type="task",
+            entity_id=task.id,
+            action="status_changed",
+            workspace_id=project.workspace_id,
+            project_id=task.project_id,
+            task_id=task.id,
+            summary=f"moved \"{task.title}\" from {old_status} to {target_status}",
+            changes={"status": {"from": old_status, "to": target_status}},
+        )
+
+
+@router.post("/batch/update", status_code=status.HTTP_204_NO_CONTENT)
+async def bulk_update_tasks(
+    body: BulkTaskUpdate,
+    current_user: CurrentUser,
+    collab: Annotated[CollaborationService, Depends()],
+    activity: Annotated[ActivityService, Depends()],
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    result = await db.execute(
+        select(models.Task).where(models.Task.id.in_(body.task_ids)).options(
+            joinedload(models.Task.project)
+        )
+    )
+    tasks = list(result.unique().scalars().all())
+    if not tasks:
+        return
+
+    # All tasks must be in the same project
+    project_ids = {t.project_id for t in tasks}
+    project = await _get_project_or_404(next(iter(project_ids)), db)
+    # All tasks must be accessible (same project) for the operation to proceed
+    if len(project_ids) > 1:
+        raise HTTPException(status_code=400, detail="All tasks must be in the same project")
+    await collab.require_access(project.workspace_id, current_user.id, min_role="member")
+
+    update_data = {}
+    if body.status is not None:
+        update_data["status"] = body.status.value if hasattr(body.status, "value") else body.status
+    if body.priority is not None:
+        update_data["priority"] = body.priority.value if hasattr(body.priority, "value") else body.priority
+    if body.assigned_to_id is not None:
+        update_data["assigned_to_id"] = body.assigned_to_id
+    if body.due_date is not None:
+        update_data["due_date"] = body.due_date
+
+    if not update_data:
+        return
+
+    for t in tasks:
+        for key, value in update_data.items():
+            setattr(t, key, value)
+    await db.commit()
+
+    await activity.log(
+        user_id=current_user.id,
+        entity_type="task",
+        entity_id=0,
+        action="bulk_updated",
+        workspace_id=project.workspace_id,
+        project_id=project.id,
+        summary=f"bulk updated {len(tasks)} tasks",
+        changes={"task_ids": body.task_ids, **update_data},
+    )
+
+
+@router.post("/batch/delete", status_code=status.HTTP_204_NO_CONTENT)
+async def bulk_delete_tasks(
+    body: BulkTaskDelete,
+    current_user: CurrentUser,
+    collab: Annotated[CollaborationService, Depends()],
+    activity: Annotated[ActivityService, Depends()],
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    result = await db.execute(
+        select(models.Task).where(models.Task.id.in_(body.task_ids))
+    )
+    tasks = list(result.scalars().all())
+    if not tasks:
+        return
+
+    project_ids = {t.project_id for t in tasks}
+    project = await _get_project_or_404(next(iter(project_ids)), db)
+    if len(project_ids) > 1:
+        raise HTTPException(status_code=400, detail="All tasks must be in the same project")
+    await collab.require_access(project.workspace_id, current_user.id, min_role="admin")
+
+    for t in tasks:
+        await db.delete(t)
+    await db.commit()
+
+    await activity.log(
+        user_id=current_user.id,
+        entity_type="task",
+        entity_id=0,
+        action="bulk_deleted",
+        workspace_id=project.workspace_id,
+        project_id=project.id,
+        summary=f"bulk deleted {len(tasks)} tasks",
+        changes={"task_ids": body.task_ids},
+    )
 
 
 def _to_read(task: models.Task) -> TaskRead:

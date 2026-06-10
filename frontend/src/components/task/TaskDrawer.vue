@@ -188,6 +188,20 @@
               <span v-else class="prop-empty">Unassigned</span>
             </div>
           </div>
+
+          <!-- Tags -->
+          <div class="prop-row">
+            <div class="prop-label">
+              <font-awesome-icon :icon="['fas', 'tag']" />
+              Tags
+            </div>
+            <div class="prop-val">
+              <div v-if="task.tags?.length" class="drawer-tags">
+                <TagChip v-for="t in task.tags" :key="t.id" :tag="t" />
+              </div>
+              <span v-else class="prop-empty">—</span>
+            </div>
+          </div>
         </div>
 
         <div class="drawer-divider"></div>
@@ -208,14 +222,12 @@
             <span v-if="commentCount" class="tab-badge">{{ commentCount }}</span>
           </button>
           <button
-            v-if="task.status === 'review'"
-            class="tab-btn tab-btn--review"
-            :class="{ 'tab-active': activeTab === 'review' }"
-            @click="activeTab = 'review'"
+            class="tab-btn"
+            :class="{ 'tab-active': activeTab === 'attachments' }"
+            @click="activeTab = 'attachments'"
           >
-            <font-awesome-icon :icon="['fas', 'link']" />
-            Review Links
-            <span v-if="reviewLinksCount" class="tab-badge">{{ reviewLinksCount }}</span>
+            <font-awesome-icon :icon="['fas', 'paperclip']" />
+            Attachments
           </button>
         </div>
 
@@ -242,6 +254,11 @@
           <DrawerReviewLinks v-if="task" :task="task" @updated="emit('updated', $event)" />
         </div>
 
+        <!-- ── Attachments tab ── -->
+        <div v-if="activeTab === 'attachments'" class="tab-content">
+          <DrawerAttachments v-if="task" :task-id="task.id" />
+        </div>
+
       </div>
     </Transition>
   </Teleport>
@@ -255,8 +272,9 @@ import { useMembersStore } from '../../stores/members'
 import { useAuthStore } from '../../stores/auth'
 import { get, patch } from '../../stores/client'
 import type { Task, TaskStatus, TaskPriority, WorkspaceMember } from '../../types'
+import TagChip from './TagChip.vue'
+import DrawerAttachments from './DrawerAttachments.vue'
 import DrawerComments from './DrawerComments.vue'
-import DrawerReviewLinks from './DrawerReviewLinks.vue'
 
 const props = defineProps<{
   task: Task | null
@@ -277,7 +295,7 @@ const { confirm } = useConfirm()
 
 const editMode = ref(false)
 const saving = ref(false)
-const activeTab = ref<'description' | 'comments' | 'review'>('description')
+const activeTab = ref<'description' | 'comments'>('description')
 const showAssigneePicker = ref(false)
 const commentCount = ref(0)
 
@@ -382,11 +400,6 @@ function formatDateTime(d: string) {
     hour: '2-digit', minute: '2-digit',
   })
 }
-
-const reviewLinksCount = computed(() => {
-  const meta = props.task?.metadata_json as Record<string, any> | null
-  return (meta?.review_links as any[])?.length ?? 0
-})
 
 watch(
   () => props.task,

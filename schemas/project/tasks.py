@@ -3,6 +3,7 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict, Field
 
 from models.tasks import TaskPriority, TaskStatus
+from schemas.tags import TagRead
 
 
 class TaskBase(BaseModel):
@@ -52,3 +53,4 @@ class TaskRead(TaskBase):
     assignee_name: str | None = None
     assignee_avatar_url: str | None = None
     position: int | None = None
+    tags: list[TagRead] = []

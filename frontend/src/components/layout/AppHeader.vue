@@ -54,20 +54,13 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '../../stores/auth'
-import { useWorkspaceStore } from '../../stores/workspaces'
-import { useTaskStore } from '../../stores/tasks'
-import { useMembersStore } from '../../stores/members'
 import { useNotificationStore } from '../../stores/notifications'
 import NotificationDropdown from '../common/NotificationDropdown.vue'
 
 const auth = useAuthStore()
 const route = useRoute()
-const workspaceStore = useWorkspaceStore()
-const taskStore = useTaskStore()
-const membersStore = useMembersStore()
 const notifStore = useNotificationStore()
 
-const reviewCount = ref(0)
 const showNotifs = ref(false)
 
 function toggleNotifs() {
@@ -79,7 +72,6 @@ function toggleNotifs() {
 
 const navItems = computed(() => [
   { label: 'Home',       to: '/',           icon: ['fas', 'house'],              activeOn: ['/']           },
-  { label: 'Reviews',    to: '/review',     icon: ['fas', 'code-pull-request'],  activeOn: ['/review'],    count: reviewCount.value || undefined },
   { label: 'Workspaces', to: '/workspaces', icon: ['fas', 'layer-group'],        activeOn: ['/workspaces'] },
   { label: 'Settings',   to: '/settings',   icon: ['fas', 'gear'],               activeOn: ['/settings']   },
 ])
@@ -89,24 +81,7 @@ function isActive(item: { to: string; activeOn: string[] }) {
   return item.activeOn.some(p => route.path.startsWith(p))
 }
 
-async function loadReviewCount() {
-  try {
-    if (workspaceStore.workspaces.length === 0) await workspaceStore.fetchAll()
-    const wsId = workspaceStore.workspaces[0]?.id
-    if (!wsId) return
-
-    await membersStore.fetchMyMembership(wsId)
-    const tasks = await taskStore.fetchReviewTasks(wsId)
-    const role = membersStore.myMembership?.role
-    const isAdminOrOwner = role === 'admin' || role === 'owner'
-    reviewCount.value = isAdminOrOwner
-      ? tasks.length
-      : tasks.filter(t => t.assigned_to_id === auth.user?.id).length
-  } catch { /* non-critical */ }
-}
-
 onMounted(() => {
-  loadReviewCount()
   notifStore.connectSSE()
   notifStore.fetchUnreadCount()
 })

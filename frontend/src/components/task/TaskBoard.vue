@@ -99,6 +99,7 @@
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import draggable from 'vuedraggable'
 import { useTaskStore } from '../../stores/tasks'
+import { useTagStore } from '../../stores/tags'
 import { usePlanStore } from '../../stores/plans'
 import { useMembersStore } from '../../stores/members'
 import { useAuthStore } from '../../stores/auth'
@@ -122,6 +123,7 @@ const emit = defineEmits<{
 }>()
 
 const taskStore = useTaskStore()
+const tagStore = useTagStore()
 const planStore = usePlanStore()
 const membersStore = useMembersStore()
 const auth = useAuthStore()
@@ -295,8 +297,13 @@ async function onDragEnd(evt: any) {
 }
 
 async function onTaskCreated(data: Record<string, any>) {
-  await taskStore.create(data as any)
+  const created = await taskStore.create(data as any)
+  const tags: { id: number }[] = data.tags || []
+  for (const t of tags) {
+    await tagStore.attachToTask(created.id, t.id)
+  }
   showModal.value = false
+  await taskStore.fetchByProject(props.projectId)
 }
 
 function onTaskUpdated(updated: Task) {

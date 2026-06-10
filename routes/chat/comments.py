@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import models
 from database import get_db
 from schemas.chat.comments import CommentCreate, CommentRead, CommentUpdate
-from config import settings
+from services.activity import ActivityService
 from services.auth import CurrentUser
 from services.chat.comments import CommentService
 from services.notifications import NotificationService, emit_notification_event
@@ -62,12 +62,33 @@ async def create_comment(
     comment: CommentCreate,
     current_user: CurrentUser,
     service: Annotated[CommentService, Depends()],
+    activity: Annotated[ActivityService, Depends()],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     await _verify_task_ownership(comment.task_id, current_user.id, db)
     data = comment.model_dump(exclude_unset=True)
     data["user_id"] = current_user.id
     created = await service.create(data)
+
+    task_result = await db.execute(
+        select(models.Task).where(models.Task.id == comment.task_id)
+    )
+    task = task_result.scalars().first()
+    if task:
+        project_result = await db.execute(
+            select(models.Project).where(models.Project.id == task.project_id)
+        )
+        proj = project_result.scalars().first()
+        await activity.log(
+            user_id=current_user.id,
+            entity_type="comment",
+            entity_id=created.id,
+            action="created",
+            workspace_id=proj.workspace_id if proj else None,
+            project_id=task.project_id,
+            task_id=task.id,
+            summary=f"commented on \"{task.title}\"",
+        )
 
     # Notify task assignee about the new comment (unless they wrote it)
     task_result = await db.execute(
@@ -150,6 +171,7 @@ async def delete_comment(
     comment_id: int,
     current_user: CurrentUser,
     service: Annotated[CommentService, Depends()],
+    activity: Annotated[ActivityService, Depends()],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     comment = await service.get_by_id(comment_id)
@@ -161,5 +183,19 @@ async def delete_comment(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to delete this comment",
+        )
+    task_result = await db.execute(
+        select(models.Task).where(models.Task.id == comment.task_id)
+    )
+    task = task_result.scalars().first()
+    if task:
+        await activity.log(
+            user_id=current_user.id,
+            entity_type="comment",
+            entity_id=comment.id,
+            action="deleted",
+            project_id=task.project_id,
+            task_id=task.id,
+            summary=f"deleted a comment on \"{task.title}\"",
         )
     await service.delete(comment)

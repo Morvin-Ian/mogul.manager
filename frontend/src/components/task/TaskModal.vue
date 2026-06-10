@@ -120,6 +120,13 @@
           </div>
           <span v-if="!isAdminUser" class="field-hint">You can only assign tasks to yourself.</span>
         </div>
+        <div class="form-group">
+          <TagPicker
+            v-if="projectId || task?.project_id"
+            :project-id="projectId || task!.project_id"
+            v-model="form.tags"
+          />
+        </div>
         <div class="form-row">
           <div class="form-group">
             <label for="t-est">Est. Hours</label>
@@ -148,6 +155,7 @@ import type { Task, TaskPriority, TaskStatus, WorkspaceMember } from '../../type
 import { useAiSuggest } from '../../composables/useAiSuggest'
 import { get } from '../../stores/client'
 import { useAuthStore } from '../../stores/auth'
+import TagPicker from './TagPicker.vue'
 
 const props = defineProps<{
   task?: Task | null
@@ -159,6 +167,8 @@ const emit = defineEmits<{
   saved: [data: Record<string, any>]
 }>()
 
+import type { Tag } from '../../types'
+
 interface TaskForm {
   title: string
   description: string
@@ -167,6 +177,7 @@ interface TaskForm {
   assigned_to_id: number | null
   estimated_hours: number | null
   due_date: string
+  tags: Tag[]
 }
 
 const form = reactive<TaskForm>({
@@ -177,6 +188,7 @@ const form = reactive<TaskForm>({
   assigned_to_id: null,
   estimated_hours: null,
   due_date: '',
+  tags: [],
 })
 const auth = useAuthStore()
 const members = ref<WorkspaceMember[]>([])
@@ -249,6 +261,7 @@ watch(() => props.task, (t) => {
     form.assigned_to_id = t.assigned_to_id
     form.estimated_hours = t.estimated_hours
     form.due_date = t.due_date ? t.due_date.slice(0, 10) : ''
+    form.tags = t.tags || []
   } else {
     form.title = ''
     form.description = ''
@@ -257,6 +270,7 @@ watch(() => props.task, (t) => {
     form.assigned_to_id = null
     form.estimated_hours = null
     form.due_date = ''
+    form.tags = []
   }
 }, { immediate: true })
 

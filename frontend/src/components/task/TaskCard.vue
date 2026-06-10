@@ -23,6 +23,10 @@
     <!-- Description snippet -->
     <p v-if="task.description" class="card-desc">{{ task.description }}</p>
 
+    <div v-if="task.tags?.length" class="card-tags">
+      <TagChip v-for="t in task.tags" :key="t.id" :tag="t" />
+    </div>
+
     <div class="card-divider" />
 
     <!-- Footer: comments + date + avatars -->
@@ -74,6 +78,7 @@
 import { computed } from 'vue'
 import type { Task } from '../../types'
 import { useAuthStore } from '../../stores/auth'
+import TagChip from './TagChip.vue'
 
 const props = defineProps<{ task: Task; canDrag?: boolean; isTeam?: boolean }>()
 const auth = useAuthStore()

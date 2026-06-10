@@ -75,7 +75,6 @@ const ROUTE_PROMPTS: Record<string, string[]> = {
   '/projects': ['List all active projects', 'Which project has the most pending tasks?', 'Create a project and add tasks to it'],
   '/plans': ['Create a plan for my current project', 'Show me all active plans', 'What are the next steps in my plans?'],
   '/documents': ['Summarize my uploaded documents', 'Search my docs for information on', 'What documents do I have ready?'],
-  '/review': ['What tasks are in review right now?', 'Approve all my reviewed tasks', 'Who submitted the most tasks for review?'],
 }
 
 const DEFAULT_PROMPTS = [
