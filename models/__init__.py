@@ -12,7 +12,6 @@ from .plans import Plan, PlanStatus, PlanStep, StepPriority, StepStatus
 from .projects import Project, ProjectStatus
 from .tags import Tag
 from .tasks import Task, TaskPriority, TaskStatus
-from .templates import ProjectTemplate
 from .users import PasswordResetToken, RefreshToken, User
 from .workspaces import Workspace
 
@@ -44,7 +43,6 @@ __all__ = [
     "StepStatus",
     "Project",
     "ProjectStatus",
-    "ProjectTemplate",
     "Tag",
     "Task",
     "TaskPriority",

@@ -215,6 +215,7 @@ async def list_tasks(
         tasks = await service.list_by_workspace(
             workspace_id, status=status, skip=skip, limit=limit
         )
+        await _attach_comment_counts(db, tasks)
         return [_to_read(t) for t in tasks]
     if project_id is None:
         raise HTTPException(
@@ -225,6 +226,7 @@ async def list_tasks(
         project.workspace_id, current_user.id, min_role="member"
     )
     tasks = await service.list_by_project(project_id, skip=skip, limit=limit)
+    await _attach_comment_counts(db, tasks)
     return [_to_read(t) for t in tasks]
 
 
@@ -241,6 +243,7 @@ async def get_task(
     await collab.require_access(
         project.workspace_id, current_user.id, min_role="member"
     )
+    await _attach_comment_counts(db, [task])
     return _to_read(task)
 
 
@@ -355,6 +358,7 @@ async def update_task(
             changes=changed_fields,
         )
 
+    await _attach_comment_counts(db, [updated])
     return _to_read(updated)
 
 
@@ -556,4 +560,25 @@ async def bulk_delete_tasks(
 
 
 def _to_read(task: models.Task) -> TaskRead:
-    return TaskRead.model_validate(task)
+    # model_validate with from_attributes=True may not pick up transient
+    # attributes set by _attach_comment_counts, so we explicitly supply it.
+    result = TaskRead.model_validate(task)
+    cc = getattr(task, "comment_count", None)
+    if cc is not None:
+        result.comment_count = cc
+    return result
+
+
+async def _attach_comment_counts(db: AsyncSession, tasks: list[models.Task]) -> None:
+    """Set a transient comment_count attribute that TaskRead picks up."""
+    ids = [t.id for t in tasks]
+    if not ids:
+        return
+    result = await db.execute(
+        select(models.Comment.task_id, func.count(models.Comment.id))
+        .where(models.Comment.task_id.in_(ids))
+        .group_by(models.Comment.task_id)
+    )
+    counts = dict(result.all())
+    for t in tasks:
+        t.comment_count = counts.get(t.id, 0)

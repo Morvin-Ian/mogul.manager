@@ -1,7 +1,7 @@
 """add_task_attachments
 
 Revision ID: 287541f7e9e3
-Revises: ad69059cfcbf
+Revises: 0edd5491c2b9
 Create Date: 2026-06-10 11:02:06.043903
 
 """
@@ -13,7 +13,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision: str = '287541f7e9e3'
-down_revision: Union[str, Sequence[str], None] = 'ad69059cfcbf'
+down_revision: Union[str, Sequence[str], None] = '0edd5491c2b9'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

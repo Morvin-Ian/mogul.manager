@@ -5,6 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import models
+from config import settings
 from database import get_db
 from schemas.chat.comments import CommentCreate, CommentRead, CommentUpdate
 from services.activity import ActivityService
@@ -127,6 +128,17 @@ async def list_comments(
 ):
     await _verify_task_ownership(task_id, current_user.id, db)
     return await service.list_by_task(task_id, skip=skip, limit=limit)
+
+
+@router.get("/relevant", response_model=list[CommentRead])
+async def list_relevant_comments(
+    current_user: CurrentUser,
+    service: Annotated[CommentService, Depends()],
+    limit: int = Query(50, ge=1, le=200),
+):
+    """Recent comments that concern the current user (dashboard feed):
+    comments on tasks assigned to them, threads they joined, or their own."""
+    return await service.list_relevant(current_user.id, limit=limit)
 
 
 @router.get("/{comment_id}", response_model=CommentRead)

@@ -54,3 +54,4 @@ class TaskRead(TaskBase):
     assignee_avatar_url: str | None = None
     position: int | None = None
     tags: list[TagRead] = []
+    comment_count: int = 0

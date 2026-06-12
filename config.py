@@ -27,6 +27,9 @@ class Settings(BaseSettings):
     s3_bucket_name: str
     s3_custom_domain: str
     s3_endpoint_url: str = ""
+    # R2 only accepts auto/wnam/enam/weur/eeur/apac/oc — an ambient
+    # AWS_DEFAULT_REGION like eu-west-1 breaks every upload
+    s3_region_name: str = "auto"
 
     mail_server: str = "localhost"
     mail_port: int = 587

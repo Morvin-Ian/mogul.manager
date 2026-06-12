@@ -172,7 +172,6 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useProjectStore } from '../../stores/projects'
-import { useTemplateStore } from '../../stores/templates'
 import { useMembersStore } from '../../stores/members'
 import { useDocumentStore } from '../../stores/documents'
 import type { ProjectStatus } from '../../types'
@@ -184,7 +183,6 @@ const props = defineProps<{ workspaceId: number }>()
 
 const router = useRouter()
 const projectStore = useProjectStore()
-const templateStore = useTemplateStore()
 const membersStore = useMembersStore()
 const docStore = useDocumentStore()
 const showForm = ref(false)
@@ -291,18 +289,8 @@ function timeAgo(d: string) {
 }
 
 async function onProjectSaved(data: Record<string, any>) {
-  const templateId = data.template_id
   const wsId = data.workspace_id ?? props.workspaceId
-  let project
-  if (templateId) {
-    project = await templateStore.createProjectFromTemplate(templateId, {
-      workspace_id: wsId,
-      name: data.title,
-      description: data.description,
-    })
-  } else {
-    project = await projectStore.create({ ...data, workspace_id: wsId } as any)
-  }
+  const project = await projectStore.create({ ...data, workspace_id: wsId } as any)
   showForm.value = false
   journeyProjectTitle.value = project.title
   journeyProjectId.value = project.id

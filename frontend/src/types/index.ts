@@ -118,6 +118,7 @@ export interface Task {
   completed_at: string | null;
   created_at: string;
   updated_at: string;
+  comment_count?: number;
 }
 
 export interface TaskCreate {
@@ -413,23 +414,6 @@ export interface TaskAttachment {
 export interface AttachmentList {
   items: TaskAttachment[];
   total: number;
-}
-
-export interface ProjectTemplate {
-  id: number;
-  uuid: string;
-  workspace_id: number;
-  user_id: number;
-  name: string;
-  description: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface CreateFromTemplate {
-  workspace_id: number;
-  name: string;
-  description?: string | null;
 }
 
 export interface Tag {

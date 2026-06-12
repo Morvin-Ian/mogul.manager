@@ -47,7 +47,7 @@
         @delete="deleteWorkspace"
       />
       <DeadlinesPanel class="deadlines-panel" :tasks="allTasks" :projects="allProjects" />
-      <CommentsPanel class="comments-panel" :tasks="allTasks" />
+      <CommentsPanel class="comments-panel" :tasks="allTasks" @comment-updated="handleCommentUpdated" />
     </div>
 
     <!-- Project creation modal -->
@@ -126,7 +126,7 @@ async function loadAllData() {
       const taskArrays = await Promise.all(projectIds.map(id => get<Task[]>(`/tasks?project_id=${id}`)))
       allTasks.value = taskArrays.flat()
       commentStore.clear()
-      await Promise.allSettled(allTasks.value.slice(0, 5).map(t => commentStore.fetchForTask(t.id)))
+      await commentStore.fetchRelevant()
     }
   } catch (e) {
     console.error('Failed to load dashboard data', e)
@@ -140,6 +140,11 @@ onMounted(loadAllData)
 function handleTaskUpdated(task: Task) {
   const idx = allTasks.value.findIndex(t => t.id === task.id)
   if (idx !== -1) allTasks.value[idx] = task
+}
+
+function handleCommentUpdated(taskId: number, delta: number) {
+  const task = allTasks.value.find(t => t.id === taskId)
+  if (task) task.comment_count = Math.max(0, (task.comment_count ?? 0) + delta)
 }
 
 async function handleWorkspaceSaved(data: { title: string; description: string }) {

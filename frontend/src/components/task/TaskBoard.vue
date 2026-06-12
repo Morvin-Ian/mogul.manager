@@ -97,6 +97,7 @@
       :task="selectedTask"
       :workspace-id="workspaceId ?? null"
       :project-id="projectId"
+      :initial-tab="openTaskTab"
       @close="closeTask"
       @deleted="closeTask(); loadTasks()"
       @updated="onTaskUpdated"
@@ -124,6 +125,7 @@ const props = defineProps<{
   projectId: number
   workspaceId?: string | null
   openTaskUuid?: string | null
+  openTaskTab?: 'description' | 'comments' | 'attachments' | null
 }>()
 
 const emit = defineEmits<{

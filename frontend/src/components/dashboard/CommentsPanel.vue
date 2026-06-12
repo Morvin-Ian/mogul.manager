@@ -24,7 +24,9 @@
             <span class="comment-author-name">
               {{ c.user?.username ?? (c.user_id === auth.user?.id ? auth.user?.username : 'Team Member') }}
             </span>
-            <span class="comment-task-label">{{ taskTitleFor(c.task_id) }}</span>
+            <button class="comment-task-label comment-task-link" @click="goToComment(c.task_id, c.id)" :title="`Open ${taskTitleFor(c.task_id)}`">
+              {{ taskTitleFor(c.task_id) }}
+            </button>
           </div>
           <span class="comment-time">{{ timeAgo(c.created_at) }}</span>
         </div>
@@ -42,7 +44,7 @@
             <button class="btn-comment-cancel" @click="editingCommentId = null">Cancel</button>
           </div>
         </div>
-        <p v-else class="comment-content">{{ c.content }}</p>
+        <p v-else class="comment-content comment-content--link" @click="goToComment(c.task_id, c.id)">{{ c.content }}</p>
 
         <!-- Footer row: reply + expand toggle + owner actions -->
         <div class="comment-footer-row">
@@ -153,15 +155,27 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { useCommentStore } from '../../stores/comments'
 import { useAuthStore } from '../../stores/auth'
 import { timeAgo } from '../../utils/time'
 import type { Task } from '../../types'
 
 const props = defineProps<{ tasks: Task[] }>()
+const emit = defineEmits<{ 'comment-updated': [taskId: number, delta: number] }>()
 
 const commentStore = useCommentStore()
 const auth = useAuthStore()
+const router = useRouter()
+
+// Open the comment's task on the project detail page, comments tab active
+function goToComment(taskId: number, commentId?: number) {
+  const task = props.tasks.find(t => t.id === taskId)
+  if (!task?.project_uuid) return
+  let path = `/projects/${task.project_uuid}?task=${task.uuid}&tab=comments`
+  if (commentId) path += `&commentId=${commentId}`
+  router.push(path)
+}
 
 const newCommentContent = ref('')
 const newCommentTaskId = ref<number | null>(null)
@@ -171,9 +185,13 @@ const replyingToId = ref<number | null>(null)
 const replyContent = ref('')
 const expandedReplies = ref<Set<number>>(new Set())
 
+const completedTaskIds = computed(() =>
+  new Set(props.tasks.filter(t => t.status === 'completed').map(t => t.id))
+)
+
 const topLevelComments = computed(() =>
   [...commentStore.all]
-    .filter(c => c.parent_id === null && c.user_id === auth.user?.id)
+    .filter(c => c.parent_id === null && !completedTaskIds.value.has(c.task_id))
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     .slice(0, 8)
 )
@@ -198,6 +216,7 @@ async function submitComment() {
   if (!content || !newCommentTaskId.value) return
   await commentStore.create({ task_id: newCommentTaskId.value, content })
   newCommentContent.value = ''
+  emit('comment-updated', newCommentTaskId.value, 1)
 }
 
 async function submitReply(parentId: number) {
@@ -209,10 +228,13 @@ async function submitReply(parentId: number) {
   replyContent.value = ''
   replyingToId.value = null
   expandedReplies.value = new Set([...expandedReplies.value, parentId])
+  emit('comment-updated', parent.task_id, 1)
 }
 
 async function deleteComment(id: number) {
+  const c = commentStore.all.find(c => c.id === id)
   await commentStore.remove(id)
+  if (c) emit('comment-updated', c.task_id, -1)
 }
 
 function startEdit(c: { id: number; content: string }) {
@@ -330,6 +352,23 @@ function toggleReplies(commentId: number) {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+.comment-task-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: color 0.12s;
+}
+.comment-task-link:hover {
+  color: var(--primary);
+  text-decoration: underline;
+}
+
+.comment-content--link { cursor: pointer; }
+.comment-content--link:hover { color: var(--text); }
 
 .comment-time {
   font-size: 11.5px;

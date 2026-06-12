@@ -34,7 +34,7 @@
       <div class="card-footer-left">
         <span class="comment-count">
           <font-awesome-icon :icon="['far', 'comment']" />
-          0
+          {{ task.comment_count ?? 0 }}
         </span>
         <span v-if="task.due_date" class="card-due">
           <svg viewBox="0 0 12 12" fill="none" width="10" height="10">

@@ -14,6 +14,15 @@ export const useCommentStore = defineStore('comments', () => {
     return items
   }
 
+  // Comments that concern the current user (dashboard feed): on tasks
+  // assigned to them, threads they joined, or their own.
+  async function fetchRelevant(limit = 50) {
+    const items = await get<Comment[]>(`/comments/relevant?limit=${limit}`)
+    const existingIds = new Set(all.value.map((c) => c.id))
+    all.value.push(...items.filter((c) => !existingIds.has(c.id)))
+    return items
+  }
+
   async function create(data: CommentCreate) {
     const c = await post<Comment>('/comments', data)
     all.value.unshift(c)
@@ -36,5 +45,5 @@ export const useCommentStore = defineStore('comments', () => {
     all.value = []
   }
 
-  return { all, loading, fetchForTask, create, update, remove, clear }
+  return { all, loading, fetchForTask, fetchRelevant, create, update, remove, clear }
 })

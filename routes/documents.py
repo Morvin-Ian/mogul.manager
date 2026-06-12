@@ -1,6 +1,8 @@
+import logging
 from datetime import UTC, datetime
 from pathlib import Path
 
+from botocore.exceptions import BotoCoreError, ClientError
 from fastapi import (
     APIRouter,
     BackgroundTasks,
@@ -36,6 +38,8 @@ from services.documents import (
 )
 from services.documents.rag import RAGService
 from services.documents.service import _s3_client, _s3_download
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/documents", tags=["Documents"])
 
@@ -85,6 +89,9 @@ async def upload_document(
         )
     except ValueError as exc:
         raise HTTPException(400, str(exc))
+    except (BotoCoreError, ClientError) as exc:
+        logger.error("Document upload to storage failed: %s", exc)
+        raise HTTPException(503, "File storage is temporarily unavailable. Please try again.")
 
     background_tasks.add_task(process_document_bg, doc.id)
     return doc

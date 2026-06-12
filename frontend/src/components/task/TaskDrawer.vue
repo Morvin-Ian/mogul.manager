@@ -246,7 +246,7 @@
 
         <!-- ── Comments tab ── -->
         <div v-if="activeTab === 'comments'" class="tab-content">
-          <DrawerComments v-if="task" :task-id="task.id" @count-change="commentCount = $event" />
+          <DrawerComments v-if="task" :task-id="task.id" :highlight-comment-id="highlightCommentId" @count-change="onCommentCount" />
         </div>
 
         <!-- ── Attachments tab ── -->
@@ -261,6 +261,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, watch, onMounted, onUnmounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { useConfirm } from '../../composables/useConfirm'
 import { useToast } from '../../composables/useToast'
 import { useTaskStore } from '../../stores/tasks'
@@ -276,6 +277,7 @@ const props = defineProps<{
   task: Task | null
   workspaceId: string | null
   projectId: number
+  initialTab?: 'description' | 'comments' | 'attachments' | null
 }>()
 
 const emit = defineEmits<{
@@ -284,17 +286,39 @@ const emit = defineEmits<{
   updated: [task: Task]
 }>()
 
+const route = useRoute()
 const taskStore = useTaskStore()
 const membersStore = useMembersStore()
 const auth = useAuthStore()
 const { confirm } = useConfirm()
 const toast = useToast()
 
+const highlightCommentId = computed(() => {
+  const id = route.query.commentId as string
+  return id ? Number(id) : null
+})
+
 const editMode = ref(false)
 const saving = ref(false)
-const activeTab = ref<'description' | 'comments' | 'attachments'>('description')
+const activeTab = ref<'description' | 'comments' | 'attachments'>(props.initialTab ?? 'description')
 const showAssigneePicker = ref(false)
-const commentCount = ref(0)
+// Seed from the task's server-side count so the badge shows without
+// having to open the comments tab; DrawerComments refines it on fetch.
+const commentCount = ref(props.task?.comment_count ?? 0)
+
+watch(
+  () => props.task?.uuid,
+  () => {
+    commentCount.value = props.task?.comment_count ?? 0
+    activeTab.value = props.initialTab ?? 'description'
+  },
+)
+
+// Keep the kanban card's count in sync while the drawer is open
+function onCommentCount(n: number) {
+  commentCount.value = n
+  if (props.task) props.task.comment_count = n
+}
 
 const workspaceMembers = ref<WorkspaceMember[]>([])
 

@@ -98,13 +98,6 @@
             Edit
           </button>
           <button v-if="isAdmin" class="btn btn-sm btn-danger" @click="handleDelete">Delete</button>
-          <button v-if="isAdmin" class="btn btn-sm" @click="saveAsTemplate">
-            <svg viewBox="0 0 14 14" fill="none" width="12" height="12">
-              <rect x="1" y="1" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.2"/>
-              <path d="M4 5h6M7 4v6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
-            </svg>
-            Save as template
-          </button>
         </div>
       </div>
 
@@ -164,6 +157,7 @@
           :project-id="project.id"
           :workspace-id="project.workspace_uuid"
           :open-task-uuid="openTaskUuid"
+          :open-task-tab="openTaskTab"
           @task-open="onTaskOpen"
           @task-close="onTaskClose"
         />
@@ -250,7 +244,6 @@ import { useDocumentStore } from '../stores/documents'
 import type { Document } from '../types'
 import DocUploadModal from '../components/common/DocUploadModal.vue'
 import { useProjectStore } from '../stores/projects'
-import { useTemplateStore } from '../stores/templates'
 import { useMembersStore } from '../stores/members'
 import { useAuthStore } from '../stores/auth'
 import { useTaskStore } from '../stores/tasks'
@@ -271,6 +264,10 @@ const route = useRoute()
 const router = useRouter()
 
 const openTaskUuid = computed(() => (route.query.task as string) || null)
+const openTaskTab = computed(() => {
+  const tab = route.query.tab as string
+  return tab === 'comments' || tab === 'attachments' ? tab : null
+})
 
 function onTaskOpen(uuid: string) {
   if (route.query.task !== uuid) router.replace({ query: { task: uuid } })
@@ -279,7 +276,6 @@ function onTaskClose() {
   if (route.query.task) router.replace({ query: {} })
 }
 const projectStore = useProjectStore()
-const templateStore = useTemplateStore()
 const membersStore = useMembersStore()
 const auth = useAuthStore()
 const taskStore = useTaskStore()
@@ -389,16 +385,6 @@ async function handleDelete() {
   router.push(`/workspaces/${wsUuid}`)
 }
 
-async function saveAsTemplate() {
-  if (!project.value) return
-  const name = prompt('Template name:', project.value.title)
-  if (!name) return
-  try {
-    await templateStore.createFromProject(project.value.id, name, project.value.description)
-  } catch (e: any) {
-    alert(e.message)
-  }
-}
 </script>
 
 <style scoped>

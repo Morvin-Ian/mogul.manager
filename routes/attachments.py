@@ -1,5 +1,7 @@
+import logging
 from typing import Annotated
 
+from botocore.exceptions import BotoCoreError, ClientError
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,6 +13,8 @@ from services.attachments import AttachmentService
 from services.auth import CurrentUser
 from services.project.tasks import TaskService
 from services.workspace.collaboration import CollaborationService
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(
     prefix="/api/tasks/{task_id}/attachments",
@@ -70,6 +74,12 @@ async def upload_attachment(
         return await attachment.upload(task.id, current_user.id, file)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
+    except (BotoCoreError, ClientError) as exc:
+        logger.error("Attachment upload to storage failed: %s", exc)
+        raise HTTPException(
+            status_code=503,
+            detail="File storage is temporarily unavailable. Please try again.",
+        )
 
 
 @router.delete("/{attachment_id}", status_code=status.HTTP_204_NO_CONTENT)

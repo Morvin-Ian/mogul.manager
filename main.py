@@ -22,7 +22,6 @@ from routes.chat import router as chat_router
 from routes.documents import router as documents_router
 from routes.notifications import router as notifications_router
 from routes.reports import router as reports_router
-from routes.templates import router as templates_router
 from routes.project import milestones_router, plans_router, tags_router, tasks_router
 from routes.project import router as projects_router
 from routes.user import google_router
@@ -177,5 +176,4 @@ app.include_router(invitations_router)
 app.include_router(notifications_router)
 app.include_router(activity_router)
 app.include_router(attachments_router)
-app.include_router(templates_router)
 app.include_router(reports_router)
