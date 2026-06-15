@@ -10,7 +10,7 @@
         </div>
         <div>
           <p class="explainer-label">1. Upload &amp; attach</p>
-          <p class="explainer-text">Upload any PDF, Word doc, plain text, or CSV. Optionally attach it to a workspace or project so the AI uses it only in that context.</p>
+          <p class="explainer-text">Upload PDFs, Word docs, text files, or CSVs. Attach them to a workspace or project so the AI grounds its answers in that context.</p>
         </div>
       </div>
       <div class="explainer-col">
@@ -22,7 +22,7 @@
         </div>
         <div>
           <p class="explainer-label">2. Auto-process</p>
-          <p class="explainer-text">The AI extracts text, splits it into chunks, and builds a searchable knowledge base from your file.</p>
+          <p class="explainer-text">The AI extracts the content, chunks it intelligently, and builds a searchable knowledge base from your files.</p>
         </div>
       </div>
       <div class="explainer-col">
@@ -33,13 +33,13 @@
         </div>
         <div>
           <p class="explainer-label">3. Ask anything</p>
-          <p class="explainer-text">Go to AI Chat and ask questions. Relevant excerpts are automatically injected into context before the AI responds.</p>
+          <p class="explainer-text">Head to AI Chat and ask away. Relevant excerpts are injected automatically into every response.</p>
         </div>
       </div>
     </div>
     <p class="explainer-tip">
       <svg viewBox="0 0 16 16" fill="none" width="13" height="13" style="flex-shrink:0"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.3"/><path d="M8 7v4M8 5.5v.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
-      <span><strong>Tip:</strong> Attach a file to a project and the AI will ground its answers in that file when you're working in that project's context. Global files are available everywhere.</span>
+      <span><strong>Tip:</strong> Attach files to a project and the AI automatically uses them as context when you chat in that project. Global files are available anywhere.</span>
     </p>
   </div>
 </template>
@@ -51,8 +51,8 @@ defineEmits<{ dismiss: [] }>()
 <style scoped>
 .explainer-callout {
   position: relative;
-  background: var(--primary-light);
-  border: 1px solid var(--primary-border);
+  background: #EDE9FE;
+  border: 1.5px solid #C4B5FD;
   border-radius: var(--radius-lg);
   padding: 20px 24px;
   margin-bottom: 24px;
@@ -72,7 +72,7 @@ defineEmits<{ dismiss: [] }>()
   border-radius: 4px;
   transition: color 0.1s, background 0.1s;
 }
-.explainer-dismiss:hover { color: var(--text); background: var(--primary-border); }
+.explainer-dismiss:hover { color: var(--text); background: #C4B5FD; }
 
 .explainer-body {
   display: flex;
@@ -90,8 +90,8 @@ defineEmits<{ dismiss: [] }>()
 }
 
 .explainer-icon {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
@@ -103,21 +103,21 @@ defineEmits<{ dismiss: [] }>()
 .explainer-icon--process { background: #D8F0D8; border: 1px solid #70C878; color: #1A5820; }
 .explainer-icon--chat    { background: #F2E0CC; border: 1px solid #CFA070; color: #7A3410; }
 
-.explainer-label { font-size: 12.5px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
-.explainer-text  { font-size: 12.5px; color: var(--text-muted); line-height: 1.55; margin-bottom: 6px; }
+.explainer-label { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+.explainer-text  { font-size: 13px; color: var(--text); line-height: 1.55; margin-bottom: 6px; opacity: 0.8; }
 
 .explainer-tip {
   display: flex;
   align-items: flex-start;
   gap: 7px;
-  font-size: 11.5px;
-  color: var(--text-muted);
+  font-size: 12px;
+  color: var(--text);
   background: rgba(255,255,255,0.5);
-  border: 1px solid var(--primary-border);
+  border: 1px solid #C4B5FD;
   border-radius: var(--radius-sm);
   padding: 8px 12px;
   line-height: 1.55;
   margin-top: 14px;
 }
-.explainer-tip svg { margin-top: 1px; color: var(--primary); }
+.explainer-tip svg { margin-top: 1px; color: #7C3AED; }
 </style>

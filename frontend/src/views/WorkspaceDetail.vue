@@ -33,7 +33,7 @@
             </div>
             <div>
               <p class="explainer-label">Workspace</p>
-              <p class="explainer-text">A top-level container for a team or area of work.</p>
+              <p class="explainer-text">A container for a team or focused area of work.</p>
               <p class="explainer-example">"Freelance Clients" · "TC4A"</p>
             </div>
           </div>
@@ -55,7 +55,7 @@
             </div>
             <div>
               <p class="explainer-label">Project</p>
-              <p class="explainer-text">A focused initiative with a kanban board and timeline.</p>
+              <p class="explainer-text">A focused initiative with its own board, timeline, and tasks.</p>
               <p class="explainer-example">"Website Redesign" · "Q2 Campaign"</p>
             </div>
           </div>
@@ -74,7 +74,7 @@
             </div>
             <div>
               <p class="explainer-label">Task</p>
-              <p class="explainer-text">A single action with a status, assignee, and due date.</p>
+              <p class="explainer-text">An actionable item with status, assignee, and due date.</p>
               <p class="explainer-example">"Write homepage copy" · "Review PR"</p>
             </div>
           </div>
@@ -91,7 +91,7 @@
             </div>
             <div>
               <p class="explainer-label">Files <span class="support-badge support-badge--context">Context</span></p>
-              <p class="explainer-text">Upload docs — the AI uses them as grounded context in Chat.</p>
+              <p class="explainer-text">Upload files — the AI uses them as source context in every chat.</p>
             </div>
           </div>
         </div>
@@ -354,8 +354,8 @@ async function handleDelete() {
 /* Explainer */
 .explainer-callout {
   position: relative;
-  background: #F4F4F6;
-  border: 1px solid var(--border);
+  background: #EDE9FE;
+  border: 1.5px solid #C4B5FD;
   border-radius: var(--radius-lg);
   padding: 20px 24px;
   margin-bottom: 24px;
@@ -375,7 +375,7 @@ async function handleDelete() {
   border-radius: 4px;
   transition: color 0.1s, background 0.1s;
 }
-.explainer-dismiss:hover { color: var(--text); background: var(--border); }
+.explainer-dismiss:hover { color: var(--text); background: #C4B5FD; }
 
 .explainer-body {
   display: flex;
@@ -393,8 +393,8 @@ async function handleDelete() {
 }
 
 .explainer-icon {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
@@ -407,7 +407,7 @@ async function handleDelete() {
 .explainer-icon--file      { background: #F5E4CC; border: 1px solid #D0A060; color: #6A3008; }
 
 .explainer-label {
-  font-size: 13px;
+  font-size: 13.5px;
   font-weight: 700;
   color: var(--text);
   margin-bottom: 3px;
@@ -415,15 +415,16 @@ async function handleDelete() {
 }
 
 .explainer-text {
-  font-size: 12px;
-  color: var(--text-muted);
+  font-size: 12.5px;
+  color: var(--text);
   line-height: 1.5;
   margin-bottom: 4px;
+  opacity: 0.8;
 }
 
 .explainer-example {
-  font-size: 11px;
-  color: var(--text-light);
+  font-size: 11.5px;
+  color: var(--text-muted);
   letter-spacing: 0.1px;
 }
 
@@ -432,17 +433,17 @@ async function handleDelete() {
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  color: var(--text-light);
+  color: var(--text-muted);
   padding-top: 8px;
   flex-shrink: 0;
 }
 
 .explainer-heading {
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.8px;
   text-transform: uppercase;
-  color: var(--text-light);
+  color: var(--primary);
   margin-bottom: 16px;
 }
 
@@ -451,7 +452,7 @@ async function handleDelete() {
   display: flex;
   gap: 0;
   margin-top: 14px;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid #C4B5FD;
   padding-top: 14px;
 }
 
@@ -467,7 +468,7 @@ async function handleDelete() {
 
 .support-divider {
   width: 1px;
-  background: var(--border);
+  background: var(--primary-border);
   margin: 0 4px;
   flex-shrink: 0;
 }

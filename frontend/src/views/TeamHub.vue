@@ -80,7 +80,7 @@
               <div class="td td-actions" @click.stop>
                 <button class="row-btn" @click="$router.push(`/workspaces/${ws.uuid}`)">Open</button>
                 <button class="row-btn row-btn-primary" @click="$router.push(`/team/${ws.uuid}`)">
-                  <font-awesome-icon :icon="['fas', 'users']" />
+          <font-awesome-icon :icon="['fas', 'folder-open']" />
                   Manage team
                 </button>
               </div>
