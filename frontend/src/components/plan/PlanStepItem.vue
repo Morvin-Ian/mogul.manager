@@ -247,15 +247,6 @@ function cycleStatus() {
 }
 .step-title--done {
   color: var(--text-light);
-  text-decoration: line-through;
-  text-decoration-color: var(--border-strong);
-  text-decoration-thickness: 1px;
-}
-:global([data-theme="dark"]) .step-title--done {
-  /* In dark mode --text-light and --border-strong are the same #6E7D8C,
-     making the line invisible or harsh depending on rendering.
-     Use a very subtle translucent overlay instead. */
-  text-decoration-color: rgba(110, 125, 140, 0.35);
 }
 
 .step-chips {
@@ -277,12 +268,12 @@ function cycleStatus() {
 .ssb-pending     { background: rgba(100,116,139,0.12); color: #475569; }
 .ssb-in_progress { background: rgba(245,158,11,0.12);  color: #A87800; }
 .ssb-completed   { background: rgba(0,186,124,0.14);   color: #00845A; }
-.ssb-skipped     { background: rgba(138,145,158,0.12); color: #8A919E; text-decoration: line-through; }
+.ssb-skipped     { background: rgba(138,145,158,0.12); color: #8A919E; }
 
 :global([data-theme="dark"]) .ssb-pending     { background: rgba(148,163,184,0.12); color: #94A3B8; }
 :global([data-theme="dark"]) .ssb-in_progress { background: rgba(255,179,0,0.14);   color: #FFB300; }
 :global([data-theme="dark"]) .ssb-completed   { background: rgba(0,186,124,0.18);   color: #00BA7C; }
-:global([data-theme="dark"]) .ssb-skipped     { background: rgba(110,125,140,0.15); color: #6E7D8C; text-decoration: line-through; text-decoration-color: rgba(110,125,140,0.35); text-decoration-thickness: 1px; }
+:global([data-theme="dark"]) .ssb-skipped     { background: rgba(110,125,140,0.15); color: #6E7D8C; }
 
 .step-priority {
   font-size: 11px;

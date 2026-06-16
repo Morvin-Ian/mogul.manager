@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -17,6 +18,13 @@ router = APIRouter(
     prefix="/api/projects",
     tags=["Projects"],
 )
+
+
+def _serialize_changes(data: dict) -> dict:
+    return {
+        k: v.isoformat() if isinstance(v, datetime) else v
+        for k, v in data.items()
+    }
 
 
 async def _attach_task_counts(
@@ -161,6 +169,7 @@ async def update_project(
     data = project_update.model_dump(exclude_unset=True)
     updated = await service.update(project, data)
     if data:
+        changes = _serialize_changes(data)
         await activity.log(
             user_id=current_user.id,
             entity_type="project",
@@ -169,7 +178,7 @@ async def update_project(
             workspace_id=updated.workspace_id,
             project_id=updated.id,
             summary=f"updated project \"{updated.title}\"",
-            changes=data,
+            changes=changes,
         )
     return updated
 

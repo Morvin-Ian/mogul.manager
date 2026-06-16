@@ -162,6 +162,45 @@ async def revoke_invitation(
     await collab.db.commit()
 
 
+@router.post(
+    "/invitations/{invitation_id}/resend",
+    response_model=InvitationResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def resend_invitation(
+    workspace_id: str,
+    invitation_id: int,
+    current_user: CurrentUser,
+    collab: Annotated[CollaborationService, Depends()],
+    ws_service: Annotated[WorkspaceService, Depends()],
+):
+    workspace = await _get_workspace_or_404(workspace_id, ws_service)
+    await collab.require_access(workspace.id, current_user.id, min_role="admin")
+
+    invitation = await collab.resend_invite(
+        invitation_id=invitation_id,
+        workspace_id=workspace.id,
+        invited_by_id=current_user.id,
+    )
+
+    email_sent = True
+    try:
+        await send_invite_email(
+            to_email=invitation.email,
+            token=invitation.token,
+            role=invitation.role.value,
+            workspace_title=workspace.title,
+            invited_by_username=current_user.username,
+        )
+    except Exception:
+        logger.warning("Resend email failed to send", exc_info=True)
+        email_sent = False
+
+    return InvitationResponse.model_validate(invitation).model_copy(
+        update={"email_sent": email_sent}
+    )
+
+
 @router.patch("/{user_id}/role", response_model=MemberResponse)
 async def update_member_role(
     workspace_id: str,
@@ -240,5 +279,5 @@ async def accept_invitation(
     current_user: CurrentUser,
     collab: Annotated[CollaborationService, Depends()],
 ):
-    member = await collab.accept_invite(token=token, user_id=current_user.id)
+    member = await collab.accept_invite(token=token, user_id=current_user.id, email=current_user.email)
     return AcceptResponse.model_validate(member)

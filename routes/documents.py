@@ -43,6 +43,12 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/documents", tags=["Documents"])
 
+_FILE_MIME = {
+    "pdf": "application/pdf",
+    "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "txt": "text/plain; charset=utf-8",
+    "csv": "text/csv; charset=utf-8",
+}
 
 @router.get("", response_model=list[DocumentResponse])
 async def list_documents(
@@ -219,13 +225,6 @@ async def stream_document_file(
     db: AsyncSession = Depends(get_db),
 ):
     """Proxy the raw file from S3 with inline Content-Disposition for in-browser viewing."""
-    _MIME = {
-        "pdf": "application/pdf",
-        "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        "txt": "text/plain; charset=utf-8",
-        "csv": "text/csv; charset=utf-8",
-    }
-
     doc = await DocumentService(db).get_by_uuid(document_id, current_user.id)
     if not doc:
         raise HTTPException(404, "Document not found")
@@ -234,7 +233,7 @@ async def stream_document_file(
 
     storage_key = doc.storage_key
     content = await _rtp(lambda: _s3_download(storage_key))
-    media_type = _MIME.get(doc.file_type.value, "application/octet-stream")
+    media_type = _FILE_MIME.get(doc.file_type.value, "application/octet-stream")
 
     return Response(
         content=content,
@@ -261,10 +260,17 @@ async def get_view_url(
         raise HTTPException(404, "File not available")
 
     storage_key = doc.storage_key
+    file_type = doc.file_type.value
+    mime = _FILE_MIME.get(file_type, "application/octet-stream")
     url = await _rtp(
         lambda: _s3_client().generate_presigned_url(
             "get_object",
-            Params={"Bucket": settings.s3_bucket_name, "Key": storage_key},
+            Params={
+                "Bucket": settings.s3_bucket_name,
+                "Key": storage_key,
+                "ResponseContentDisposition": f'inline; filename="{doc.original_filename}"',
+                "ResponseContentType": mime,
+            },
             ExpiresIn=3600,
         )
     )

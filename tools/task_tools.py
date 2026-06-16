@@ -160,12 +160,39 @@ def _serialize(task: models.Task) -> dict:
     return TaskRead.model_validate(task).model_dump(mode="json")
 
 
+async def _resolve_assignee_email(args: dict, db: AsyncSession) -> tuple[dict | None, str | None]:
+    """Translate ``assigned_to_email`` into ``assigned_to_id`` and drop the email key.
+
+    ``assigned_to_email`` is a schema-only convenience field — it is NOT a column on
+    the Task model, so it must never reach ``TaskService``. Mirrors the HTTP route's
+    ``_resolve_assignee_email`` but returns a JSON error string instead of raising,
+    since tools surface errors as JSON to the agent.
+    """
+    args = {**args}
+    email = args.pop("assigned_to_email", None)
+    if not email:
+        return args, None
+    result = await db.execute(select(models.User).where(models.User.email == email))
+    user = result.scalars().first()
+    if not user:
+        return None, json.dumps({
+            "error": f"No user found with email '{email}'. They must be a registered member of the workspace."
+        })
+    args["assigned_to_id"] = user.id
+    return args, None
+
+
 async def handle(name: str, args: dict, db: AsyncSession) -> str:
     svc = TaskService(db)  # type: ignore[arg-type]
 
     if name == "create_task":
+        args, err = await _resolve_assignee_email(args, db)
+        if err:
+            return err
         inp = TaskCreate(**_coerce_priority(args))
-        task = await svc.create(inp.model_dump(exclude_none=True))
+        data = inp.model_dump(exclude_none=True)
+        data.pop("assigned_to_email", None)
+        task = await svc.create(data)
         task = await _load_task_full(task.id, db) or task
         return json.dumps({"success": True, "task": _serialize(task)})
 
@@ -174,8 +201,13 @@ async def handle(name: str, args: dict, db: AsyncSession) -> str:
         task = await svc.get_by_id(task_id)
         if not task:
             return json.dumps({"error": f"Task {task_id} not found"})
+        args, err = await _resolve_assignee_email(args, db)
+        if err:
+            return err
         inp = TaskUpdate(**_coerce_priority(args))
-        task = await svc.update(task, inp.model_dump(exclude_unset=True))
+        data = inp.model_dump(exclude_unset=True)
+        data.pop("assigned_to_email", None)
+        task = await svc.update(task, data)
         task = await _load_task_full(task.id, db) or task
         return json.dumps({"success": True, "task": _serialize(task)})
 

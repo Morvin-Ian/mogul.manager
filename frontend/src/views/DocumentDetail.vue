@@ -1,4 +1,5 @@
 <template>
+  <div class="doc-detail-page">
   <!-- Skeleton while loading doc -->
   <div v-if="store.loading && !doc" class="detail-layout sk-detail-layout">
     <!-- Sidebar skeleton -->
@@ -160,12 +161,7 @@
         </a>
       </div>
 
-      <!-- Viewer skeleton while fetching file -->
-      <div v-if="viewerLoading" class="viewer-body sk-viewer-content">
-        <div v-for="n in 18" :key="n" class="sk sk-viewer-line" :style="{ width: [90,100,85,100,75,100,92,100,80,100,95,70,100,88,100,60,100,84][n-1]+'%' }"></div>
-      </div>
-
-      <!-- PDF iframe -->
+      <!-- PDF iframe — uses presigned S3 URL to avoid PDF.js blob issues -->
       <iframe
         v-if="doc.file_type === 'pdf' && viewUrl"
         :src="viewUrl"
@@ -176,7 +172,11 @@
       <div v-else-if="(doc.file_type === 'txt' || doc.file_type === 'csv') && textContent" class="viewer-body text-viewer">
         <pre class="text-pre">{{ textContent }}</pre>
       </div>
-      <!-- DOCX or no URL available -->
+      <!-- Viewer skeleton while fetching file -->
+      <div v-else-if="viewerLoading" class="viewer-body sk-viewer-content">
+        <div v-for="n in 18" :key="n" class="sk sk-viewer-line" :style="{ width: [90,100,85,100,75,100,92,100,80,100,95,70,100,88,100,60,100,84][n-1]+'%' }"></div>
+      </div>
+      <!-- DOCX / unavailable / error -->
       <div v-else class="viewer-body viewer-center viewer-unavail">
         <svg viewBox="0 0 24 24" fill="none" width="44" height="44"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zM14 2v6h6M16 13H8M16 17H8M10 9H8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
         <p class="unavail-title">
@@ -196,6 +196,7 @@
       </div>
     </main>
   </div>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -206,7 +207,7 @@ import { useDocumentStore } from '../stores/documents'
 import { useProjectStore } from '../stores/projects'
 import { useAuthStore } from '../stores/auth'
 import { useConfirm } from '../composables/useConfirm'
-import { fetchBlob } from '../stores/client'
+import { fetchBlob, get } from '../stores/client'
 
 const route = useRoute()
 const router = useRouter()
@@ -250,14 +251,15 @@ async function loadViewUrl() {
   if (!doc.value) return
   viewerError.value = null
   try {
-    // Use our own /file proxy: authenticated, inline Content-Disposition,
-    // no S3 CORS / X-Frame-Options issues since it's same-origin.
-    const blob = await fetchBlob(`/documents/${docId.value}/file`)
-    viewUrl.value = URL.createObjectURL(blob)
-
-    // Pre-load text content for TXT/CSV inline viewer
     if (doc.value.file_type === 'txt' || doc.value.file_type === 'csv') {
+      // TXT/CSV: fetch blob for inline text viewer
+      const blob = await fetchBlob(`/documents/${docId.value}/file`)
+      viewUrl.value = URL.createObjectURL(blob)
       textContent.value = await blob.text()
+    } else {
+      // PDF / others: use presigned S3 URL (avoids PDF.js blob URL issues)
+      const data = await get<{ url: string }>(`/documents/${docId.value}/view-url`)
+      viewUrl.value = data.url
     }
   } catch (e) {
     viewerError.value = (e as Error).message
@@ -359,6 +361,10 @@ function fileIconLg(type: string) {
 </script>
 
 <style scoped>
+/* Single root element so the page works inside Dashboard's
+   <Transition mode="out-in">. display:contents keeps it out of layout. */
+.doc-detail-page { display: contents; }
+
 /* ── Layout ── */
 .detail-layout {
   display: grid;

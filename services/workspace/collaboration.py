@@ -128,6 +128,32 @@ class CollaborationService:
         await self.db.refresh(invitation)
         return invitation
 
+    async def resend_invite(
+        self, invitation_id: int, workspace_id: int, invited_by_id: int
+    ) -> models.Invitation:
+        result = await self.db.execute(
+            select(models.Invitation).where(
+                models.Invitation.id == invitation_id,
+                models.Invitation.workspace_id == workspace_id,
+            )
+        )
+        invitation = result.scalars().first()
+        if not invitation:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Invitation not found"
+            )
+        if invitation.status != InvitationStatus.pending:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Only pending invitations can be resent",
+            )
+        return await self.create_invite(
+            workspace_id=workspace_id,
+            email=invitation.email,
+            role=invitation.role.value,
+            invited_by_id=invited_by_id,
+        )
+
     async def list_invitations(self, workspace_id: int) -> list[models.Invitation]:
         result = await self.db.execute(
             select(models.Invitation).where(
@@ -138,7 +164,7 @@ class CollaborationService:
         return list(result.scalars().all())
 
     async def accept_invite(
-        self, token: str, user_id: int
+        self, token: str, user_id: int, email: str
     ) -> models.WorkspaceMember:
         result = await self.db.execute(
             select(models.Invitation).where(models.Invitation.token == token)
@@ -161,6 +187,12 @@ class CollaborationService:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invitation has expired",
+            )
+
+        if invitation.email != email:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="This invitation was sent to a different email address",
             )
 
         # Check not already a member

@@ -35,11 +35,13 @@ router = APIRouter(
 )
 
 
-def _build_state_token() -> str:
-    payload = {
+def _build_state_token(next: str | None = None) -> str:
+    payload: dict = {
         "purpose": "oauth_state",
         "exp": datetime.now(UTC) + timedelta(minutes=15),
     }
+    if next:
+        payload["next"] = next
     return jwt.encode(
         payload,
         settings.secret_key.get_secret_value(),
@@ -47,16 +49,18 @@ def _build_state_token() -> str:
     )
 
 
-def _verify_state_token(state: str) -> bool:
+def _verify_state_token(state: str) -> dict | None:
     try:
         payload = jwt.decode(
             state,
             settings.secret_key.get_secret_value(),
             algorithms=[settings.algorithm],
         )
-        return payload.get("purpose") == "oauth_state"
+        if payload.get("purpose") == "oauth_state":
+            return payload
+        return None
     except jwt.PyJWTError:
-        return False
+        return None
 
 
 def _make_username_from_email(email: str) -> str:
@@ -67,8 +71,10 @@ def _make_username_from_email(email: str) -> str:
 
 
 @router.get("/google")
-async def google_login() -> RedirectResponse:
-    state = _build_state_token()
+async def google_login(
+    next: str | None = None,
+) -> RedirectResponse:
+    state = _build_state_token(next=next)
 
     params = {
         "client_id": settings.google_client_id,
@@ -101,7 +107,8 @@ async def google_callback(
     if not code or not state:
         return RedirectResponse(url=error_redirect)
 
-    if not _verify_state_token(state):
+    state_payload = _verify_state_token(state)
+    if state_payload is None:
         logger.warning("Invalid OAuth state token")
         return RedirectResponse(url=error_redirect)
 
@@ -148,9 +155,12 @@ async def google_callback(
         expires_delta=timedelta(minutes=settings.access_token_expire_minutes),
     )
 
-    response = RedirectResponse(
-        url=f"{settings.frontend_url}/auth/callback?token={access_token}"
-    )
+    redirect_url = f"{settings.frontend_url}/auth/callback?token={access_token}"
+    next_url = state_payload.get("next")
+    if next_url:
+        redirect_url += f"&next={urllib.parse.quote(next_url)}"
+
+    response = RedirectResponse(url=redirect_url)
     await issue_refresh_cookie(response, user.id, db)
     return response
 

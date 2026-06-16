@@ -1,4 +1,6 @@
 import logging
+from datetime import datetime
+from enum import Enum
 from typing import Annotated
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
@@ -247,6 +249,14 @@ async def get_task(
     return _to_read(task)
 
 
+def _json_safe(v: object) -> object:
+    if isinstance(v, datetime):
+        return v.isoformat()
+    if isinstance(v, Enum):
+        return v.value
+    return v
+
+
 @router.patch("/{task_id}", response_model=TaskRead)
 async def update_task(
     task_id: str,
@@ -333,7 +343,7 @@ async def update_task(
             )
             await emit_notification_event(updated.assigned_to_id, notif)
 
-    changed_fields = {k: v for k, v in data.items() if v is not None}
+    changed_fields = {k: _json_safe(v) for k, v in data.items() if v is not None}
     if changed_fields:
         summary_parts = []
         if "status" in changed_fields:

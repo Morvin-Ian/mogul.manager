@@ -81,6 +81,19 @@ export const useMembersStore = defineStore('members', () => {
     }
   }
 
+  async function resendInvitation(workspaceId: number | string, invitationId: number) {
+    error.value = null
+    try {
+      const inv = await post<Invitation>(`/workspaces/${workspaceId}/members/invitations/${invitationId}/resend`)
+      const idx = invitations.value.findIndex((i) => i.id === invitationId)
+      if (idx !== -1) invitations.value[idx] = inv
+      return inv
+    } catch (e) {
+      error.value = (e as Error).message
+      throw e
+    }
+  }
+
   async function fetchMyMembership(workspaceId: number | string) {
     try {
       myMembership.value = await get<MyMembershipResponse>(`/workspaces/${workspaceId}/members/me`)
@@ -124,6 +137,7 @@ export const useMembersStore = defineStore('members', () => {
     removeMember,
     updateRole,
     revokeInvitation,
+    resendInvitation,
     acceptInvite,
     getInviteInfo,
   }

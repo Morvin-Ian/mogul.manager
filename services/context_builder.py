@@ -92,10 +92,13 @@ async def build_context(user_id: int, db: AsyncSession, query: str | None = None
             members = ws_members.get(ws.id, [])
             if members:
                 member_parts = ", ".join(
-                    f"{m['username']} <{m['email']}> ({m['role']})" for m in members
+                    f"{m['username']} ({m['role']})" for m in members
+                )
+                email_map = "; ".join(
+                    f"{m['username']}={m['email']}" for m in members
                 )
                 lines.append(f"    Team: {member_parts}")
-                lines.append(f"    (Use the email addresses above when assigning tasks)")
+                lines.append(f"    (Internal — member emails for tool calls: {email_map})")
 
             for proj in active_projects:
                 lines.append(f"    Project: {proj.title!r} (project_id: {proj.id}, status: {proj.status.value})")

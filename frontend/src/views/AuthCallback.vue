@@ -35,6 +35,7 @@ const errorMessage = ref('Google sign-in failed. Please try again.')
 onMounted(async () => {
   const token = route.query.token as string | undefined
   const error = route.query.error as string | undefined
+  const next = route.query.next as string | undefined
 
   if (error) {
     errorMessage.value = 'Google sign-in failed. Please try again.'
@@ -54,7 +55,7 @@ onMounted(async () => {
   // Re-initialise — fetchUser reads from the store token ref
   try {
     await auth.fetchUser()
-    router.replace('/')
+    router.replace(next && next.startsWith('/') ? next : '/')
   } catch {
     errorMessage.value = 'Failed to load user data. Please try again.'
     state.value = 'error'

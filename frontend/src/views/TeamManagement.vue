@@ -190,7 +190,10 @@
             </div>
             <span class="role-chip" :class="`role-${inv.role}`">{{ inv.role }}</span>
             <span class="inv-status-chip" :class="`inv-${inv.status}`">{{ inv.status }}</span>
-            <button class="revoke-btn" @click="handleRevoke(inv.id)">Revoke</button>
+            <div class="inv-actions">
+              <button class="resend-btn" @click="handleResend(inv.id)">Resend</button>
+              <button class="revoke-btn" @click="handleRevoke(inv.id)">Revoke</button>
+            </div>
           </div>
         </div>
       </div>
@@ -377,6 +380,9 @@ async function handleRevoke(invitationId: number) {
   })
   if (!ok) return
   await membersStore.revokeInvitation(workspaceId.value, invitationId)
+}
+async function handleResend(invitationId: number) {
+  await membersStore.resendInvitation(workspaceId.value, invitationId)
 }
 </script>
 
@@ -709,13 +715,13 @@ async function handleRevoke(invitationId: number) {
 }
 .inv-table-head {
   display: grid;
-  grid-template-columns: 1fr 130px 130px 100px;
+  grid-template-columns: 1fr 100px 90px 190px;
   padding: 9px 20px;
   border-bottom: 1px solid var(--border);
 }
 .inv-row {
   display: grid;
-  grid-template-columns: 1fr 130px 130px 100px;
+  grid-template-columns: 1fr 100px 90px 190px;
   align-items: center;
   padding: 12px 20px;
   border-bottom: 1px solid var(--border);
@@ -751,6 +757,30 @@ async function handleRevoke(invitationId: number) {
 .inv-accepted { background: #ECFDF5; color: #065F46; border-color: #A7F3D0; }
 .inv-expired  { background: var(--bg); color: var(--text-light); border-color: var(--border); }
 .inv-revoked  { background: #FFF1F2; color: #BE123C; border-color: #FECDD3; }
+.inv-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.resend-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: var(--radius-full);
+  border: 1.5px solid var(--primary-border);
+  background: var(--primary-light);
+  color: var(--primary);
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+.resend-btn:hover {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
 .revoke-btn {
   display: inline-flex;
   align-items: center;

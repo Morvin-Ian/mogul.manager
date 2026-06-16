@@ -32,7 +32,7 @@
     <!-- Footer: comments + date + avatars -->
     <div class="card-footer">
       <div class="card-footer-left">
-        <span class="comment-count">
+        <span v-if="isTeam" class="comment-count">
           <font-awesome-icon :icon="['far', 'comment']" />
           {{ task.comment_count ?? 0 }}
         </span>

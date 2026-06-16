@@ -19,7 +19,6 @@
         <div class="ws-table-body">
           <div v-for="n in 4" :key="n" class="ws-row sk-row">
             <div class="td td-workspace">
-              <div class="sk sk-avatar"></div>
               <div class="sk-info-col">
                 <div class="sk sk-ws-name"></div>
                 <div class="sk sk-ws-desc"></div>
@@ -38,8 +37,10 @@
 
     <template v-else>
       <div v-if="workspaces.length === 0" class="empty-state">
-        <div class="empty-icon">
-          <font-awesome-icon :icon="['fas', 'users']" />
+        <div class="empty-icon-wrap">
+          <div class="empty-icon">
+            <font-awesome-icon :icon="['fas', 'users']" />
+          </div>
         </div>
         <h3>No workspaces yet</h3>
         <p>Create a workspace to start building your team.</p>
@@ -63,9 +64,6 @@
               @click="$router.push(`/team/${ws.uuid}`)"
             >
               <div class="td td-workspace">
-                <div class="ws-avatar" :style="avatarStyle(ws.id)">
-                  {{ ws.title.charAt(0).toUpperCase() }}
-                </div>
                 <div class="ws-info">
                   <span class="ws-name">{{ ws.title }}</span>
                   <span v-if="ws.description" class="ws-desc">{{ ws.description }}</span>
@@ -80,7 +78,7 @@
               <div class="td td-actions" @click.stop>
                 <button class="row-btn" @click="$router.push(`/workspaces/${ws.uuid}`)">Open</button>
                 <button class="row-btn row-btn-primary" @click="$router.push(`/team/${ws.uuid}`)">
-          <font-awesome-icon :icon="['fas', 'folder-open']" />
+                  <font-awesome-icon :icon="['fas', 'users']" />
                   Manage team
                 </button>
               </div>
@@ -119,14 +117,6 @@ onMounted(async () => {
 const workspaces = computed(() => workspaceStore.workspaces)
 const hasOwnedWorkspaces = computed(() => workspaces.value.some(ws => ws.user_id === auth.user?.id))
 
-const AVATAR_COLORS = [
-  ['#0052FF','#003CBF'], ['#7C3AED','#5B21B6'], ['#059669','#047857'],
-  ['#DC2626','#B91C1C'], ['#D97706','#B45309'], ['#0891B2','#0E7490'],
-]
-function avatarStyle(id: number) {
-  const [a, b] = AVATAR_COLORS[id % AVATAR_COLORS.length]
-  return { background: `linear-gradient(135deg, ${a}, ${b})` }
-}
 function formatDate(d: string) {
   return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
@@ -183,20 +173,7 @@ function formatDate(d: string) {
 .ws-row:hover { background: var(--bg); }
 
 .td { display: flex; align-items: center; }
-.td-workspace { gap: 13px; }
-
-.ws-avatar {
-  width: 38px;
-  height: 38px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
-  font-weight: 800;
-  color: #fff;
-  flex-shrink: 0;
-}
+.td-workspace { gap: 0; }
 .ws-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .ws-name {
   font-size: 14px;
@@ -276,7 +253,15 @@ function formatDate(d: string) {
   text-align: center; padding: 80px 20px;
   display: flex; flex-direction: column; align-items: center; gap: 12px;
 }
-.empty-icon { font-size: 36px; color: var(--text-light); }
+.empty-icon-wrap {
+  width: 64px; height: 64px;
+  border-radius: 50%;
+  background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 8px;
+}
+.empty-icon { font-size: 26px; color: var(--text-muted); }
+:global([data-theme="dark"]) .empty-icon { color: #fff; }
 .empty-state h3 { font-size: 17px; font-weight: 700; color: var(--text); }
 .empty-state p { font-size: 13.5px; color: var(--text-muted); }
 
@@ -305,7 +290,6 @@ function formatDate(d: string) {
   border-radius: 4px;
 }
 .sk-row { pointer-events: none; cursor: default; }
-.sk-avatar    { width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0; }
 .sk-info-col  { display: flex; flex-direction: column; gap: 5px; flex: 1; }
 .sk-ws-name   { height: 14px; width: 140px; }
 .sk-ws-desc   { height: 11px; width: 90px; }
