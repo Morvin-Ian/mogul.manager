@@ -97,12 +97,12 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function logout() {
-    try {
-      await fetch('/api/users/logout', { method: 'POST', credentials: 'include' })
-    } catch { /* best-effort */ }
     user.value = null
     token.value = null
     localStorage.removeItem('token')
+    try {
+      await fetch('/api/users/logout', { method: 'POST', credentials: 'include' })
+    } catch { /* best-effort */ }
   }
 
   return {

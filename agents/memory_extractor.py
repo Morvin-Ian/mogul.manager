@@ -5,8 +5,8 @@ from openai import AsyncOpenAI
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from config import settings
-from utils.prompts import MEMORY_EXTRACTION_SYSTEM
 from services.memory import MemoryService
+from utils.prompts import MEMORY_EXTRACTION_SYSTEM
 
 logger = logging.getLogger(__name__)
 
@@ -42,10 +42,9 @@ class MemoryExtractor:
         user_message: str,
         assistant_message: str,
         db: AsyncSession,
+        workspace_id: int | None = None,
     ) -> None:
-        exchange = (
-            f"User: {user_message}\n\nAssistant: {assistant_message}"
-        )
+        exchange = f"User: {user_message}\n\nAssistant: {assistant_message}"
 
         try:
             response = await self.client.chat.completions.create(
@@ -58,8 +57,13 @@ class MemoryExtractor:
                 max_tokens=256,
             )
             raw = response.choices[0].message.content or "{}"
-            # Strip markdown fences if the model wraps anyway
-            raw = raw.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+            raw = (
+                raw.strip()
+                .removeprefix("```json")
+                .removeprefix("```")
+                .removesuffix("```")
+                .strip()
+            )
             data = json.loads(raw)
         except Exception as exc:
             logger.warning("Memory extraction failed: %s", exc)
@@ -69,7 +73,7 @@ class MemoryExtractor:
         if not memories:
             return
 
-        svc = MemoryService(db)  # type: ignore[arg-type]
+        svc = MemoryService(db)
         existing = await svc.list_by_user(user_id, limit=100)
 
         for item in memories[:3]:
@@ -77,11 +81,18 @@ class MemoryExtractor:
             content = item.get("content", "").strip()
             importance = int(item.get("importance", 1))
 
-            if not content or memory_type not in ("preference", "decision", "goal", "fact"):
+            if not content or memory_type not in (
+                "preference",
+                "decision",
+                "goal",
+                "fact",
+            ):
                 continue
 
             if _is_duplicate(content, existing):
-                logger.debug("Skipping duplicate memory for user %d: %s", user_id, content)
+                logger.debug(
+                    "Skipping duplicate memory for user %d: %s", user_id, content
+                )
                 continue
 
             await svc.create(
@@ -92,5 +103,8 @@ class MemoryExtractor:
                     "importance": max(1, min(3, importance)),
                     "source_conversation_id": conversation_id,
                 },
+                workspace_id=workspace_id,
             )
-            logger.debug("Stored memory [%s] for user %d: %s", memory_type, user_id, content)
+            logger.debug(
+                "Stored memory [%s] for user %d: %s", memory_type, user_id, content
+            )

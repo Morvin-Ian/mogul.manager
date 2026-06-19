@@ -47,19 +47,22 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import type { TaskAttachment } from '../../types'
 import { useAttachmentStore } from '../../stores/attachments'
 import { useConfirm } from '../../composables/useConfirm'
 import { useToast } from '../../composables/useToast'
 
-const props = defineProps<{ taskId: number }>()
+const props = defineProps<{ taskId: string }>()
+const emit = defineEmits<{ countChange: [number] }>()
 const store = useAttachmentStore()
 const { confirm } = useConfirm()
 const toast = useToast()
 const uploading = ref(false)
 
 onMounted(() => store.fetchByTask(props.taskId))
+
+watch(() => store.total, (val) => emit('countChange', val), { immediate: true })
 
 function fileIcon(mime: string): string {
   if (mime.startsWith('image/')) return 'image'

@@ -38,6 +38,7 @@ from services.documents import (
 )
 from services.documents.rag import RAGService
 from services.documents.service import _s3_client, _s3_download
+from services.notifications import NotificationService, emit_notification_event
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +51,7 @@ _FILE_MIME = {
     "csv": "text/csv; charset=utf-8",
 }
 
+
 @router.get("", response_model=list[DocumentResponse])
 async def list_documents(
     current_user: CurrentUser,
@@ -61,9 +63,13 @@ async def list_documents(
 ):
     svc = DocumentService(db)
     if project_id is not None:
-        return await svc.list_by_project(project_id, current_user.id, skip=skip, limit=limit)
+        return await svc.list_by_project(
+            project_id, current_user.id, skip=skip, limit=limit
+        )
     if workspace_id is not None:
-        return await svc.list_by_workspace(workspace_id, current_user.id, skip=skip, limit=limit)
+        return await svc.list_by_workspace(
+            workspace_id, current_user.id, skip=skip, limit=limit
+        )
     return await svc.list_documents(current_user.id, skip=skip, limit=limit)
 
 
@@ -97,9 +103,39 @@ async def upload_document(
         raise HTTPException(400, str(exc))
     except (BotoCoreError, ClientError) as exc:
         logger.error("Document upload to storage failed: %s", exc)
-        raise HTTPException(503, "File storage is temporarily unavailable. Please try again.")
+        raise HTTPException(
+            503, "File storage is temporarily unavailable. Please try again."
+        )
 
     background_tasks.add_task(process_document_bg, doc.id)
+
+    # Notify workspace members when a document is uploaded to a project
+    if project_id is not None and doc.project and doc.project.workspace_id:
+        result = await db.execute(
+            select(models.WorkspaceMember).where(
+                models.WorkspaceMember.workspace_id == doc.project.workspace_id,
+                models.WorkspaceMember.user_id != current_user.id,
+            )
+        )
+        members = result.scalars().all()
+        notif_svc = NotificationService(db)
+        project_uuid = doc.project.uuid
+        notif_link = f"{settings.frontend_url}/projects/{project_uuid}"
+        for m in members:
+            notif = await notif_svc.create(
+                user_id=m.user_id,
+                notification_type="document_uploaded",
+                title=f"New document: {doc.original_filename}",
+                message=f'{current_user.username} uploaded "{doc.original_filename}" to {doc.project.title}',
+                link=notif_link,
+                metadata_json={
+                    "document_uuid": doc.uuid,
+                    "project_id": project_id,
+                    "project_uuid": project_uuid,
+                },
+            )
+            await emit_notification_event(m.user_id, notif)
+
     return doc
 
 

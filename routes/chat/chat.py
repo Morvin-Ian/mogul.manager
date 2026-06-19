@@ -1,4 +1,6 @@
+import asyncio
 import json
+import logging
 from collections import defaultdict
 from time import monotonic
 from typing import Annotated
@@ -8,6 +10,7 @@ from fastapi.responses import StreamingResponse
 
 from agents.deepseek import DeepSeekAgent
 from agents.memory_extractor import MemoryExtractor
+from database import AsyncSessionLocal
 from schemas.chat.chat import (
     ConversationCreate,
     ConversationDetail,
@@ -21,6 +24,8 @@ from schemas.chat.chat import (
 from services.auth import CurrentUser
 from services.chat.chat import ChatService
 from services.context_builder import build_context
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(
     prefix="/api/chat",
@@ -148,17 +153,23 @@ async def send_message(
     async def generate():
         collected: list[str] = []
 
-        # Build rich context including RAG over user's documents
+        recent_messages = await service.get_messages(conversation_id)
+        user_queries = [m.content for m in recent_messages[-8:] if m.role == "user"]
+        combined_query = " ".join(user_queries[-3:])
+
         user_context = await build_context(
-            current_user.id, service.db, query=message.content
+            current_user.id, service.db, query=combined_query
         )
 
-        # Retrieve recent conversation history (short-term memory)
         context = await service.get_context(conversation_id)
 
         agent = get_deepseek()
         async for event in agent.stream_response(
-            context, service.db, user_context, current_user.id
+            context,
+            service.db,
+            user_context,
+            current_user.id,
+            context_builder=lambda uid, db: build_context(uid, db),
         ):
             if event["type"] == "token":
                 collected.append(event["content"])
@@ -170,15 +181,21 @@ async def send_message(
         msg = await service.add_message(conversation_id, "assistant", full_response)
         yield f"data: {json.dumps({'done': True, 'message': {'id': msg.id, 'role': msg.role, 'content': msg.content, 'created_at': msg.created_at.isoformat()}})}\n\n"
 
-        # Extract and persist long-term memories from this exchange
-        extractor = get_extractor()
-        await extractor.extract_and_store(
-            user_id=current_user.id,
-            conversation_id=conversation_id,
-            user_message=message.content,
-            assistant_message=full_response,
-            db=service.db,
-        )
+        async def _extract_bg():
+            try:
+                async with AsyncSessionLocal() as bg_db:
+                    extractor = get_extractor()
+                    await extractor.extract_and_store(
+                        user_id=current_user.id,
+                        conversation_id=conversation_id,
+                        user_message=message.content,
+                        assistant_message=full_response,
+                        db=bg_db,
+                    )
+            except Exception as exc:
+                logger.warning("Background memory extraction failed: %s", exc)
+
+        asyncio.create_task(_extract_bg())
 
     return StreamingResponse(generate(), media_type="text/event-stream")
 

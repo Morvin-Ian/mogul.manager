@@ -81,7 +81,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed } from 'vue'
 import { useTaskStore } from '../../stores/tasks'
 import type { Task, Project } from '../../types'
 
@@ -94,12 +94,7 @@ const taskFilter = ref<'all' | 'today' | 'tomorrow'>('all')
 const statusFilter = ref<string | null>(null)
 const showStatusDropdown = ref(false)
 
-const effectiveSearch = ref('')
-let searchTimer: ReturnType<typeof setTimeout> | null = null
-watch(() => props.searchQuery, (val) => {
-  if (searchTimer) clearTimeout(searchTimer)
-  searchTimer = setTimeout(() => { effectiveSearch.value = val }, 250)
-})
+const effectiveSearch = computed(() => props.searchQuery)
 
 const statusOptions = [
   { value: null,          label: 'All Tasks',    color: '#64748B' },
@@ -405,7 +400,7 @@ async function toggleTask(task: Task) {
   gap: 14px;
   flex: 1;
   overflow-y: auto;
-  max-height: 700px;
+  max-height: 800px;
   min-height: 0;
   padding-right: 2px;
 }

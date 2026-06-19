@@ -143,7 +143,7 @@ async def _schedule_notification(
         user_id=assignee.id,
         notification_type="task_assigned",
         title=f"Task assigned: {task.title}",
-        message=f"{assigned_by.username} assigned you \"{task.title}\" in {project_name} (Priority: {priority_label})",
+        message=f'{assigned_by.username} assigned you "{task.title}" in {project_name} (Priority: {priority_label})',
         link=task_url,
         metadata_json={
             "task_uuid": task.uuid,
@@ -194,7 +194,7 @@ async def create_task(
         workspace_id=project.workspace_id,
         project_id=created.project_id,
         task_id=created.id,
-        summary=f"created task \"{created.title}\"",
+        summary=f'created task "{created.title}"',
     )
 
     return _to_read(created)
@@ -327,21 +327,54 @@ async def update_task(
     if new_status_val and new_status_val != old_status:
         await _sync_step_from_task(updated, new_status_val, db)
 
-        # Notify assignee of status change (unless they changed it themselves)
+        # Notify relevant parties of status change
+        proj_result = await db.execute(
+            select(models.Project.uuid).where(models.Project.id == updated.project_id)
+        )
+        project_uuid = proj_result.scalar() or ""
+        status_labels = {
+            "todo": "To Do",
+            "in_progress": "In Progress",
+            "review": "In Review",
+            "blocked": "Blocked",
+            "completed": "Completed",
+        }
+        notif_title = f"Task status changed: {updated.title}"
+        notif_body = f'{current_user.username} moved "{updated.title}" from {status_labels.get(old_status, old_status)} to {status_labels.get(new_status_val, new_status_val)}'
+        notif_link = (
+            f"{settings.frontend_url}/projects/{project_uuid}?task={updated.uuid}"
+        )
+        notif_meta = {
+            "task_uuid": updated.uuid,
+            "old_status": old_status,
+            "new_status": new_status_val,
+        }
+
+        # Notify assignee when someone else changes their task status
         if updated.assigned_to_id and updated.assigned_to_id != current_user.id:
-            proj_result = await db.execute(select(models.Project.uuid).where(models.Project.id == updated.project_id))
-            project_uuid = proj_result.scalar() or ""
-            status_labels = {"todo": "To Do", "in_progress": "In Progress", "review": "In Review", "blocked": "Blocked", "completed": "Completed"}
             notif_svc = NotificationService(db)
             notif = await notif_svc.create_and_notify(
                 user_id=updated.assigned_to_id,
                 notification_type="task_status_changed",
-                title=f"Task status changed: {updated.title}",
-                message=f"{current_user.username} moved \"{updated.title}\" from {status_labels.get(old_status, old_status)} to {status_labels.get(new_status_val, new_status_val)}",
-                link=f"{settings.frontend_url}/projects/{project_uuid}?task={updated.uuid}",
-                metadata_json={"task_uuid": updated.uuid, "old_status": old_status, "new_status": new_status_val},
+                title=notif_title,
+                message=notif_body,
+                link=notif_link,
+                metadata_json=notif_meta,
             )
             await emit_notification_event(updated.assigned_to_id, notif)
+
+        # Notify workspace admins when a member changes task status
+        if member.role == MemberRole.member:
+            await _notify_workspace_admins(
+                workspace_id=project.workspace_id,
+                notification_type="task_status_changed",
+                title=notif_title,
+                message=notif_body,
+                link=notif_link,
+                metadata_json=notif_meta,
+                exclude_user_id=current_user.id,
+                db=db,
+            )
 
     changed_fields = {k: _json_safe(v) for k, v in data.items() if v is not None}
     if changed_fields:
@@ -364,7 +397,7 @@ async def update_task(
             workspace_id=project.workspace_id,
             project_id=updated.project_id,
             task_id=updated.id,
-            summary=f"{summary_parts[0]} \"{updated.title}\"",
+            summary=f'{summary_parts[0]} "{updated.title}"',
             changes=changed_fields,
         )
 
@@ -393,7 +426,7 @@ async def delete_task(
         workspace_id=project.workspace_id,
         project_id=task.project_id,
         task_id=task.id,
-        summary=f"deleted task \"{task.title}\"",
+        summary=f'deleted task "{task.title}"',
     )
     await service.delete(task)
 
@@ -453,7 +486,7 @@ async def reorder_task(
             workspace_id=project.workspace_id,
             project_id=task.project_id,
             task_id=task.id,
-            summary=f"moved \"{task.title}\" from {old_status} to {target_status}",
+            summary=f'moved "{task.title}" from {old_status} to {target_status}',
             changes={"status": {"from": old_status, "to": target_status}},
         )
 
@@ -467,9 +500,9 @@ async def bulk_update_tasks(
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     result = await db.execute(
-        select(models.Task).where(models.Task.id.in_(body.task_ids)).options(
-            joinedload(models.Task.project)
-        )
+        select(models.Task)
+        .where(models.Task.id.in_(body.task_ids))
+        .options(joinedload(models.Task.project))
     )
     tasks = list(result.unique().scalars().all())
     if not tasks:
@@ -480,7 +513,9 @@ async def bulk_update_tasks(
     project = await _get_project_or_404(next(iter(project_ids)), db)
     # All tasks must be accessible (same project) for the operation to proceed
     if len(project_ids) > 1:
-        raise HTTPException(status_code=400, detail="All tasks must be in the same project")
+        raise HTTPException(
+            status_code=400, detail="All tasks must be in the same project"
+        )
     member = await collab.require_access(
         project.workspace_id, current_user.id, min_role="member"
     )
@@ -504,9 +539,13 @@ async def bulk_update_tasks(
 
     update_data = {}
     if body.status is not None:
-        update_data["status"] = body.status.value if hasattr(body.status, "value") else body.status
+        update_data["status"] = (
+            body.status.value if hasattr(body.status, "value") else body.status
+        )
     if body.priority is not None:
-        update_data["priority"] = body.priority.value if hasattr(body.priority, "value") else body.priority
+        update_data["priority"] = (
+            body.priority.value if hasattr(body.priority, "value") else body.priority
+        )
     if body.assigned_to_id is not None:
         update_data["assigned_to_id"] = body.assigned_to_id
     if body.due_date is not None:
@@ -550,7 +589,9 @@ async def bulk_delete_tasks(
     project_ids = {t.project_id for t in tasks}
     project = await _get_project_or_404(next(iter(project_ids)), db)
     if len(project_ids) > 1:
-        raise HTTPException(status_code=400, detail="All tasks must be in the same project")
+        raise HTTPException(
+            status_code=400, detail="All tasks must be in the same project"
+        )
     await collab.require_access(project.workspace_id, current_user.id, min_role="admin")
 
     for t in tasks:
@@ -577,6 +618,39 @@ def _to_read(task: models.Task) -> TaskRead:
     if cc is not None:
         result.comment_count = cc
     return result
+
+
+async def _notify_workspace_admins(
+    workspace_id: int,
+    notification_type: str,
+    title: str,
+    message: str,
+    link: str,
+    metadata_json: dict | None,
+    exclude_user_id: int,
+    db: AsyncSession,
+) -> None:
+    """Send a notification to all admin/owner members of a workspace, excluding a given user."""
+    result = await db.execute(
+        select(models.WorkspaceMember).where(
+            models.WorkspaceMember.workspace_id == workspace_id,
+            models.WorkspaceMember.role.in_([MemberRole.admin, MemberRole.owner]),
+        )
+    )
+    admins = result.scalars().all()
+    notif_svc = NotificationService(db)
+    for admin in admins:
+        if admin.user_id == exclude_user_id:
+            continue
+        notif = await notif_svc.create(
+            user_id=admin.user_id,
+            notification_type=notification_type,
+            title=title,
+            message=message,
+            link=link,
+            metadata_json=metadata_json,
+        )
+        await emit_notification_event(admin.user_id, notif)
 
 
 async def _attach_comment_counts(db: AsyncSession, tasks: list[models.Task]) -> None:

@@ -20,7 +20,13 @@ PROJECT_TOOLS = [
                     "description": {"type": "string"},
                     "status": {
                         "type": "string",
-                        "enum": ["planning", "active", "on_hold", "completed", "archived"],
+                        "enum": [
+                            "planning",
+                            "active",
+                            "on_hold",
+                            "completed",
+                            "archived",
+                        ],
                     },
                     "due_date": {"type": "string", "description": "ISO 8601 date-time"},
                 },
@@ -41,7 +47,13 @@ PROJECT_TOOLS = [
                     "description": {"type": "string"},
                     "status": {
                         "type": "string",
-                        "enum": ["planning", "active", "on_hold", "completed", "archived"],
+                        "enum": [
+                            "planning",
+                            "active",
+                            "on_hold",
+                            "completed",
+                            "archived",
+                        ],
                     },
                     "due_date": {
                         "type": "string",
@@ -61,6 +73,14 @@ PROJECT_TOOLS = [
                 "type": "object",
                 "properties": {
                     "workspace_id": {"type": "integer"},
+                    "limit": {
+                        "type": "integer",
+                        "description": "Max results (default 100)",
+                    },
+                    "offset": {
+                        "type": "integer",
+                        "description": "Skip N results (default 0)",
+                    },
                 },
                 "required": ["workspace_id"],
             },
@@ -119,7 +139,11 @@ async def handle(name: str, args: dict, db: AsyncSession) -> str:
         return json.dumps({"success": True, "project": _serialize(project)})
 
     if name == "list_projects":
-        projects = await svc.list_by_workspace(args["workspace_id"])
+        projects = await svc.list_by_workspace(
+            args["workspace_id"],
+            skip=args.get("offset", 0),
+            limit=args.get("limit", 100),
+        )
         return json.dumps({"projects": [_serialize(p) for p in projects]})
 
     if name == "get_project":

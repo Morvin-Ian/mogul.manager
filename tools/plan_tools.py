@@ -71,21 +71,23 @@ async def handle(name: str, args: dict, db: AsyncSession, user_id: int = 0) -> s
                 title=title,
                 description=description or None,
             )
-            return json.dumps({
-                "id": plan.id,
-                "title": plan.title,
-                "status": plan.status.value,
-                "step_count": len(plan.steps),
-                "steps": [
-                    {
-                        "order": s.step_order + 1,
-                        "title": s.title,
-                        "priority": s.priority.value,
-                        "linked_task": s.linked_task_title,
-                    }
-                    for s in sorted(plan.steps, key=lambda s: s.step_order)
-                ],
-            })
+            return json.dumps(
+                {
+                    "id": plan.id,
+                    "title": plan.title,
+                    "status": plan.status.value,
+                    "step_count": len(plan.steps),
+                    "steps": [
+                        {
+                            "order": s.step_order + 1,
+                            "title": s.title,
+                            "priority": s.priority.value,
+                            "linked_task": s.linked_task_title,
+                        }
+                        for s in sorted(plan.steps, key=lambda s: s.step_order)
+                    ],
+                }
+            )
         except Exception as exc:
             return json.dumps({"error": str(exc)})
 
@@ -95,16 +97,22 @@ async def handle(name: str, args: dict, db: AsyncSession, user_id: int = 0) -> s
             return json.dumps({"error": "project_id is required"})
         try:
             plans = await svc.list_by_project(int(project_id))
-            return json.dumps([
-                {
-                    "id": p.id,
-                    "title": p.title,
-                    "status": p.status.value,
-                    "step_count": len(p.steps),
-                    "done_count": sum(1 for s in p.steps if s.status.value in ("completed", "skipped")),
-                }
-                for p in plans
-            ])
+            return json.dumps(
+                [
+                    {
+                        "id": p.id,
+                        "title": p.title,
+                        "status": p.status.value,
+                        "step_count": len(p.steps),
+                        "done_count": sum(
+                            1
+                            for s in p.steps
+                            if s.status.value in ("completed", "skipped")
+                        ),
+                    }
+                    for p in plans
+                ]
+            )
         except Exception as exc:
             return json.dumps({"error": str(exc)})
 

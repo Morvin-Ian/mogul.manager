@@ -26,6 +26,18 @@
             </router-link>
 
             <router-link
+                to="/projects"
+                active-class="active"
+                class="nav-item"
+                title="Projects"
+            >
+                <span class="icon-wrap">
+                    <font-awesome-icon :icon="['fas', 'folder']" />
+                </span>
+                <span class="nav-label">Projects</span>
+            </router-link>
+
+            <router-link
                 to="/team"
                 active-class="active"
                 class="nav-item"
@@ -136,10 +148,10 @@ function handleLogout() {
     align-items: center;
     gap: 2px;
     padding: 0 10px;
-    flex: 1;
 }
 
 .sidebar-footer {
+    margin-top: 20px;
     padding: 10px 10px 0;
     display: flex;
     flex-direction: column;

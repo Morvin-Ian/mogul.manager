@@ -5,7 +5,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
 import models
-from models.projects import Project as _Project  # noqa: F401 — used in _load_task_full selectinload
+from models.projects import (
+    Project as _Project,  # noqa: F401 — used in _load_task_full selectinload
+)
 from schemas.project.tasks import TaskCreate, TaskRead, TaskUpdate
 from services.project.tasks import TaskService
 
@@ -22,6 +24,7 @@ async def _load_task_full(task_id: int, db: AsyncSession) -> models.Task | None:
     )
     return result.unique().scalars().first()
 
+
 TASK_TOOLS = [
     {
         "type": "function",
@@ -31,7 +34,10 @@ TASK_TOOLS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "project_id": {"type": "integer", "description": "ID of the project"},
+                    "project_id": {
+                        "type": "integer",
+                        "description": "ID of the project",
+                    },
                     "title": {"type": "string"},
                     "description": {"type": "string"},
                     "priority": {
@@ -40,7 +46,13 @@ TASK_TOOLS = [
                     },
                     "status": {
                         "type": "string",
-                        "enum": ["todo", "in_progress", "review", "blocked", "completed"],
+                        "enum": [
+                            "todo",
+                            "in_progress",
+                            "review",
+                            "blocked",
+                            "completed",
+                        ],
                     },
                     "assigned_to_email": {
                         "type": "string",
@@ -66,7 +78,13 @@ TASK_TOOLS = [
                     "description": {"type": "string"},
                     "status": {
                         "type": "string",
-                        "enum": ["todo", "in_progress", "review", "blocked", "completed"],
+                        "enum": [
+                            "todo",
+                            "in_progress",
+                            "review",
+                            "blocked",
+                            "completed",
+                        ],
                     },
                     "priority": {
                         "type": "string",
@@ -92,7 +110,10 @@ TASK_TOOLS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "task_id": {"type": "integer", "description": "ID of the task to assign"},
+                    "task_id": {
+                        "type": "integer",
+                        "description": "ID of the task to assign",
+                    },
                     "assigned_to_email": {
                         "type": "string",
                         "description": "Email address of the team member. Use the email shown in the USER CONTEXT team list.",
@@ -111,6 +132,14 @@ TASK_TOOLS = [
                 "type": "object",
                 "properties": {
                     "project_id": {"type": "integer"},
+                    "limit": {
+                        "type": "integer",
+                        "description": "Max results (default 50)",
+                    },
+                    "offset": {
+                        "type": "integer",
+                        "description": "Skip N results (default 0)",
+                    },
                 },
                 "required": ["project_id"],
             },
@@ -160,7 +189,9 @@ def _serialize(task: models.Task) -> dict:
     return TaskRead.model_validate(task).model_dump(mode="json")
 
 
-async def _resolve_assignee_email(args: dict, db: AsyncSession) -> tuple[dict | None, str | None]:
+async def _resolve_assignee_email(
+    args: dict, db: AsyncSession
+) -> tuple[dict | None, str | None]:
     """Translate ``assigned_to_email`` into ``assigned_to_id`` and drop the email key.
 
     ``assigned_to_email`` is a schema-only convenience field — it is NOT a column on
@@ -175,9 +206,11 @@ async def _resolve_assignee_email(args: dict, db: AsyncSession) -> tuple[dict | 
     result = await db.execute(select(models.User).where(models.User.email == email))
     user = result.scalars().first()
     if not user:
-        return None, json.dumps({
-            "error": f"No user found with email '{email}'. They must be a registered member of the workspace."
-        })
+        return None, json.dumps(
+            {
+                "error": f"No user found with email '{email}'. They must be a registered member of the workspace."
+            }
+        )
     args["assigned_to_id"] = user.id
     return args, None
 
@@ -212,7 +245,11 @@ async def handle(name: str, args: dict, db: AsyncSession) -> str:
         return json.dumps({"success": True, "task": _serialize(task)})
 
     if name == "list_tasks":
-        tasks = await svc.list_by_project(args["project_id"])
+        tasks = await svc.list_by_project(
+            args["project_id"],
+            skip=args.get("offset", 0),
+            limit=args.get("limit", 50),
+        )
         return json.dumps({"tasks": [_serialize(t) for t in tasks]})
 
     if name == "get_task":
@@ -232,7 +269,11 @@ async def handle(name: str, args: dict, db: AsyncSession) -> str:
         )
         user = user_result.scalars().first()
         if not user:
-            return json.dumps({"error": f"No user found with email '{email}'. They must be a registered member of the workspace."})
+            return json.dumps(
+                {
+                    "error": f"No user found with email '{email}'. They must be a registered member of the workspace."
+                }
+            )
         task = await svc.update(task, {"assigned_to_id": user.id})
         task = await _load_task_full(task.id, db) or task
         return json.dumps({"success": True, "task": _serialize(task)})

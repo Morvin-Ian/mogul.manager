@@ -15,7 +15,10 @@ WORKSPACE_TOOLS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "user_id": {"type": "integer", "description": "The current user's ID"},
+                    "user_id": {
+                        "type": "integer",
+                        "description": "The current user's ID",
+                    },
                     "title": {"type": "string"},
                     "description": {"type": "string"},
                     "settings": {"type": "object"},
@@ -50,7 +53,18 @@ WORKSPACE_TOOLS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "user_id": {"type": "integer", "description": "The current user's ID"},
+                    "user_id": {
+                        "type": "integer",
+                        "description": "The current user's ID",
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Max results (default 50)",
+                    },
+                    "offset": {
+                        "type": "integer",
+                        "description": "Skip N results (default 0)",
+                    },
                 },
                 "required": ["user_id"],
             },
@@ -124,6 +138,8 @@ async def handle(name: str, args: dict, db: AsyncSession) -> str:
         if not workspace:
             return json.dumps({"error": f"Workspace {args['workspace_id']} not found"})
         await svc.delete(workspace)
-        return json.dumps({"success": True, "deleted_workspace_id": args["workspace_id"]})
+        return json.dumps(
+            {"success": True, "deleted_workspace_id": args["workspace_id"]}
+        )
 
     return json.dumps({"error": f"Unknown workspace tool: {name}"})

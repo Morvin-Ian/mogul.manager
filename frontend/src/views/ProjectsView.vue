@@ -73,23 +73,64 @@
             @click="$router.push(`/projects/${p.uuid}`)"
           >
             <div class="card-top">
-              <span class="status-chip" :class="`chip-${p.status}`">{{ statusLabel(p.status) }}</span>
-              <span v-if="p.ai_summary" class="ai-badge">
-                <font-awesome-icon :icon="['fas', 'wand-magic-sparkles']" />
-                AI
-              </span>
+              <div class="card-folder">
+                <svg viewBox="0 0 20 20" fill="none" width="20" height="20">
+                  <path d="M2 5.5A1.5 1.5 0 013.5 4h3.586a1 1 0 01.707.293L9.5 5.5H16.5A1.5 1.5 0 0118 7v8.5A1.5 1.5 0 0116.5 17h-13A1.5 1.5 0 012 15.5v-10z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <div class="card-top-right">
+                <span class="card-status-pill">
+                  <span class="status-dot" :style="{ background: STATUS_COLORS[p.status] }"></span>
+                  <span class="status-text" :style="{ color: STATUS_COLORS[p.status] }">{{ statusLabel(p.status) }}</span>
+                </span>
+                <span v-if="p.ai_summary" class="ai-badge">
+                  <font-awesome-icon :icon="['fas', 'wand-magic-sparkles']" />
+                  AI
+                </span>
+              </div>
             </div>
             <h3 class="card-title">{{ p.title }}</h3>
-            <p v-if="p.description" class="card-desc">{{ p.description }}</p>
-            <div class="card-footer">
-              <span v-if="p.due_date" class="card-meta">
-                <font-awesome-icon :icon="['far', 'calendar']" />
+            <p class="card-desc">{{ p.description || 'No description added yet.' }}</p>
+            <div class="card-meta">
+              <span v-if="p.due_date" class="meta-item" :class="{ 'meta-overdue': isOverdue(p.due_date) }">
+                <svg viewBox="0 0 14 14" fill="none" width="12" height="12">
+                  <rect x="1" y="2" width="12" height="10.5" rx="1.5" stroke="currentColor" stroke-width="1.2"/>
+                  <path d="M1 5.5h12M5 1v2.5M9 1v2.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+                </svg>
                 {{ formatDate(p.due_date) }}
               </span>
-              <span class="card-meta">
-                <font-awesome-icon :icon="['fas', 'list-check']" />
-                Updated {{ timeAgo(p.updated_at) }}
+              <span v-else class="meta-item meta-nodate">
+                <svg viewBox="0 0 14 14" fill="none" width="12" height="12">
+                  <rect x="1" y="2" width="12" height="10.5" rx="1.5" stroke="currentColor" stroke-width="1.2"/>
+                  <path d="M1 5.5h12M5 1v2.5M9 1v2.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+                </svg>
+                No due date
               </span>
+              <span class="meta-updated">Updated {{ timeAgo(p.updated_at) }}</span>
+            </div>
+            <div class="card-divider"></div>
+            <div class="card-stats">
+              <div class="stat-progress">
+                <svg viewBox="0 0 32 32" width="26" height="26" class="progress-ring">
+                  <circle cx="16" cy="16" r="12" fill="none" stroke="var(--border)" stroke-width="3.5"/>
+                  <circle
+                    cx="16" cy="16" r="12" fill="none"
+                    :stroke="ringColor(taskPct(p))"
+                    stroke-width="3.5"
+                    stroke-linecap="round"
+                    :stroke-dasharray="`${taskPct(p) * 75.4 / 100} 75.4`"
+                    transform="rotate(-90 16 16)"
+                    style="transition: stroke-dasharray 0.4s ease"
+                  />
+                </svg>
+                <span class="pct-text">{{ p.task_count > 0 ? taskPct(p) + '%' : '—' }}</span>
+              </div>
+              <div class="stat-tasks">
+                <svg viewBox="0 0 16 16" fill="none" width="13" height="13">
+                  <path d="M2 4h12M2 8h8M2 12h10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+                </svg>
+                <span>{{ p.completed_count }} / {{ p.task_count }} Tasks</span>
+              </div>
             </div>
           </div>
         </div>
@@ -125,6 +166,28 @@ const STATUS_LABELS: Record<ProjectStatus, string> = {
   completed: 'Completed', archived: 'Archived',
 }
 function statusLabel(s: ProjectStatus) { return STATUS_LABELS[s] ?? s }
+
+const STATUS_COLORS: Record<ProjectStatus, string> = {
+  planning:  '#8B6FE8',
+  active:    '#00BA7C',
+  on_hold:   '#F59E0B',
+  completed: '#3B82F6',
+  archived:  '#8B98A5',
+}
+
+function taskPct(p: { task_count: number; completed_count: number }) {
+  if (!p.task_count) return 0
+  return Math.round((p.completed_count / p.task_count) * 100)
+}
+
+function ringColor(pct: number): string {
+  if (pct === 100) return '#00BA7C'
+  if (pct >= 60)  return '#3B82F6'
+  if (pct >= 30)  return '#F59E0B'
+  return '#EF4444'
+}
+
+function isOverdue(d: string) { return new Date(d) < new Date() }
 
 function formatDate(d: string) {
   return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
@@ -232,19 +295,23 @@ onMounted(() => projectStore.fetchAll())
 }
 
 .project-card {
-  background: var(--surface); border: 1.5px solid var(--border);
-  border-radius: var(--radius-lg); padding: 18px 20px;
-  cursor: pointer; transition: border-color 0.14s, box-shadow 0.14s, transform 0.12s;
-  display: flex; flex-direction: column; gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px 22px 18px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  transition: box-shadow 0.2s, transform 0.18s;
+  box-shadow: 0 4px 16px rgba(10,11,13,0.08), 0 1px 4px rgba(10,11,13,0.04);
 }
 .project-card:hover {
-  border-color: var(--border-strong);
-  box-shadow: 0 4px 16px rgba(10,11,13,0.08);
-  transform: translateY(-1px);
+  box-shadow: 0 16px 48px rgba(10,11,13,0.16), 0 4px 12px rgba(10,11,13,0.08);
+  transform: translateY(-4px);
 }
 
 .skeleton-card {
-  height: 130px;
+  height: 180px;
   background: linear-gradient(90deg, var(--bg) 25%, var(--border) 50%, var(--bg) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.4s infinite;
@@ -252,17 +319,38 @@ onMounted(() => projectStore.fetchAll())
 }
 @keyframes shimmer { to { background-position: -200% 0; } }
 
-.card-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
-
-.status-chip {
-  font-size: 11px; font-weight: 700; padding: 2px 9px;
-  border-radius: var(--radius-full); letter-spacing: 0.1px;
+.card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
 }
-.chip-planning  { background: rgba(100,116,139,0.15); color: #475569; }
-.chip-active    { background: rgba(0,186,124,0.14);   color: #00845A; }
-.chip-on_hold   { background: rgba(255,179,0,0.16);   color: #A87800; }
-.chip-completed { background: rgba(104,204,128,0.18); color: #1A5820; }
-.chip-archived  { background: rgba(139,152,165,0.15); color: #536471; }
+.card-folder {
+  color: var(--text-light);
+  display: flex;
+  align-items: center;
+}
+.card-top-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.card-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.status-text {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.1px;
+}
 
 .ai-badge {
   display: inline-flex; align-items: center; gap: 4px;
@@ -272,17 +360,83 @@ onMounted(() => projectStore.fetchAll())
 }
 
 .card-title {
-  font-size: 15px; font-weight: 700; color: var(--text);
-  letter-spacing: -0.3px; line-height: 1.3;
+  font-size: 16.5px;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: -0.4px;
+  line-height: 1.25;
+  margin-bottom: 8px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
+
 .card-desc {
-  font-size: 12.5px; color: var(--text-muted); line-height: 1.5;
-  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.55;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-bottom: 14px;
+  flex: 1;
 }
-.card-footer { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 4px; }
+
 .card-meta {
-  display: inline-flex; align-items: center; gap: 5px;
-  font-size: 11.5px; color: var(--text-light); font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+.meta-overdue { color: var(--danger); }
+.meta-nodate { color: var(--text-light); }
+.meta-updated {
+  font-size: 11.5px;
+  color: var(--text-light);
+  white-space: nowrap;
+}
+
+.card-divider {
+  height: 1px;
+  background: var(--border);
+  margin-bottom: 14px;
+}
+
+.card-stats {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.stat-progress {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.progress-ring { flex-shrink: 0; }
+.pct-text {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.3px;
+}
+.stat-tasks {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-muted);
 }
 
 /* Empty state */
@@ -300,9 +454,11 @@ onMounted(() => projectStore.fetchAll())
 
 /* Dark mode */
 :global([data-theme="dark"]) .filter-pill.active { background: #F7F9F9 !important; color: #15202B !important; border-color: #F7F9F9 !important; }
-:global([data-theme="dark"]) .chip-planning  { background: rgba(100,116,139,0.2) !important; color: #94A3B8 !important; }
-:global([data-theme="dark"]) .chip-active    { background: rgba(0,186,124,0.2) !important;    color: #00BA7C !important; }
-:global([data-theme="dark"]) .chip-on_hold   { background: rgba(255,179,0,0.2) !important;    color: #FFB300 !important; }
-:global([data-theme="dark"]) .chip-completed { background: rgba(104,204,128,0.22) !important; color: #68CC80 !important; }
-:global([data-theme="dark"]) .chip-archived  { background: rgba(139,152,165,0.18) !important; color: #8B98A5 !important; }
+:global([data-theme="dark"]) .project-card {
+  background: rgba(30,39,50,0.95);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3), 0 1px 4px rgba(0,0,0,0.2);
+}
+:global([data-theme="dark"]) .project-card:hover {
+  box-shadow: 0 16px 48px rgba(0,0,0,0.5), 0 4px 12px rgba(0,0,0,0.3);
+}
 </style>

@@ -18,7 +18,10 @@ MEMORY_TOOLS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "user_id": {"type": "integer", "description": "The current user's ID"},
+                    "user_id": {
+                        "type": "integer",
+                        "description": "The current user's ID",
+                    },
                     "memory_type": {
                         "type": "string",
                         "enum": ["preference", "decision", "goal", "fact"],
@@ -41,11 +44,22 @@ MEMORY_TOOLS = [
         "type": "function",
         "function": {
             "name": "list_memories",
-            "description": "Retrieve all stored long-term memories about the current user.",
+            "description": "Retrieve stored long-term memories about the current user.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "user_id": {"type": "integer", "description": "The current user's ID"},
+                    "user_id": {
+                        "type": "integer",
+                        "description": "The current user's ID",
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Max results (default 20)",
+                    },
+                    "workspace_id": {
+                        "type": "integer",
+                        "description": "Optional — scope to workspace-level shared memories",
+                    },
                 },
                 "required": ["user_id"],
             },
@@ -88,7 +102,12 @@ async def handle(name: str, args: dict, db: AsyncSession) -> str:
         return json.dumps({"success": True, "memory": _serialize(memory)})
 
     if name == "list_memories":
-        memories = await svc.list_by_user(args["user_id"])
+        limit = args.get("limit", 20)
+        workspace_id = args.get("workspace_id")
+        if workspace_id:
+            memories = await svc.list_by_workspace(workspace_id, limit=limit)
+        else:
+            memories = await svc.list_by_user(args["user_id"], limit=limit)
         return json.dumps({"memories": [_serialize(m) for m in memories]})
 
     if name == "delete_memory":

@@ -15,14 +15,23 @@ SEARCH_TOOLS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "query": {"type": "string", "description": "Keyword to match in task titles"},
+                    "query": {
+                        "type": "string",
+                        "description": "Keyword to match in task titles",
+                    },
                     "project_id": {
                         "type": "integer",
                         "description": "Limit search to this project (optional)",
                     },
                     "status": {
                         "type": "string",
-                        "enum": ["todo", "in_progress", "review", "blocked", "completed"],
+                        "enum": [
+                            "todo",
+                            "in_progress",
+                            "review",
+                            "blocked",
+                            "completed",
+                        ],
                         "description": "Filter by status (optional)",
                     },
                 },
@@ -60,17 +69,19 @@ async def handle(name: str, args: dict, db: AsyncSession) -> str:
             stmt = stmt.where(models.Task.status == _STATUS_MAP[inp.status])
         result = await db.execute(stmt.limit(20))
         tasks = list(result.scalars().all())
-        return json.dumps({
-            "tasks": [
-                {
-                    "id": t.id,
-                    "title": t.title,
-                    "status": t.status.value,
-                    "priority": t.priority.value,
-                    "project_id": t.project_id,
-                }
-                for t in tasks
-            ]
-        })
+        return json.dumps(
+            {
+                "tasks": [
+                    {
+                        "id": t.id,
+                        "title": t.title,
+                        "status": t.status.value,
+                        "priority": t.priority.value,
+                        "project_id": t.project_id,
+                    }
+                    for t in tasks
+                ]
+            }
+        )
 
     return json.dumps({"error": f"Unknown search tool: {name}"})

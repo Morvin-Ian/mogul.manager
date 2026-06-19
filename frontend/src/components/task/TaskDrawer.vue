@@ -228,6 +228,7 @@
           >
             <font-awesome-icon :icon="['fas', 'paperclip']" />
             Attachments
+            <span v-if="attachmentCount" class="tab-badge">{{ attachmentCount }}</span>
           </button>
         </div>
 
@@ -250,8 +251,8 @@
         </div>
 
         <!-- ── Attachments tab ── -->
-        <div v-if="activeTab === 'attachments'" class="tab-content">
-          <DrawerAttachments v-if="task" :task-id="task.id" />
+        <div v-show="activeTab === 'attachments'" class="tab-content">
+          <DrawerAttachments v-if="task" :task-id="task.uuid" @count-change="onAttachmentCount" />
         </div>
 
       </div>
@@ -305,11 +306,13 @@ const showAssigneePicker = ref(false)
 // Seed from the task's server-side count so the badge shows without
 // having to open the comments tab; DrawerComments refines it on fetch.
 const commentCount = ref(props.task?.comment_count ?? 0)
+const attachmentCount = ref(0)
 
 watch(
   () => props.task?.uuid,
   () => {
     commentCount.value = props.task?.comment_count ?? 0
+    attachmentCount.value = 0
     activeTab.value = props.initialTab ?? 'description'
   },
 )
@@ -318,6 +321,9 @@ watch(
 function onCommentCount(n: number) {
   commentCount.value = n
   if (props.task) props.task.comment_count = n
+}
+function onAttachmentCount(n: number) {
+  attachmentCount.value = n
 }
 
 const workspaceMembers = ref<WorkspaceMember[]>([])

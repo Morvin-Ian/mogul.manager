@@ -11,11 +11,26 @@ DOCUMENT_TOOLS = [
         "type": "function",
         "function": {
             "name": "list_documents",
-            "description": "List all documents the user has uploaded.",
+            "description": "List documents the user has access to.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "user_id": {"type": "integer", "description": "The current user's ID"},
+                    "user_id": {
+                        "type": "integer",
+                        "description": "The current user's ID",
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Max results (default 50)",
+                    },
+                    "offset": {
+                        "type": "integer",
+                        "description": "Skip N results (default 0)",
+                    },
+                    "workspace_id": {
+                        "type": "integer",
+                        "description": "Optional — scope to documents in this workspace only",
+                    },
                 },
                 "required": ["user_id"],
             },
@@ -42,6 +57,10 @@ DOCUMENT_TOOLS = [
                         "type": "integer",
                         "description": "Number of results to return (default 5)",
                         "default": 5,
+                    },
+                    "workspace_id": {
+                        "type": "integer",
+                        "description": "Optional — scope search to documents in this workspace only",
                     },
                 },
                 "required": ["query", "user_id"],
@@ -76,6 +95,10 @@ DOCUMENT_TOOLS = [
                 "properties": {
                     "question": {"type": "string"},
                     "user_id": {"type": "integer"},
+                    "workspace_id": {
+                        "type": "integer",
+                        "description": "Optional — scope to documents in this workspace only",
+                    },
                 },
                 "required": ["question", "user_id"],
             },
@@ -89,7 +112,20 @@ async def handle(name: str, args: dict[str, Any], db: AsyncSession) -> str:
     rag = RAGService(db)
 
     if name == "list_documents":
-        docs = await svc.list_documents(args["user_id"])
+        workspace_id = args.get("workspace_id")
+        if workspace_id:
+            docs = await svc.list_by_workspace(
+                workspace_id,
+                args["user_id"],
+                skip=args.get("offset", 0),
+                limit=args.get("limit", 50),
+            )
+        else:
+            docs = await svc.list_documents(
+                args["user_id"],
+                skip=args.get("offset", 0),
+                limit=args.get("limit", 50),
+            )
         return json.dumps(
             [
                 {
@@ -111,6 +147,7 @@ async def handle(name: str, args: dict[str, Any], db: AsyncSession) -> str:
             query=args["query"],
             user_id=args["user_id"],
             top_k=args.get("top_k", 5),
+            workspace_id=args.get("workspace_id"),
         )
         return json.dumps({"results": hits, "count": len(hits)})
 
@@ -136,13 +173,12 @@ async def handle(name: str, args: dict[str, Any], db: AsyncSession) -> str:
             query=args["question"],
             user_id=args["user_id"],
             top_k=6,
+            workspace_id=args.get("workspace_id"),
         )
         if not hits:
             return json.dumps({"answer": "No relevant documents found.", "sources": []})
 
-        context = "\n\n".join(
-            f'[{h["document_title"]}]: {h["content"]}' for h in hits
-        )
+        context = "\n\n".join(f"[{h['document_title']}]: {h['content']}" for h in hits)
         sources = list({h["document_title"] for h in hits})
         return json.dumps({"context": context, "sources": sources})
 

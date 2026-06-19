@@ -1,6 +1,7 @@
 import json
 import logging
 import re
+from collections.abc import Callable
 
 from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletionMessageParam
@@ -17,9 +18,25 @@ logger = logging.getLogger(__name__)
 
 _MAX_TOOL_ITERATIONS = 5
 
-# DeepSeek sometimes falls back to its native DSML tool-call format instead of
 _DSML_RE = re.compile(r"<\|+DSML\|+>.*?</\|+DSML\|+tool_calls>", re.DOTALL)
 _DSML_OPEN_RE = re.compile(r"<\|+DSML\|+[^>]*>")
+
+_MUTATION_TOOLS = frozenset(
+    {
+        "create_task",
+        "update_task",
+        "delete_task",
+        "create_project",
+        "update_project",
+        "delete_project",
+        "create_workspace",
+        "update_workspace",
+        "delete_workspace",
+        "store_memory",
+        "delete_memory",
+        "create_plan",
+    }
+)
 
 
 def _strip_dsml(text: str) -> str:
@@ -45,23 +62,25 @@ class DeepSeekAgent:
         db: AsyncSession,
         user_context: str = "",
         user_id: int = 0,
+        context_builder: Callable | None = None,
     ):
         history: list[ChatCompletionMessageParam] = [
             {"role": "system", "content": self._build_system_prompt(user_context)},
             *messages,
         ]
 
-        for _ in range(_MAX_TOOL_ITERATIONS):
+        _current_user_context = user_context
+
+        for iteration in range(_MAX_TOOL_ITERATIONS):
             response = await self.client.chat.completions.create(
                 model=self.model,
                 messages=history,
-                tools=ALL_TOOLS,  # type: ignore[arg-type]
+                tools=ALL_TOOLS,
                 tool_choice="auto",
             )
             choice = response.choices[0]
 
             if choice.finish_reason != "tool_calls" or not choice.message.tool_calls:
-                # Model finished without requesting tools. Yield its response directly
                 if choice.message.content:
                     content = _strip_dsml(choice.message.content)
                     if content:
@@ -69,7 +88,6 @@ class DeepSeekAgent:
                     return
                 break
 
-            # Only process standard function-type tool calls
             function_calls = [
                 tc
                 for tc in choice.message.tool_calls
@@ -90,10 +108,11 @@ class DeepSeekAgent:
             assistant_msg: ChatCompletionMessageParam = {
                 "role": "assistant",
                 "content": choice.message.content or "",
-                "tool_calls": tool_calls_payload,  # type: ignore[typeddict-unknown-key]
+                "tool_calls": tool_calls_payload,
             }
             history.append(assistant_msg)
 
+            had_mutation = False
             for tc in function_calls:
                 yield {"type": "tool_start", "name": tc.function.name}
                 try:
@@ -114,6 +133,8 @@ class DeepSeekAgent:
                             tc.function.name,
                             parsed_result["error"],
                         )
+                    elif tc.function.name in _MUTATION_TOOLS:
+                        had_mutation = True
                 except json.JSONDecodeError:
                     pass
                 tool_msg: ChatCompletionMessageParam = {
@@ -123,8 +144,16 @@ class DeepSeekAgent:
                 }
                 history.append(tool_msg)
 
-        # Fallback: stream a final response when the tool loop exhausted its iterations
-        # or the model stopped without providing content.
+            if had_mutation and context_builder and user_id:
+                try:
+                    _current_user_context = await context_builder(user_id, db)
+                    history[0] = {
+                        "role": "system",
+                        "content": self._build_system_prompt(_current_user_context),
+                    }
+                except Exception as exc:
+                    logger.warning("Context refresh failed: %s", exc)
+
         stream = await self.client.chat.completions.create(
             model=self.model,
             messages=history,
@@ -139,25 +168,12 @@ class DeepSeekAgent:
                 if content:
                     yield {"type": "token", "content": content}
 
-    # Planner
-
     async def decompose(
         self,
         goal: str,
         research: str = "",
         existing_tasks: list[dict] | None = None,
     ) -> list[dict]:
-        """Break a goal into an ordered list of plan step dicts.
-
-        Each step includes a "task" field with action="create" (new task spec)
-        or action="link" (existing task id to attach).
-
-        Args:
-            goal: The plain-language goal + optional project context.
-            research: Optional background text to prepend for domain-aware steps.
-            existing_tasks: List of existing project tasks as dicts with keys
-                            id, title, status, priority.
-        """
         parts: list[str] = []
         if research:
             parts.append(research)
@@ -192,9 +208,7 @@ class DeepSeekAgent:
             steps = data.get("steps", [])
             if not isinstance(steps, list) or not steps:
                 raise ValueError("Empty steps list")
-            return steps[
-                :30
-            ]  # soft cap — prevents runaway output, not an artificial plan limit
+            return steps[:30]
         except Exception as exc:
             logger.warning("Plan decomposition failed: %s", exc)
             return [
@@ -212,9 +226,7 @@ class DeepSeekAgent:
                 }
             ]
 
-    # Form field suggestions
     async def suggest_field(self, context_type: str, title: str, field: str) -> str:
-        """Return a short AI-generated suggestion for a form field."""
         system = SUGGEST_PROMPTS.get(context_type, {}).get(field)
         if not system:
             system = (
