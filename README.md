@@ -1,9 +1,6 @@
 <div align="center">
   <h1>mogul.Manager</h1>
   <p>
-    <strong>AI-powered project management tool</strong>
-  </p>
-  <p>
     <img src="https://img.shields.io/badge/python-3.11-blue?style=flat&logo=python" alt="Python">
     <img src="https://img.shields.io/badge/vue-3-4FC08D?style=flat&logo=vue.js" alt="Vue 3">
     <img src="https://img.shields.io/badge/postgres-17-4169E1?style=flat&logo=postgresql" alt="PostgreSQL">
@@ -114,5 +111,3 @@ npm run dev                   # starts on http://localhost:5173
 
 > **Note:** Set `DATABASE_URL` in `.env` to point to your local PostgreSQL instance
 > when running without Docker.
-
-
