@@ -17,13 +17,13 @@ from models.documents import Document, DocumentStatus
 from routes.activity import router as activity_router
 from routes.attachments import router as attachments_router
 from routes.chat import comments_router
-from routes.dependencies import router as dependencies_router
 from routes.chat import router as chat_router
+from routes.dependencies import router as dependencies_router
 from routes.documents import router as documents_router
 from routes.notifications import router as notifications_router
-from routes.reports import router as reports_router
 from routes.project import milestones_router, plans_router, tags_router, tasks_router
 from routes.project import router as projects_router
+from routes.reports import router as reports_router
 from routes.user import google_router
 from routes.user import router as users_router
 from routes.workspace import invitations_router, members_router
@@ -43,6 +43,7 @@ logger = logging.getLogger(__name__)
 # A document must be stuck in pending/processing for this long before we retry it.
 # Prevents race-condition double-processing of docs that just started.
 _STUCK_THRESHOLD_SECONDS = 900  # 15 minutes
+_MAX_PROCESSING_ATTEMPTS = 3
 
 
 async def _periodic_document_check(interval_seconds: int = 1800) -> None:
@@ -55,10 +56,6 @@ async def _periodic_document_check(interval_seconds: int = 1800) -> None:
             break
         except Exception as exc:
             logger.error("Periodic document check error: %s", exc)
-
-
-# Failed documents are retried automatically until this many attempts.
-_MAX_PROCESSING_ATTEMPTS = 3
 
 
 async def _requeue_pending_documents() -> None:
@@ -98,7 +95,12 @@ async def lifespan(app: FastAPI):
             "REFRESH_SECRET_KEY is not set — falling back to SECRET_KEY for "
             "refresh tokens. Set a separate secret in production."
         )
-    await warmup_embeddings()
+    try:
+        await warmup_embeddings()
+    except Exception:
+        logger.warning(
+            "Embedding model not available — will load on demand", exc_info=True
+        )
     await _requeue_pending_documents()
     periodic_task = asyncio.create_task(_periodic_document_check())
     yield
@@ -156,8 +158,11 @@ async def healthcheck():
         async with AsyncSessionLocal() as db:
             await db.execute(select(1))
     except Exception:
-        return JSONResponse(status_code=503, content={"status": "degraded", "database": "unreachable"})
+        return JSONResponse(
+            status_code=503, content={"status": "degraded", "database": "unreachable"}
+        )
     return {"status": "ok"}
+
 
 app.include_router(users_router)
 app.include_router(google_router)

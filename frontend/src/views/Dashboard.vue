@@ -29,12 +29,14 @@ const router = useRouter()
 const auth = useAuthStore()
 
 onMounted(async () => {
-  if (!auth.user) {
+  if (!auth.user && auth.token) {
     try {
       await auth.fetchUser()
-    } catch {
-      auth.logout()
-      router.push('/login')
+    } catch (e) {
+      // Network/refresh failure on page load — don't force-logout immediately.
+      // The refresh interceptor in client.ts already handles 401; if it still
+      // fails, the next API call will redirect to login.
+      if (!navigator.onLine) return
     }
   }
 })

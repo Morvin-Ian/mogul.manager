@@ -84,8 +84,14 @@ async function request<T>(endpoint: string, options: RequestOptions = {}, _retry
   }
 
   if (res.status === 204) return null as T
-  const data = await res.json()
-  if (!res.ok) throw new Error(data.detail || 'Request failed')
+
+  let data: any
+  try {
+    data = await res.json()
+  } catch {
+    data = {}
+  }
+  if (!res.ok) throw new Error(data.detail || `Request failed (${res.status})`)
   return data as T
 }
 
