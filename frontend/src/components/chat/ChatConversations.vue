@@ -184,8 +184,8 @@ function formatDate(d: string) {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  background: #1c1c1e;
-  color: #fff;
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
   border: none;
   border-radius: var(--radius-full);
   padding: 5px 12px;
@@ -198,7 +198,6 @@ function formatDate(d: string) {
 }
 .new-btn:hover { opacity: 0.82; }
 .new-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-:global([data-theme="dark"]) .new-btn { background: #F7F9F9; color: #15202B; }
 
 /* ── Search ── */
 .search-wrap {

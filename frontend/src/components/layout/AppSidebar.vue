@@ -398,4 +398,5 @@ function handleLogout() {
 .nav-item--ai .icon-wrap {
     position: relative;
 }
+
 </style>

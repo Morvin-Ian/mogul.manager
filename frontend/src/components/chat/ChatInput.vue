@@ -445,11 +445,11 @@ textarea:disabled { opacity: 0.6; }
 
 .send-btn {
   width: 34px; height: 34px; border-radius: 10px;
-  background: #1c1c1e; color: #fff; border: none; cursor: pointer;
+  background: var(--btn-primary-bg); color: var(--btn-primary-text); border: none; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0; transition: background 0.15s, transform 0.1s;
 }
-.send-btn:hover:not(:disabled) { background: #2e2e30; }
+.send-btn:hover:not(:disabled) { background: var(--btn-primary-bg-hover); }
 .send-btn:active:not(:disabled) { transform: scale(0.94); }
 .send-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 
@@ -500,8 +500,6 @@ textarea:disabled { opacity: 0.6; }
 }
 
 /* Dark mode */
-:global([data-theme="dark"]) .send-btn { background: #F7F9F9; color: #15202B; }
-:global([data-theme="dark"]) .send-btn:hover:not(:disabled) { background: #e2e5e5; }
 :global([data-theme="dark"]) .fb-success { background: rgba(0,186,124,0.15); border-color: rgba(0,186,124,0.3); color: #00BA7C; }
 :global([data-theme="dark"]) .fb-error   { background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.3); color: #FCA5A5; }
 </style>

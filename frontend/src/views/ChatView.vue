@@ -25,34 +25,33 @@
                             v-if="chatStore.current.messages.length === 0"
                             class="chat-welcome"
                         >
-                            <div class="welcome-brand">
-                                <span class="brand-word">mogul<span class="brand-dot">.</span></span>
-                                <span class="brand-sub">manager</span>
-                            </div>
-                            <h1 class="welcome-title">How can I help you today?</h1>
-                            <p class="welcome-sub">
-                                Ask me anything about your workspaces, projects, or tasks.
-                                I can act on your behalf — creating, updating, and analysing in real time.
-                            </p>
+                            <div class="starter-glow"></div>
+                            <div class="starter-content">
+                                <h1 class="welcome-title">How can I help you today?</h1>
+                                <p class="welcome-sub">
+                                    Ask me anything about your workspaces, projects, or tasks.
+                                    I can act on your behalf — creating, updating, and analysing in real time.
+                                </p>
 
-                            <!-- Action cards -->
-                            <div class="action-grid">
-                                <button
-                                    v-for="card in actionCards"
-                                    :key="card.text"
-                                    class="action-card"
-                                    @click="quickSend(card.text)"
-                                >
-                                    <div class="action-icon" :style="{ background: card.bg }">
-                                        <component :is="'span'" v-html="card.svg"></component>
-                                    </div>
-                                    <span class="action-label">{{ card.label }}</span>
-                                    <span class="action-plus">
-                                        <svg viewBox="0 0 12 12" fill="none" width="11" height="11">
-                                            <path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-                                        </svg>
-                                    </span>
-                                </button>
+                                <!-- Action cards -->
+                                <div class="action-grid">
+                                    <button
+                                        v-for="card in actionCards"
+                                        :key="card.text"
+                                        class="action-card"
+                                        @click="quickSend(card.text)"
+                                    >
+                                        <div class="action-icon">
+                                            <component :is="'span'" class="action-icon-svg" v-html="card.svg"></component>
+                                        </div>
+                                        <span class="action-label">{{ card.label }}</span>
+                                        <span class="action-plus">
+                                            <svg viewBox="0 0 12 12" fill="none" width="11" height="11">
+                                                <path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                                            </svg>
+                                        </span>
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
@@ -118,29 +117,28 @@
 
                 <!-- No conversation selected -->
                 <div v-else class="no-conv-state">
-                    <div class="welcome-brand">
-                        <span class="brand-word">mogul<span class="brand-dot">.</span></span>
-                        <span class="brand-sub">manager</span>
-                    </div>
-                    <h1 class="welcome-title">How can I help you today?</h1>
-                    <p class="welcome-sub">Select a conversation or start a new one.</p>
-                    <div class="action-grid">
-                        <button
-                            v-for="card in actionCards"
-                            :key="card.text"
-                            class="action-card"
-                            @click="startWithPrompt(card.text)"
-                        >
-                            <div class="action-icon" :style="{ background: card.bg }">
-                                <component :is="'span'" v-html="card.svg"></component>
-                            </div>
-                            <span class="action-label">{{ card.label }}</span>
-                            <span class="action-plus">
-                                <svg viewBox="0 0 12 12" fill="none" width="11" height="11">
-                                    <path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-                                </svg>
-                            </span>
-                        </button>
+                    <div class="starter-glow"></div>
+                    <div class="starter-content">
+                        <h1 class="welcome-title">How can I help you today?</h1>
+                        <p class="welcome-sub">Select a conversation or start a new one.</p>
+                        <div class="action-grid">
+                            <button
+                                v-for="card in actionCards"
+                                :key="card.text"
+                                class="action-card"
+                                @click="startWithPrompt(card.text)"
+                            >
+                                <div class="action-icon">
+                                    <component :is="'span'" class="action-icon-svg" v-html="card.svg"></component>
+                                </div>
+                                <span class="action-label">{{ card.label }}</span>
+                                <span class="action-plus">
+                                    <svg viewBox="0 0 12 12" fill="none" width="11" height="11">
+                                        <path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                                    </svg>
+                                </span>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </main>
@@ -218,26 +216,26 @@ const actionCards = [
     {
         label: "What's blocking my team?",
         text: "What is currently blocking my team's tasks?",
-        bg: '#DBEAFE',
-        svg: `<svg viewBox="0 0 20 20" fill="none" width="20" height="20"><circle cx="10" cy="10" r="7.5" stroke="#1E40AF" stroke-width="1.5"/><path d="M10 6v5M10 14v.5" stroke="#1E40AF" stroke-width="1.8" stroke-linecap="round"/></svg>`,
+        icon: 'blocked',
+        svg: `<svg viewBox="0 0 20 20" fill="none" width="20" height="20"><circle cx="10" cy="10" r="7.5" stroke="currentColor" stroke-width="1.5"/><path d="M10 6v5M10 14v.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`,
     },
     {
         label: "Summarize project progress",
         text: "Summarize the current progress across all my active projects.",
-        bg: '#D1FAE5',
-        svg: `<svg viewBox="0 0 20 20" fill="none" width="20" height="20"><path d="M3 14l4-5 4 3 4-6" stroke="#065F46" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 17h14" stroke="#065F46" stroke-width="1.3" stroke-linecap="round"/></svg>`,
+        icon: 'progress',
+        svg: `<svg viewBox="0 0 20 20" fill="none" width="20" height="20"><path d="M3 14l4-5 4 3 4-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 17h14" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>`,
     },
     {
         label: "Create tasks from a goal",
         text: "Help me break down a goal into actionable tasks.",
-        bg: '#FEF3C7',
-        svg: `<svg viewBox="0 0 20 20" fill="none" width="20" height="20"><rect x="3" y="3" width="14" height="14" rx="3" stroke="#92400E" stroke-width="1.5"/><path d="M7 10l2.5 2.5L13 7.5" stroke="#92400E" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+        icon: 'tasks',
+        svg: `<svg viewBox="0 0 20 20" fill="none" width="20" height="20"><rect x="3" y="3" width="14" height="14" rx="3" stroke="currentColor" stroke-width="1.5"/><path d="M7 10l2.5 2.5L13 7.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
     },
     {
         label: "Draft a team status update",
         text: "Draft a weekly status update summarising what my team has accomplished.",
-        bg: '#FCE7F3',
-        svg: `<svg viewBox="0 0 20 20" fill="none" width="20" height="20"><path d="M4 4h12v10H4z" stroke="#9D174D" stroke-width="1.5" stroke-linejoin="round"/><path d="M7 8h6M7 11h4" stroke="#9D174D" stroke-width="1.3" stroke-linecap="round"/><path d="M12.5 14.5l2 2.5" stroke="#9D174D" stroke-width="1.3" stroke-linecap="round"/></svg>`,
+        icon: 'draft',
+        svg: `<svg viewBox="0 0 20 20" fill="none" width="20" height="20"><path d="M4 4h12v10H4z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M7 8h6M7 11h4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M12.5 14.5l2 2.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>`,
     },
 ]
 
@@ -414,35 +412,46 @@ function formatToolName(name: string) {
     margin: 0 auto;
 }
 
+/* ── Starter glow ── */
+.starter-glow {
+    position: absolute;
+    top: -40%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 520px;
+    height: 520px;
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--primary-muted) 0%, transparent 70%);
+    pointer-events: none;
+    opacity: 0.6;
+}
+
+:global([data-theme="dark"]) .starter-glow {
+    background: radial-gradient(circle, rgba(91, 155, 255, 0.12) 0%, transparent 70%);
+    opacity: 0.8;
+}
+
 /* ── Welcome screen ── */
 .chat-welcome,
 .no-conv-state {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 56px 16px 32px;
+    justify-content: center;
+    padding: 40px 16px 32px;
     gap: 0;
     text-align: center;
+    position: relative;
+    overflow: hidden;
+    flex: 1;
 }
 
-.welcome-brand {
+.starter-content {
+    position: relative;
+    z-index: 1;
     display: flex;
-    align-items: baseline;
-    gap: 3px;
-    margin-bottom: 28px;
-}
-.brand-word {
-    font-size: 22px;
-    font-weight: 800;
-    color: var(--text);
-    letter-spacing: -0.8px;
-}
-.brand-dot { color: var(--primary); }
-.brand-sub {
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--text-muted);
-    letter-spacing: 0.2px;
+    flex-direction: column;
+    align-items: center;
 }
 
 .welcome-title {
@@ -483,13 +492,18 @@ function formatToolName(name: string) {
     cursor: pointer;
     font-family: inherit;
     text-align: left;
-    transition: border-color 0.14s, box-shadow 0.14s, transform 0.1s;
-    box-shadow: 0 1px 4px rgba(10,11,13,0.05);
+    transition: border-color 0.14s, box-shadow 0.14s, transform 0.1s, background 0.14s;
+    box-shadow: 0 1px 3px rgba(10,11,13,0.04);
 }
 .action-card:hover {
     border-color: var(--border-strong);
-    box-shadow: 0 4px 16px rgba(10,11,13,0.1);
+    box-shadow: 0 4px 16px rgba(10,11,13,0.08);
     transform: translateY(-1px);
+    background: var(--card-bg);
+}
+:global([data-theme="dark"]) .action-card:hover {
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    background: rgba(255,255,255,0.03);
 }
 
 .action-icon {
@@ -500,6 +514,15 @@ function formatToolName(name: string) {
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    transition: color 0.14s, background 0.14s, border-color 0.14s;
+}
+.action-card:hover .action-icon {
+    color: var(--primary);
+    background: var(--primary-muted);
+    border-color: var(--primary-border);
 }
 
 .action-label {
@@ -516,16 +539,15 @@ function formatToolName(name: string) {
     width: 26px;
     height: 26px;
     border-radius: 8px;
-    background: #1c1c1e;
+    background: var(--btn-primary-bg);
     border: none;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #fff;
+    color: var(--btn-primary-text);
     transition: opacity 0.12s;
 }
 .action-card:hover .action-plus { opacity: 0.8; }
-:global([data-theme="dark"]) .action-plus { background: #F7F9F9; color: #1c1c1e; }
 
 /* ── Thinking & tool activity ── */
 .thinking-status {

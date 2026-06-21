@@ -1,7 +1,7 @@
 <template>
   <div class="message" :class="[role === 'user' ? 'message-user' : 'message-assistant', { 'message-streaming': streaming, 'message-grouped': grouped }]">
     <div class="message-avatar" :class="{ 'avatar-hidden': grouped }">
-      {{ role === 'user' ? initials : 'AI' }}
+      {{ role === 'user' ? initials : '✦' }}
     </div>
     <div class="message-content">
       <div class="message-text">

@@ -1,7 +1,7 @@
 import asyncio
 from datetime import datetime, timezone
 
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -283,17 +283,15 @@ async def _fetch_project_nearest_deadlines(
         return {}
     now = datetime.now(timezone.utc)
 
+    overdue_case = case(
+        ((models.Task.due_date < now) & (models.Task.status != models.TaskStatus.COMPLETED), 1),
+        else_=0,
+    )
     rows = await db.execute(
         select(
             models.Task.project_id,
             func.min(models.Task.due_date).label("nearest"),
-            func.sum(
-                func.cast(
-                    (models.Task.due_date < now)
-                    & (models.Task.status != models.TaskStatus.COMPLETED),
-                    type_=int,
-                )
-            ).label("overdue_count"),
+            func.sum(overdue_case).label("overdue_count"),
         )
         .where(
             models.Task.project_id.in_(project_ids),
