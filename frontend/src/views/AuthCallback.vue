@@ -32,10 +32,21 @@ const auth = useAuthStore()
 const state = ref<'loading' | 'error'>('loading')
 const errorMessage = ref('Google sign-in failed. Please try again.')
 
+function isValidRedirect(path: string): boolean {
+  try {
+    const url = new URL(path, window.location.origin)
+    return url.origin === window.location.origin && path.startsWith('/')
+  } catch {
+    return false
+  }
+}
+
 onMounted(async () => {
-  const token = route.query.token as string | undefined
+  // Read token and next from URL hash fragment, not query string
+  const hashParams = new URLSearchParams(route.hash.replace(/^#/, ''))
+  const token = hashParams.get('token') || (route.query.token as string | undefined)
   const error = route.query.error as string | undefined
-  const next = route.query.next as string | undefined
+  const next = hashParams.get('next') || (route.query.next as string | undefined)
 
   if (error) {
     errorMessage.value = 'Google sign-in failed. Please try again.'
@@ -55,7 +66,7 @@ onMounted(async () => {
   // Re-initialise — fetchUser reads from the store token ref
   try {
     await auth.fetchUser()
-    router.replace(next && next.startsWith('/') ? next : '/')
+    router.replace(next && isValidRedirect(next) ? next : '/')
   } catch {
     errorMessage.value = 'Failed to load user data. Please try again.'
     state.value = 'error'

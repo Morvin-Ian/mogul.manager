@@ -70,10 +70,27 @@ def _make_username_from_email(email: str) -> str:
     return cleaned or "user"
 
 
+def _safe_next_url(next: str | None) -> str | None:
+    """Allow only relative URLs or URLs matching the frontend origin."""
+    if not next:
+        return None
+    try:
+        parsed = urllib.parse.urlparse(next)
+        if not parsed.netloc:
+            return next.lstrip("/") or None
+        if parsed.netloc == urllib.parse.urlparse(settings.frontend_url).netloc:
+            return next
+        logger.warning("Blocked open redirect attempt: %s", next)
+        return None
+    except Exception:
+        return None
+
+
 @router.get("/google")
 async def google_login(
     next: str | None = None,
 ) -> RedirectResponse:
+    next = _safe_next_url(next)
     state = _build_state_token(next=next)
 
     params = {
@@ -155,7 +172,7 @@ async def google_callback(
         expires_delta=timedelta(minutes=settings.access_token_expire_minutes),
     )
 
-    redirect_url = f"{settings.frontend_url}/auth/callback?token={access_token}"
+    redirect_url = f"{settings.frontend_url}/auth/callback#token={access_token}"
     next_url = state_payload.get("next")
     if next_url:
         redirect_url += f"&next={urllib.parse.quote(next_url)}"

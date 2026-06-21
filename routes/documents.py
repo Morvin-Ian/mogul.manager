@@ -27,6 +27,7 @@ from schemas.documents import (
     DocumentResponse,
     DocumentUpdate,
     SearchHit,
+    SearchRequest,
     SearchResponse,
 )
 from services.auth import CurrentUser
@@ -88,6 +89,25 @@ async def upload_document(
         and (file.content_type or "") not in ALLOWED_CONTENT_TYPES
     ):
         raise HTTPException(400, "Unsupported file type. Allowed: PDF, DOCX, TXT, CSV")
+
+    # Verify workspace membership when project_id is supplied
+    if project_id is not None:
+        proj = await db.execute(
+            select(models.Project).where(models.Project.id == project_id)
+        )
+        project = proj.scalars().first()
+        if not project:
+            raise HTTPException(404, "Project not found")
+        member_check = await db.execute(
+            select(WorkspaceMember).where(
+                WorkspaceMember.workspace_id == project.workspace_id,
+                WorkspaceMember.user_id == current_user.id,
+            )
+        )
+        if not member_check.scalars().first():
+            raise HTTPException(
+                403, "You are not a member of the workspace this project belongs to"
+            )
 
     content = await file.read()
 
@@ -238,14 +258,14 @@ async def update_document(
 
 @router.post("/search", response_model=SearchResponse)
 async def search_documents(
-    body: dict,
+    body: SearchRequest,
     current_user: CurrentUser,
     db: AsyncSession = Depends(get_db),
 ):
-    query = body.get("query", "").strip()
+    query = body.query.strip()
     if not query:
         raise HTTPException(400, "query is required")
-    top_k = min(int(body.get("top_k", 5)), 20)
+    top_k = min(body.top_k, 20)
 
     hits = await RAGService(db).search(query, current_user.id, top_k=top_k)
     return SearchResponse(

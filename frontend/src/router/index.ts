@@ -2,6 +2,15 @@ import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 
+function isTokenExpired(token: string): boolean {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]))
+    return payload.exp * 1000 < Date.now()
+  } catch {
+    return true
+  }
+}
+
 const routes: RouteRecordRaw[] = [
   {
     path: '/login',
@@ -113,13 +122,22 @@ const router = createRouter({
 
 router.beforeEach((to, _from, next) => {
   const auth = useAuthStore()
-  if (to.meta?.requiresAuth && !auth.token) {
-    next('/login')
+  if (to.meta?.requiresAuth) {
+    if (!auth.token) {
+      next('/login')
+      return
+    }
+    if (isTokenExpired(auth.token)) {
+      localStorage.removeItem('token')
+      auth.token = null
+      next('/login')
+      return
+    }
   } else if (to.meta?.guest && auth.token) {
     next('/')
-  } else {
-    next()
+    return
   }
+  next()
 })
 
 export default router

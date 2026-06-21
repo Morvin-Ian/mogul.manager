@@ -10,7 +10,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.concurrency import run_in_threadpool
 
 import models
-from config import settings
 from database import get_db
 from services.documents.service import _s3_delete, _s3_upload
 
@@ -21,9 +20,63 @@ class AttachmentService:
     def __init__(self, db: Annotated[AsyncSession, Depends(get_db)]):
         self.db = db
 
+    ALLOWED_EXTENSIONS = frozenset(
+        {
+            ".jpg",
+            ".jpeg",
+            ".png",
+            ".gif",
+            ".webp",
+            ".svg",
+            ".pdf",
+            ".doc",
+            ".docx",
+            ".xls",
+            ".xlsx",
+            ".ppt",
+            ".pptx",
+            ".txt",
+            ".csv",
+            ".zip",
+            ".rar",
+            ".7z",
+            ".tar",
+            ".gz",
+        }
+    )
+
+    ALLOWED_MIMES = frozenset(
+        {
+            "image/jpeg",
+            "image/png",
+            "image/gif",
+            "image/webp",
+            "image/svg+xml",
+            "application/pdf",
+            "application/msword",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "application/vnd.ms-excel",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "application/vnd.ms-powerpoint",
+            "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+            "text/plain",
+            "text/csv",
+            "application/zip",
+            "application/x-rar-compressed",
+            "application/x-7z-compressed",
+            "application/x-tar",
+            "application/gzip",
+        }
+    )
+
     async def upload(
         self, task_id: int, user_id: int, file: UploadFile
     ) -> models.TaskAttachment:
+        ext = Path(file.filename or "file").suffix.lower()
+        mime = (file.content_type or "").lower()
+        if ext not in self.ALLOWED_EXTENSIONS and mime not in self.ALLOWED_MIMES:
+            raise ValueError(f"File type '{ext or mime}' is not allowed.")
+
         content = await file.read()
         if len(content) > MAX_ATTACHMENT_SIZE:
             raise ValueError("File exceeds the 50 MB size limit.")

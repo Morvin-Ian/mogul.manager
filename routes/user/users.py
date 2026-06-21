@@ -376,7 +376,11 @@ async def change_password(
 
 
 @router.get("/{user_id}", response_model=UserPublic)
-async def get_user(user_id: int, db: Annotated[AsyncSession, Depends(get_db)]):
+async def get_user(
+    user_id: int,
+    current_user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
     result = await db.execute(select(models.User).where(models.User.id == user_id))
     user = result.scalars().first()
     if user:

@@ -94,13 +94,22 @@ onMounted(() => {
   }
 })
 
+function isValidRedirect(path: string): boolean {
+  try {
+    const url = new URL(path, window.location.origin)
+    return url.origin === window.location.origin && path.startsWith('/')
+  } catch {
+    return false
+  }
+}
+
 async function handleLogin() {
   error.value = null
   loading.value = true
   try {
     await auth.login(email.value, password.value)
     const next = route.query.next as string | undefined
-    router.push(next && next.startsWith('/') ? next : '/')
+    router.push(next && isValidRedirect(next) ? next : '/')
   } catch (e) {
     error.value = (e as Error).message
   } finally {

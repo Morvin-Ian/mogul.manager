@@ -37,6 +37,11 @@ class ChunkResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class SearchRequest(BaseModel):
+    query: str = ""
+    top_k: int = 5
+
+
 class SearchHit(BaseModel):
     document_id: int
     document_title: str

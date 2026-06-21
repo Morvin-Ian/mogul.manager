@@ -13,7 +13,7 @@ from config import settings
 from database import get_db
 from models.collaboration import MemberRole
 from models.plans import StepStatus
-from schemas.bulk import BulkTaskDelete, BulkTaskUpdate
+from schemas.bulk import BulkTaskDelete, BulkTaskUpdate, TaskReorder
 from schemas.project.tasks import TaskCreate, TaskRead, TaskUpdate
 from services.activity import ActivityService
 from services.auth import CurrentUser
@@ -363,6 +363,25 @@ async def update_task(
             )
             await emit_notification_event(updated.assigned_to_id, notif)
 
+        # Notify workspace owner (creator) when someone else changes a task status
+        owner_result = await db.execute(
+            select(models.Workspace.user_id).where(
+                models.Workspace.id == project.workspace_id
+            )
+        )
+        workspace_owner_id = owner_result.scalar()
+        if workspace_owner_id and workspace_owner_id != current_user.id:
+            notif_svc = NotificationService(db)
+            notif = await notif_svc.create(
+                user_id=workspace_owner_id,
+                notification_type="task_status_changed",
+                title=notif_title,
+                message=notif_body,
+                link=notif_link,
+                metadata_json=notif_meta,
+            )
+            await emit_notification_event(workspace_owner_id, notif)
+
         # Notify workspace admins when a member changes task status
         if member.role == MemberRole.member:
             await _notify_workspace_admins(
@@ -433,7 +452,7 @@ async def delete_task(
 
 @router.post("/reorder", status_code=status.HTTP_204_NO_CONTENT)
 async def reorder_task(
-    body: dict,
+    body: TaskReorder,
     current_user: CurrentUser,
     service: Annotated[TaskService, Depends()],
     collab: Annotated[CollaborationService, Depends()],
@@ -441,13 +460,8 @@ async def reorder_task(
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     """Move a task to a new position (and optionally a new status column)."""
-    uuid = body.get("uuid")
-    new_position = body.get("position")
-    new_status = body.get("status")
-    if not uuid or new_position is None:
-        raise HTTPException(status_code=400, detail="uuid and position are required")
 
-    task = await _get_task_or_404(uuid, service)
+    task = await _get_task_or_404(body.uuid, service)
     project = await _get_project_or_404(task.project_id, db)
     member = await collab.require_access(
         project.workspace_id, current_user.id, min_role="member"
@@ -472,8 +486,8 @@ async def reorder_task(
             )
 
     old_status = task.status.value
-    target_status = new_status or task.status.value
-    await service.reorder_task(task, int(new_position), target_status)
+    target_status = body.status or task.status.value
+    await service.reorder_task(task, body.position, target_status)
 
     # Sync plan step if status changed via drag
     if target_status != old_status:
