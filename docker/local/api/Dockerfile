@@ -1,6 +1,7 @@
 FROM python:3.11-slim
 
 ENV PYTHONUNBUFFERED=1
+ENV FASTEMBED_CACHE_DIR=/opt/fastembed_cache
 
 WORKDIR /app
 
@@ -12,6 +13,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen
+
+# Pre-download the embedding model so it's baked into the image
+RUN uv run python -c "from fastembed import TextEmbedding; TextEmbedding(model_name='BAAI/bge-small-en-v1.5')"
 
 COPY docker/local/api/start /start
 COPY . .

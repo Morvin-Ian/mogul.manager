@@ -103,7 +103,7 @@ async def build_context(
     global_task_total = 0
     global_task_counts: dict[str, int] = {}
     global_overdue = 0
-    now = datetime.now(timezone.utc)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
 
     if all_project_ids:
         count_rows = await db.execute(
@@ -281,7 +281,7 @@ async def _fetch_project_nearest_deadlines(
 ) -> dict[int, str]:
     if not project_ids:
         return {}
-    now = datetime.now(timezone.utc)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
 
     overdue_case = case(
         ((models.Task.due_date < now) & (models.Task.status != models.TaskStatus.COMPLETED), 1),
