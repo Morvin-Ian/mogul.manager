@@ -230,6 +230,15 @@
             Attachments
             <span v-if="attachmentCount" class="tab-badge">{{ attachmentCount }}</span>
           </button>
+          <button
+            class="tab-btn"
+            :class="{ 'tab-active': activeTab === 'dependencies' }"
+            @click="activeTab = 'dependencies'"
+          >
+            <font-awesome-icon :icon="['fas', 'code-branch']" />
+            Dependencies
+            <span v-if="depCount > 0" class="tab-badge">{{ depCount }}</span>
+          </button>
         </div>
 
         <!-- ── Description tab ── -->
@@ -255,6 +264,10 @@
           <DrawerAttachments v-if="task" :task-id="task.uuid" @count-change="onAttachmentCount" />
         </div>
 
+        <div v-show="activeTab === 'dependencies'" class="tab-content">
+          <DrawerDependencies v-if="task" :task-uuid="task.uuid" :project-id="task.project_id" @count-change="onDepCount" />
+        </div>
+
       </div>
     </Transition>
   </Teleport>
@@ -273,12 +286,13 @@ import type { Task, TaskStatus, TaskPriority, WorkspaceMember } from '../../type
 import TagChip from './TagChip.vue'
 import DrawerAttachments from './DrawerAttachments.vue'
 import DrawerComments from './DrawerComments.vue'
+import DrawerDependencies from './DrawerDependencies.vue'
 
 const props = defineProps<{
   task: Task | null
   workspaceId: string | null
   projectId: number
-  initialTab?: 'description' | 'comments' | 'attachments' | null
+  initialTab?: 'description' | 'comments' | 'attachments' | 'dependencies' | null
 }>()
 
 const emit = defineEmits<{
@@ -301,12 +315,13 @@ const highlightCommentId = computed(() => {
 
 const editMode = ref(false)
 const saving = ref(false)
-const activeTab = ref<'description' | 'comments' | 'attachments'>(props.initialTab ?? 'description')
+const activeTab = ref<'description' | 'comments' | 'attachments' | 'dependencies'>(props.initialTab ?? 'description')
 const showAssigneePicker = ref(false)
 // Seed from the task's server-side count so the badge shows without
 // having to open the comments tab; DrawerComments refines it on fetch.
 const commentCount = ref(props.task?.comment_count ?? 0)
 const attachmentCount = ref(0)
+const depCount = ref(0)
 
 watch(
   () => props.task?.uuid,
@@ -324,6 +339,9 @@ function onCommentCount(n: number) {
 }
 function onAttachmentCount(n: number) {
   attachmentCount.value = n
+}
+function onDepCount(n: number) {
+  depCount.value = n
 }
 
 const workspaceMembers = ref<WorkspaceMember[]>([])

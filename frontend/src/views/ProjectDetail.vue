@@ -149,6 +149,30 @@
           Documents
           <span v-if="projectDocs.length" class="tab-count">{{ projectDocs.length }}</span>
         </button>
+        <button
+          class="proj-tab"
+          :class="{ active: activeTab === 'milestones' }"
+          @click="activeTab = 'milestones'"
+        >
+          <font-awesome-icon :icon="['fas', 'flag-checkered']" />
+          Milestones
+        </button>
+        <button
+          class="proj-tab"
+          :class="{ active: activeTab === 'activity' }"
+          @click="activeTab = 'activity'"
+        >
+          <font-awesome-icon :icon="['fas', 'clock-rotate-left']" />
+          Activity
+        </button>
+        <button
+          class="proj-tab"
+          :class="{ active: activeTab === 'reports' }"
+          @click="activeTab = 'reports'"
+        >
+          <font-awesome-icon :icon="['fas', 'chart-simple']" />
+          Reports
+        </button>
       </div>
 
       <!-- Board tab -->
@@ -166,6 +190,18 @@
       <!-- Plan tab -->
       <div v-show="activeTab === 'plan'">
         <PlanPanel :project-id="project.id" />
+      </div>
+
+      <div v-show="activeTab === 'milestones'">
+        <MilestonePanel :project-id="project.id" />
+      </div>
+
+      <div v-show="activeTab === 'activity'">
+        <ActivityPanel :project-id="project.id" />
+      </div>
+
+      <div v-show="activeTab === 'reports'">
+        <ReportsPanel :project-id="project.id" />
       </div>
 
       <!-- Documents tab -->
@@ -253,6 +289,9 @@ import TaskBoard from '../components/task/TaskBoard.vue'
 import AiNudge from '../components/common/AiNudge.vue'
 import ProjectForm from '../components/project/ProjectForm.vue'
 import PlanPanel from '../components/plan/PlanPanel.vue'
+import MilestonePanel from '../components/milestone/MilestonePanel.vue'
+import ActivityPanel from '../components/activity/ActivityPanel.vue'
+import ReportsPanel from '../components/reports/ReportsPanel.vue'
 
 const STATUS_LABELS: Record<ProjectStatus, string> = {
   planning: 'Planning', active: 'Active', on_hold: 'On Hold',
@@ -282,7 +321,7 @@ const taskStore = useTaskStore()
 const docStore = useDocumentStore()
 const { confirm } = useConfirm()
 
-const activeTab = ref<'board' | 'plan' | 'docs'>('board')
+const activeTab = ref<'board' | 'plan' | 'docs' | 'milestones' | 'activity' | 'reports'>('board')
 const projectDocs = ref<Document[]>([])
 
 // Document upload

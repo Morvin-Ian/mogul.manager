@@ -434,3 +434,68 @@ export interface InvitationInfo {
   expires_at: string;
   workspace: { id: number | null; title: string | null };
 }
+
+export interface StatusCount {
+  status: string;
+  count: number;
+}
+
+export interface PriorityCount {
+  priority: number;
+  count: number;
+}
+
+export interface ProjectReport {
+  total_tasks: number;
+  completed_tasks: number;
+  overdue_tasks: number;
+  completion_pct: number;
+  by_status: StatusCount[];
+  by_priority: PriorityCount[];
+}
+
+export interface WorkspaceReport {
+  total_projects: number;
+  total_tasks: number;
+  completed_tasks: number;
+  overdue_tasks: number;
+  completion_pct: number;
+  by_status: StatusCount[];
+  member_count: number;
+}
+
+export interface ActivityUser {
+  id: number;
+  username: string;
+  profile_path: string | null;
+}
+
+export interface ActivityLog {
+  id: number;
+  uuid: string;
+  workspace_id: number | null;
+  project_id: number | null;
+  task_id: number | null;
+  user_id: number;
+  entity_type: string;
+  entity_id: number;
+  action: string;
+  summary: string | null;
+  changes: Record<string, unknown> | null;
+  created_at: string;
+  user: ActivityUser | null;
+}
+
+export interface TaskDependencyRead {
+  id: number;
+  uuid: string;
+  title: string;
+  status: string;
+  priority: number;
+  assignee_name: string | null;
+}
+
+export interface TaskDependencyList {
+  depends_on: TaskDependencyRead[];
+  blocked_by: TaskDependencyRead[];
+}
