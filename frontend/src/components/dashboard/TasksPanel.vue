@@ -1,5 +1,5 @@
 <template>
-  <div class="panel" style="display:flex;flex-direction:column;">
+    <div class="panel" style="display:flex;flex-direction:column;overflow:hidden;min-height:0;">
     <div class="panel-hdr">
       <span class="panel-title">My Tasks</span>
       <button class="add-btn" @click="$emit('create-project')" title="New Project">+</button>

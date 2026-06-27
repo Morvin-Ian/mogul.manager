@@ -543,7 +543,7 @@ async function handleProjectSaved(data: Record<string, any>) {
   column-gap: 12px;
 }
 
-.tasks-panel { grid-column: 1; display: flex; flex-direction: column; }
+.tasks-panel { grid-column: 1; display: flex; flex-direction: column; min-height: 0; }
 .center-col  { grid-column: 2; display: flex; flex-direction: column; gap: 4px; }
 .right-col   { grid-column: 3; display: flex; flex-direction: column; gap: 4px; min-height: 0; }
 
