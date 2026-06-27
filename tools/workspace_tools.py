@@ -1,4 +1,5 @@
 import json
+from typing import cast
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -106,7 +107,7 @@ def _serialize(workspace: models.Workspace) -> dict:
 
 
 async def handle(name: str, args: dict, db: AsyncSession) -> str:
-    svc = WorkspaceService(db)  # type: ignore[arg-type]
+    svc = WorkspaceService(cast(AsyncSession, db))
 
     if name == "create_workspace":
         user_id: int = args.pop("user_id")

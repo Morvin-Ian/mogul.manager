@@ -80,7 +80,6 @@ const isOnChat = computed(() => route.path.startsWith('/chat'))
 const ROUTE_PROMPTS: Record<string, string[]> = {
   '/workspaces': ['Show me all my projects and their status', 'What tasks are overdue?', 'Create a new workspace for me'],
   '/projects': ['List all active projects', 'Which project has the most pending tasks?', 'Create a project and add tasks to it'],
-  '/plans': ['Create a plan for my current project', 'Show me all active plans', 'What are the next steps in my plans?'],
   '/documents': ['Summarize my uploaded documents', 'Search my docs for information on', 'What documents do I have ready?'],
 }
 

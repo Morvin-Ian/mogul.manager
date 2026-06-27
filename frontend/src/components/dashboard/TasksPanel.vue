@@ -8,6 +8,7 @@
       <button class="filter-pill" :class="{ active: taskFilter === 'all' }" @click="taskFilter = 'all'">All</button>
       <button class="filter-pill" :class="{ active: taskFilter === 'today' }" @click="taskFilter = 'today'">Today</button>
       <button class="filter-pill" :class="{ active: taskFilter === 'tomorrow' }" @click="taskFilter = 'tomorrow'">Tomorrow</button>
+      <button class="filter-pill" :class="{ active: taskFilter === 'overdue' }" @click="taskFilter = 'overdue'">Overdue</button>
     </div>
     <div class="ongoing-wrap">
       <div class="ongoing-row" @click="showStatusDropdown = !showStatusDropdown">
@@ -81,7 +82,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useTaskStore } from '../../stores/tasks'
 import type { Task, Project } from '../../types'
 
@@ -90,7 +91,7 @@ const emit = defineEmits<{ 'create-project': []; 'task-updated': [task: Task] }>
 
 const taskStore = useTaskStore()
 
-const taskFilter = ref<'all' | 'today' | 'tomorrow'>('all')
+const taskFilter = ref<'all' | 'today' | 'tomorrow' | 'overdue'>('all')
 const statusFilter = ref<string | null>(null)
 const showStatusDropdown = ref(false)
 
@@ -141,6 +142,9 @@ const displayedTasks = computed(() => {
     tasks = tasks.filter(t => t.due_date && new Date(t.due_date).toDateString() === today)
   } else if (taskFilter.value === 'tomorrow') {
     tasks = tasks.filter(t => t.due_date && new Date(t.due_date).toDateString() === tomorrow)
+  } else if (taskFilter.value === 'overdue') {
+    const now = new Date()
+    tasks = tasks.filter(t => t.due_date && new Date(t.due_date) < now && t.status !== 'completed')
   }
 
   return tasks.slice(0, 20)

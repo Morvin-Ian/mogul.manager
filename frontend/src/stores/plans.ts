@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import type { Plan, PlanCreate, PlanUpdate, PlanStep, StepUpdate, StepCreate } from '../types'
+import type { Plan, PlanCreate, PlanUpdate, PlanStep, StepUpdate, StepCreate, StepReorder } from '../types'
 import { get, post, patch, del } from './client'
 
 export const usePlanStore = defineStore('plans', () => {
@@ -86,15 +86,30 @@ export const usePlanStore = defineStore('plans', () => {
     }
   }
 
+  async function reorderSteps(planUuid: string, steps: StepReorder[]): Promise<Plan> {
+    const plan = await post<Plan>(`/plans/${planUuid}/steps/reorder`, steps)
+    const idx = plans.value.findIndex((p) => p.uuid === planUuid)
+    if (idx !== -1) plans.value[idx] = plan
+    if (current.value?.uuid === planUuid) current.value = plan
+    return plan
+  }
+
   function progress(plan: Plan): number {
     if (!plan.steps.length) return 0
-    const done = plan.steps.filter((s) => s.status === 'completed' || s.status === 'skipped').length
-    return Math.round((done / plan.steps.length) * 100)
+    const weights: Record<string, number> = {
+      urgent: 4, high: 3, medium: 2, low: 1,
+    }
+    const totalWeight = plan.steps.reduce((sum, s) => sum + (weights[s.priority] || 1), 0)
+    if (!totalWeight) return 0
+    const doneWeight = plan.steps
+      .filter((s) => s.status === 'completed' || s.status === 'skipped')
+      .reduce((sum, s) => sum + (weights[s.priority] || 1), 0)
+    return Math.round((doneWeight / totalWeight) * 100)
   }
 
   return {
     plans, current, loading, error,
     fetchByProject, fetchOne, create, update, remove,
-    updateStep, addStep, deleteStep, progress,
+    updateStep, addStep, deleteStep, reorderSteps, progress,
   }
 })

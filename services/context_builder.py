@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 import models
+from config import settings
 from models.collaboration import WorkspaceMember
 from models.documents import DocumentStatus
 from services.documents import DocumentService
@@ -20,9 +21,9 @@ _ACTIVE_STATUSES = {
     models.TaskStatus.REVIEW,
 }
 
-_TASK_DISPLAY_LIMIT = 12
-_DOC_DISPLAY_LIMIT = 10
-_MEMORY_LIMIT = 15
+_TASK_DISPLAY_LIMIT = settings.task_display_limit
+_DOC_DISPLAY_LIMIT = settings.doc_display_limit
+_MEMORY_LIMIT = settings.memory_limit
 
 
 async def build_context(
@@ -254,8 +255,9 @@ async def build_context(
             rag_context = await rag_svc.build_rag_context(query, user_id)
             if rag_context:
                 lines.append(f"\n{rag_context}")
-        except Exception:
-            pass
+        except (ValueError, RuntimeError, ConnectionError):
+            logger = __import__('logging').getLogger(__name__)
+            logger.exception("Failed to build RAG context for user %d", user_id)
 
     return "\n".join(lines)
 

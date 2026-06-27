@@ -1,4 +1,5 @@
 import json
+from typing import cast
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -87,7 +88,7 @@ def _serialize(memory: models.Memory) -> dict:
 
 
 async def handle(name: str, args: dict, db: AsyncSession) -> str:
-    svc = MemoryService(db)  # type: ignore[arg-type]
+    svc = MemoryService(cast(AsyncSession, db))
 
     if name == "store_memory":
         user_id: int = args.pop("user_id")

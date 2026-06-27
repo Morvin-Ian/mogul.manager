@@ -111,6 +111,6 @@ class Task(TimestampedModel):
         try:
             if 'project' in inspect(self).unloaded:
                 return None
-        except Exception:
-            pass
+        except AttributeError:
+            return None
         return self.project.uuid if self.project else None

@@ -13,6 +13,7 @@ from schemas.project.plans import (
     PlanUpdate,
     StepCreate,
     StepRead,
+    StepReorder,
     StepUpdate,
 )
 from services.auth import CurrentUser
@@ -256,6 +257,25 @@ async def update_step(
     if warning:
         result_schema.warning = warning
     return result_schema
+
+
+@router.post("/{plan_id}/steps/reorder", response_model=PlanRead)
+async def reorder_steps(
+    plan_id: str,
+    payload: list[StepReorder],
+    current_user: CurrentUser,
+    service: Annotated[PlanService, Depends()],
+    collab: Annotated[CollaborationService, Depends()],
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> PlanRead:
+    plan = await _get_plan_or_404(plan_id, service)
+    project = await _get_project_or_404(plan.project_id, db)
+    await collab.require_access(
+        project.workspace_id, current_user.id, min_role="member"
+    )
+    pairs = [(s.step_id, s.new_order) for s in payload]
+    updated = await service.reorder_steps(plan, pairs)
+    return _to_read(updated)
 
 
 @router.delete("/{plan_id}/steps/{step_id}", status_code=status.HTTP_204_NO_CONTENT)

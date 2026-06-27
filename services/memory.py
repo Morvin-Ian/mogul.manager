@@ -98,13 +98,14 @@ class MemoryService:
         return len(memories)
 
     async def _touch(self, memory: models.Memory) -> None:
-        memory.last_accessed_at = datetime.now(UTC)
+        now = datetime.now(UTC)
         await self.db.execute(
             update(models.Memory)
             .where(models.Memory.id == memory.id)
-            .values(last_accessed_at=datetime.now(UTC))
+            .values(last_accessed_at=now)
         )
         await self.db.commit()
+        memory.last_accessed_at = now
 
     async def get_stale_memories(
         self, user_id: int, max_importance: int = 1, limit: int = 50

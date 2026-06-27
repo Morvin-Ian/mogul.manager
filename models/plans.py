@@ -3,7 +3,9 @@ from __future__ import annotations
 from enum import Enum
 from typing import TYPE_CHECKING
 
-from sqlalchemy import JSON, ForeignKey, Integer, String, Text, inspect
+from datetime import datetime
+
+from sqlalchemy import JSON, DateTime, Float, ForeignKey, Integer, String, Text, inspect
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -12,6 +14,7 @@ from models.base import TimestampedModel
 if TYPE_CHECKING:
     from .projects import Project
     from .tasks import Task
+    from .users import User
 
 
 class PlanStatus(str, Enum):
@@ -51,6 +54,10 @@ class Plan(TimestampedModel):
         default=PlanStatus.ACTIVE,
         nullable=False,
     )
+    estimated_budget: Mapped[float | None] = mapped_column(Float, nullable=True)
+    actual_budget: Mapped[float | None] = mapped_column(Float, nullable=True)
+    start_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    target_completion_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     project: Mapped["Project"] = relationship("Project", back_populates="plans")
     steps: Mapped[list["PlanStep"]] = relationship(
@@ -65,8 +72,8 @@ class Plan(TimestampedModel):
         try:
             if "project" in inspect(self).unloaded:
                 return None
-        except Exception:
-            pass
+        except AttributeError:
+            return None
         return self.project.title if self.project else None
 
 
@@ -94,10 +101,19 @@ class PlanStep(TimestampedModel):
         ForeignKey("tasks.id", ondelete="SET NULL"), nullable=True
     )
     agent_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    estimated_hours: Mapped[float | None] = mapped_column(Float, nullable=True)
+    actual_hours: Mapped[float | None] = mapped_column(Float, nullable=True)
+    assigned_to_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    cost_estimate: Mapped[float | None] = mapped_column(Float, nullable=True)
 
     plan: Mapped["Plan"] = relationship("Plan", back_populates="steps")
     linked_task: Mapped["Task | None"] = relationship(
         "Task", foreign_keys=[linked_task_id]
+    )
+    assigned_user: Mapped["User | None"] = relationship(
+        "User", foreign_keys=[assigned_to_id]
     )
 
     @property
@@ -105,8 +121,8 @@ class PlanStep(TimestampedModel):
         try:
             if "linked_task" in inspect(self).unloaded:
                 return None
-        except Exception:
-            pass
+        except AttributeError:
+            return None
         return self.linked_task.uuid if self.linked_task else None
 
     @property
@@ -114,6 +130,6 @@ class PlanStep(TimestampedModel):
         try:
             if "linked_task" in inspect(self).unloaded:
                 return None
-        except Exception:
-            pass
+        except AttributeError:
+            return None
         return self.linked_task.title if self.linked_task else None

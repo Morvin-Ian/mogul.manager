@@ -16,7 +16,7 @@ from utils.prompts import PLANNER_SYSTEM, SUGGEST_PROMPTS, build_chat_system_pro
 
 logger = logging.getLogger(__name__)
 
-_MAX_TOOL_ITERATIONS = 5
+_MAX_TOOL_ITERATIONS = settings.max_tool_iterations
 
 _DSML_RE = re.compile(r"<\|+DSML\|+>.*?</\|+DSML\|+tool_calls>", re.DOTALL)
 _DSML_OPEN_RE = re.compile(r"<\|+DSML\|+[^>]*>")

@@ -26,12 +26,19 @@ class PlanCreate(BaseModel):
     title: str = Field(min_length=1, max_length=255)
     description: str | None = None
     project_id: int
+    estimated_budget: float | None = None
+    start_date: datetime | None = None
+    target_completion_date: datetime | None = None
 
 
 class PlanUpdate(BaseModel):
     title: str | None = Field(default=None, min_length=1, max_length=255)
     description: str | None = None
     status: PlanStatus | None = None
+    estimated_budget: float | None = None
+    actual_budget: float | None = None
+    start_date: datetime | None = None
+    target_completion_date: datetime | None = None
 
 
 class StepRead(BaseModel):
@@ -50,6 +57,10 @@ class StepRead(BaseModel):
     linked_task_uuid: str | None
     linked_task_title: str | None
     agent_notes: str | None
+    estimated_hours: float | None
+    actual_hours: float | None
+    assigned_to_id: int | None
+    cost_estimate: float | None
     created_at: datetime
     updated_at: datetime
     warning: str | None = None   # populated by the update endpoint when relevant
@@ -67,6 +78,10 @@ class StepUpdate(BaseModel):
     priority: StepPriority | None = None
     linked_task_id: int | None = None
     agent_notes: str | None = None
+    estimated_hours: float | None = None
+    actual_hours: float | None = None
+    assigned_to_id: int | None = None
+    cost_estimate: float | None = None
 
 
 class StepCreate(BaseModel):
@@ -74,6 +89,9 @@ class StepCreate(BaseModel):
     description: str | None = None
     priority: StepPriority = StepPriority.MEDIUM
     step_order: int | None = None
+    estimated_hours: float | None = None
+    assigned_to_id: int | None = None
+    cost_estimate: float | None = None
 
 
 class PlanRead(BaseModel):
@@ -87,6 +105,15 @@ class PlanRead(BaseModel):
     title: str
     description: str | None
     status: PlanStatus
+    estimated_budget: float | None
+    actual_budget: float | None
+    start_date: datetime | None
+    target_completion_date: datetime | None
     steps: list[StepRead]
     created_at: datetime
     updated_at: datetime
+
+
+class StepReorder(BaseModel):
+    step_id: str
+    new_order: int

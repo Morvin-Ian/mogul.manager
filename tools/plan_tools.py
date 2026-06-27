@@ -1,4 +1,5 @@
 import json
+from typing import cast
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -52,7 +53,7 @@ PLAN_TOOLS = [
 
 
 async def handle(name: str, args: dict, db: AsyncSession, user_id: int = 0) -> str:
-    svc = PlanService(db)
+    svc = PlanService(cast(AsyncSession, db))
 
     if name == "create_plan":
         project_id = args.get("project_id")

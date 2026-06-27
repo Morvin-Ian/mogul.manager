@@ -300,11 +300,15 @@ export interface PlanStep {
   step_order: number;
   priority: StepPriority;
   status: StepStatus;
-  dependencies: number[] | null;
+  dependencies: string[] | null;
   linked_task_id: number | null;
   linked_task_uuid: string | null;
   linked_task_title: string | null;
   agent_notes: string | null;
+  estimated_hours: number | null;
+  actual_hours: number | null;
+  assigned_to_id: number | null;
+  cost_estimate: number | null;
   warning?: string | null;
   created_at: string;
   updated_at: string;
@@ -319,6 +323,10 @@ export interface Plan {
   title: string;
   description: string | null;
   status: PlanStatus;
+  estimated_budget: number | null;
+  actual_budget: number | null;
+  start_date: string | null;
+  target_completion_date: string | null;
   steps: PlanStep[];
   created_at: string;
   updated_at: string;
@@ -328,12 +336,19 @@ export interface PlanCreate {
   title: string;
   description?: string | null;
   project_id: number;
+  estimated_budget?: number | null;
+  start_date?: string | null;
+  target_completion_date?: string | null;
 }
 
 export interface PlanUpdate {
   title?: string;
   description?: string | null;
   status?: PlanStatus;
+  estimated_budget?: number | null;
+  actual_budget?: number | null;
+  start_date?: string | null;
+  target_completion_date?: string | null;
 }
 
 export interface StepUpdate {
@@ -343,6 +358,10 @@ export interface StepUpdate {
   priority?: StepPriority;
   linked_task_id?: number | null;
   agent_notes?: string | null;
+  estimated_hours?: number | null;
+  actual_hours?: number | null;
+  assigned_to_id?: number | null;
+  cost_estimate?: number | null;
 }
 
 export interface StepCreate {
@@ -350,6 +369,14 @@ export interface StepCreate {
   description?: string | null;
   priority?: StepPriority;
   step_order?: number;
+  estimated_hours?: number | null;
+  assigned_to_id?: number | null;
+  cost_estimate?: number | null;
+}
+
+export interface StepReorder {
+  step_id: string;
+  new_order: number;
 }
 
 export interface Notification {

@@ -40,10 +40,8 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-# A document must be stuck in pending/processing for this long before we retry it.
-# Prevents race-condition double-processing of docs that just started.
-_STUCK_THRESHOLD_SECONDS = 900  # 15 minutes
-_MAX_PROCESSING_ATTEMPTS = 3
+_STUCK_THRESHOLD_SECONDS = settings.stuck_threshold_seconds
+_MAX_PROCESSING_ATTEMPTS = settings.max_processing_attempts
 
 
 async def _periodic_document_check(interval_seconds: int = 1800) -> None:
@@ -56,6 +54,21 @@ async def _periodic_document_check(interval_seconds: int = 1800) -> None:
             break
         except Exception as exc:
             logger.error("Periodic document check error: %s", exc)
+
+
+async def _periodic_cleanup() -> None:
+    """Periodically purge stale entries from in-memory caches."""
+    while True:
+        try:
+            await asyncio.sleep(300)  # every 5 minutes
+            _cleanup_rate_limiter()
+            from services.notifications import cleanup_stale_sse
+
+            cleanup_stale_sse()
+        except asyncio.CancelledError:
+            break
+        except Exception as exc:
+            logger.error("Periodic cleanup error: %s", exc)
 
 
 async def _requeue_pending_documents() -> None:
@@ -102,11 +115,14 @@ async def lifespan(app: FastAPI):
             "Embedding model not available — will load on demand", exc_info=True
         )
     await _requeue_pending_documents()
-    periodic_task = asyncio.create_task(_periodic_document_check())
+    periodic_doc_task = asyncio.create_task(_periodic_document_check())
+    periodic_cleanup_task = asyncio.create_task(_periodic_cleanup())
     yield
-    periodic_task.cancel()
+    periodic_doc_task.cancel()
+    periodic_cleanup_task.cancel()
     with contextlib.suppress(asyncio.CancelledError):
-        await periodic_task
+        await periodic_doc_task
+        await periodic_cleanup_task
 
 
 app = FastAPI(lifespan=lifespan)
@@ -148,9 +164,21 @@ async def security_headers(request: Request, call_next):
 # Generous ceiling — meant to stop abuse/runaway scripts, not real usage.
 # Note: per-process only; use a shared store (e.g. Redis) if scaled out.
 _WRITE_METHODS = {"POST", "PATCH", "PUT", "DELETE"}
-_WRITE_RATE_WINDOW = 60.0
-_WRITE_RATE_MAX = 240
+_WRITE_RATE_WINDOW = settings.write_rate_window
+_WRITE_RATE_MAX = settings.write_rate_max
 _write_timestamps: dict[str, list[float]] = {}
+
+
+def _cleanup_rate_limiter() -> None:
+    """Periodically purge stale entries from the rate limiter."""
+    now = monotonic()
+    stale_keys = [
+        k
+        for k, ts in _write_timestamps.items()
+        if not ts or now - ts[-1] > _WRITE_RATE_WINDOW * 2
+    ]
+    for k in stale_keys:
+        del _write_timestamps[k]
 
 
 @app.middleware("http")

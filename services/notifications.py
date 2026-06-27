@@ -123,12 +123,17 @@ class NotificationService:
 
 # In-memory SSE event bus for real-time notifications
 _sse_subscribers: dict[int, list] = {}
+_pending_events: dict[int, list[str]] = {}
+_last_activity: dict[int, float] = {}  # user_id -> last heartbeat timestamp
+_SSE_STALE_TIMEOUT = 120.0  # seconds without heartbeat = stale
 
 
 def subscribe_to_sse(user_id: int) -> int:
     import random
+    from time import monotonic
     sub_id = random.randint(1, 10**9)
     _sse_subscribers.setdefault(user_id, []).append(sub_id)
+    _last_activity[user_id] = monotonic()
     return sub_id
 
 
@@ -136,6 +141,25 @@ def unsubscribe_from_sse(user_id: int, sub_id: int) -> None:
     subs = _sse_subscribers.get(user_id, [])
     if sub_id in subs:
         subs.remove(sub_id)
+    if not _sse_subscribers.get(user_id):
+        _sse_subscribers.pop(user_id, None)
+        _last_activity.pop(user_id, None)
+
+
+def refresh_sse_activity(user_id: int) -> None:
+    from time import monotonic
+    _last_activity[user_id] = monotonic()
+
+
+def cleanup_stale_sse() -> None:
+    """Remove subscribers that haven't had activity in _SSE_STALE_TIMEOUT seconds."""
+    from time import monotonic
+    now = monotonic()
+    stale = [uid for uid, last in _last_activity.items() if now - last > _SSE_STALE_TIMEOUT]
+    for uid in stale:
+        _sse_subscribers.pop(uid, None)
+        _pending_events.pop(uid, None)
+        _last_activity.pop(uid, None)
 
 
 async def emit_notification_event(user_id: int, notification: models.Notification) -> None:
@@ -152,9 +176,6 @@ async def emit_notification_event(user_id: int, notification: models.Notificatio
     })
     # Store in a request-local way — the SSE generator reads this
     _pending_events.setdefault(user_id, []).append(payload)
-
-
-_pending_events: dict[int, list[str]] = {}
 
 
 async def get_pending_events(user_id: int) -> list[str]:

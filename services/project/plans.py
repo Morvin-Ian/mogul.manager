@@ -96,6 +96,7 @@ class PlanService:
         self.db.add(plan)
         await self.db.flush()  # get plan.id before creating steps
 
+        steps_created: list[models.PlanStep] = []
         for order, raw in enumerate(raw_steps):
             task_spec = raw.get("task") or {}
             linked_task_id = await self._resolve_task(task_spec, project_id, user_id)
@@ -118,11 +119,28 @@ class PlanService:
                 step_order=order,
                 priority=priority,
                 status=StepStatus.PENDING,
-                dependencies=raw.get("depends_on") or [],
+                dependencies=[],  # resolved after flush
                 linked_task_id=linked_task_id,
                 agent_notes=None,
             )
             self.db.add(step)
+            steps_created.append(step)
+
+        await self.db.flush()  # get step IDs
+
+        # Resolve dependencies: convert 0-based indices to step UUIDs
+        for idx, step in enumerate(steps_created):
+            raw_deps = raw_steps[idx].get("depends_on") or []
+            resolved = []
+            for dep_idx in raw_deps:
+                if isinstance(dep_idx, int) and 0 <= dep_idx < len(steps_created):
+                    dep_step = await self.db.execute(
+                        select(models.PlanStep.uuid).where(models.PlanStep.id == steps_created[dep_idx].id)
+                    )
+                    dep_uuid = dep_step.scalar()
+                    if dep_uuid:
+                        resolved.append(dep_uuid)
+            step.dependencies = resolved
 
         await self.db.commit()
         return await self._reload(plan.id)
@@ -188,6 +206,16 @@ class PlanService:
         await self.db.delete(step)
         await self.db.commit()
         await self._sync_plan_status(plan_id)
+
+    async def reorder_steps(self, plan: models.Plan, step_order_pairs: list[tuple[str, int]]) -> models.Plan:
+        """Reorder steps: accepts list of (step_uuid, new_order) pairs."""
+        uuid_to_step = {s.uuid: s for s in plan.steps}
+        for step_uuid, new_order in step_order_pairs:
+            step = uuid_to_step.get(step_uuid)
+            if step:
+                step.step_order = new_order
+        await self.db.commit()
+        return await self._reload(plan.id)
 
     # ── Internals ─────────────────────────────────────────────────────────────
 
@@ -277,6 +305,9 @@ class PlanService:
             "in_progress": "in_progress",
             "completed": "completed",
             "pending": "todo",
+            "review": "review",
+            "blocked": "blocked",
+            "skipped": "completed",
         }
         target = STEP_TO_TASK.get(step.status.value)
         if not target or not step.linked_task_id:

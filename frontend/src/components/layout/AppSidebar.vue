@@ -64,6 +64,18 @@
             </router-link>
 
             <router-link
+                to="/plans"
+                active-class="active"
+                class="nav-item"
+                title="Plans"
+            >
+                <span class="icon-wrap">
+                    <font-awesome-icon :icon="['fas', 'diagram-project']" />
+                </span>
+                <span class="nav-label">Plans</span>
+            </router-link>
+
+            <router-link
                 to="/documents"
                 active-class="active"
                 class="nav-item"

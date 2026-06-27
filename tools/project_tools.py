@@ -1,4 +1,5 @@
 import json
+from typing import cast
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -122,7 +123,7 @@ def _serialize(project: models.Project) -> dict:
 
 
 async def handle(name: str, args: dict, db: AsyncSession) -> str:
-    svc = ProjectService(db)  # type: ignore[arg-type]
+    svc = ProjectService(cast(AsyncSession, db))
 
     if name == "create_project":
         inp = ProjectCreate(**args)

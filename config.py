@@ -50,5 +50,22 @@ class Settings(BaseSettings):
     google_client_secret: SecretStr = SecretStr("")
     google_redirect_url: str = ""
 
+    # Document processing thresholds
+    stuck_threshold_seconds: int = 900
+    max_processing_attempts: int = 3
+    document_check_interval: int = 1800
 
-settings = Settings()  # type: ignore[call-arg]
+    # Context builder limits
+    task_display_limit: int = 12
+    doc_display_limit: int = 10
+    memory_limit: int = 15
+
+    # AI agent limits
+    max_tool_iterations: int = 5
+
+    # Rate limiter
+    write_rate_max: int = 240
+    write_rate_window: float = 60.0
+
+
+settings = Settings()

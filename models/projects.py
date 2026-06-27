@@ -76,8 +76,8 @@ class Project(TimestampedModel):
         try:
             if 'workspace' in inspect(self).unloaded:
                 return None
-        except Exception:
-            pass
+        except AttributeError:
+            return None
         return self.workspace.uuid if self.workspace else None
 
     @property
@@ -85,6 +85,6 @@ class Project(TimestampedModel):
         try:
             if 'workspace' in inspect(self).unloaded:
                 return None
-        except Exception:
-            pass
+        except AttributeError:
+            return None
         return self.workspace.title if self.workspace else None

@@ -1,4 +1,5 @@
 import json
+from typing import cast
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -216,7 +217,7 @@ async def _resolve_assignee_email(
 
 
 async def handle(name: str, args: dict, db: AsyncSession) -> str:
-    svc = TaskService(db)  # type: ignore[arg-type]
+    svc = TaskService(cast(AsyncSession, db))
 
     if name == "create_task":
         args, err = await _resolve_assignee_email(args, db)

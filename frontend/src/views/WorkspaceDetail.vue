@@ -198,6 +198,22 @@
       />
       <ProjectList :workspace-id="currentWorkspace.id" />
 
+      <button v-if="!showReports" class="btn btn-sm toggle-reports-btn" @click="showReports = true">
+        <font-awesome-icon :icon="['fas', 'chart-simple']" />
+        Workspace Reports
+      </button>
+      <template v-if="showReports">
+        <div class="reports-section">
+          <div class="reports-section-header">
+            <h3>Workspace Reports</h3>
+            <button class="btn btn-sm" @click="showReports = false">
+              <font-awesome-icon :icon="['fas', 'xmark']" />
+            </button>
+          </div>
+          <WorkspaceReportPanel :workspace-id="currentWorkspace.id" />
+        </div>
+      </template>
+
     </template>
 
     <WorkspaceForm
@@ -242,6 +258,7 @@ import WorkspaceCard from '../components/workspace/WorkspaceCard.vue'
 import WorkspaceForm from '../components/workspace/WorkspaceForm.vue'
 import ProjectList from '../components/project/ProjectList.vue'
 import AiNudge from '../components/common/AiNudge.vue'
+import WorkspaceReportPanel from '../components/reports/WorkspaceReportPanel.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -274,6 +291,8 @@ const journeyWsTitle = ref('')
 function skipPlanJourney() {
   showPlanJourney.value = false
 }
+const showReports = ref(false)
+
 const workspaceId = computed(() => {
   const id = route.params.id
   return id ? (id as string) : null
@@ -654,6 +673,34 @@ async function handleDelete() {
   gap: 8px;
   flex-shrink: 0;
   align-items: center;
+}
+
+.toggle-reports-btn {
+  margin-top: 24px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.reports-section {
+  margin-top: 20px;
+  padding: 20px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.reports-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.reports-section-header h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
 }
 
 /* ── Skeleton ── */
