@@ -12,7 +12,7 @@
 
 An AI-powered project management tool where you can manage workspaces, projects, and tasks
 through a chat interface. The AI agent can create, update, list, and search tasks and projects
-directly from conversation — no manual form-filling needed.
+directly from conversation — no manual form-filling required.
 
 ---
 
