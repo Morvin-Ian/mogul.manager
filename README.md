@@ -90,6 +90,15 @@ docker compose down -v
 
 ---
 
+## Deployment
+
+`docker-compose.prod.yml` builds the SPA to static files and serves it behind
+nginx, alongside a single-worker API. It is sized to share a VPS with another
+stack: nothing binds a public port, everything sits on loopback or an internal
+network. See [DEPLOY.md](DEPLOY.md) for the port map and the first-deploy steps.
+
+---
+
 ## Running locally (without Docker)
 
 ### Backend
