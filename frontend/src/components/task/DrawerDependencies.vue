@@ -130,7 +130,6 @@ async function handleAdd(t: Task) {
     await store.add(props.taskUuid, t.uuid)
     toast.success(`Now depends on "${t.title}"`)
     searchQuery.value = ''
-    searchResults.value = []
     emit('countChange', store.dependsOn.length)
   } catch (e: any) {
     toast.error(e?.message || 'Failed to add dependency')
