@@ -1,0 +1,96 @@
+# Production stack for mogul.manager, sized to share a VPS with the
+# kenyan-fantasy-league stack.
+#
+# Nothing here binds a public port. KFL's nginx is the single edge on 80/443;
+# it reaches mogul-web by container name over the shared `edge` network. The
+# loopback bindings below exist only for debugging over an SSH tunnel.
+#
+#   Host bindings          mogul.manager        kenyan-fantasy-league
+#   ─────────────────────────────────────────────────────────────────
+#   80, 443                —                    nginx
+#   127.0.0.1:8080         mogul-web            —
+#   127.0.0.1:8001         mogul-api            —
+#   127.0.0.1:5433         mogul-db             —
+#   127.0.0.1:5432         —                    postgres-db
+#   127.0.0.1:4444         —                    selenium
+
+# Pinned so this stack can never share state with the dev docker-compose.yml,
+# which would otherwise resolve to the same project name (mogulmanager) and
+# therefore the same pgdata volume.
+name: mogul-prod
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: ./docker/production/api/Dockerfile
+    container_name: mogul-api
+    restart: unless-stopped
+    command: /start
+    env_file:
+      - .env.prod
+    environment:
+      - DATABASE_URL=postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@mogul-db:5432/${POSTGRES_DB}
+    ports:
+      # Loopback only — the SPA reaches the API through mogul-web, not this.
+      - "127.0.0.1:8001:8000"
+    volumes:
+      # Persist the fastembed model cache across rebuilds.
+      - embed_cache:/opt/fastembed_cache
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - mogul-net
+
+  web:
+    build:
+      context: .
+      dockerfile: ./docker/production/client/Dockerfile
+    container_name: mogul-web
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:80"
+    depends_on:
+      - api
+    networks:
+      - mogul-net
+      # Joined so KFL's nginx can proxy_pass to http://mogul-web.
+      - edge
+
+  db:
+    image: pgvector/pgvector:pg17
+    container_name: mogul-db
+    restart: unless-stopped
+    ports:
+      # Loopback only: psql from your laptop via
+      #   ssh -L 5433:localhost:5433 <host>
+      - "127.0.0.1:5433:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - mogul-net
+
+networks:
+  mogul-net:
+    driver: bridge
+  edge:
+    external: true
+    # Docker prefixes compose networks with the project name, so KFL's
+    # `fpl-vue` network is really `kenyan-fantasy-league_fpl-vue`. Confirm with
+    # `docker network ls` and override via EDGE_NETWORK in .env.prod if needed.
+    name: ${EDGE_NETWORK:-kenyan-fantasy-league_fpl-vue}
+
+volumes:
+  pgdata:
+  embed_cache:
