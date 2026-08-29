@@ -37,7 +37,7 @@ class User(TimestampedModel):
     @property
     def profile_path(self) -> str | None:
         if self.profile_pic:
-            return f"https://{settings.s3_custom_domain}/profile_pics/{self.profile_pic}"
+            return f"{settings.s3_public_base_url}/profile_pics/{self.profile_pic}"
         return None
 
 

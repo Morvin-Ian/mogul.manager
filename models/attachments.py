@@ -32,7 +32,7 @@ class TaskAttachment(TimestampedModel):
 
     @property
     def url(self) -> str:
-        return f"https://{settings.s3_custom_domain}/{self.storage_key}"
+        return f"{settings.s3_public_base_url}/{self.storage_key}"
 
     @property
     def uploader_name(self) -> str | None:

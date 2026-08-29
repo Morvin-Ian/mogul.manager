@@ -26,6 +26,8 @@ class Settings(BaseSettings):
     s3_access_key_id: SecretStr
     s3_secret_access_key: SecretStr
     s3_bucket_name: str
+    # Accepted with or without a scheme; read it back via s3_public_base_url,
+    # which normalises both forms into a usable origin.
     s3_custom_domain: str
     s3_endpoint_url: str = ""
     # R2 only accepts auto/wnam/enam/weur/eeur/apac/oc — an ambient
@@ -66,6 +68,14 @@ class Settings(BaseSettings):
     # Rate limiter
     write_rate_max: int = 240
     write_rate_window: float = 60.0
+
+    @property
+    def s3_public_base_url(self) -> str:
+        """Public origin for stored objects, with no trailing slash."""
+        domain = self.s3_custom_domain.strip().rstrip("/")
+        if not domain.startswith(("http://", "https://")):
+            domain = f"https://{domain}"
+        return domain
 
 
 settings = Settings()

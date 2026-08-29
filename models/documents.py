@@ -68,7 +68,7 @@ class Document(TimestampedModel):
     @property
     def url(self) -> str | None:
         if self.storage_key:
-            return f"https://{settings.s3_custom_domain}/{self.storage_key}"
+            return f"{settings.s3_public_base_url}/{self.storage_key}"
         return None
 
     @property
