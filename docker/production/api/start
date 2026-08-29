@@ -1,0 +1,12 @@
+#!/bin/sh
+set -e
+
+uv run alembic upgrade head
+
+# Single worker on purpose. main.py's lifespan owns process-local state that
+# does not survive being forked: the periodic document requeue loop, the
+# in-memory write rate limiter, and the SSE subscriber registry that
+# /api/notifications/stream fans out over. Extra workers would each requeue
+# the same documents and would only see the events raised in their own
+# process. Scale by putting a shared broker behind those first.
+exec uv run fastapi run main.py --host 0.0.0.0 --port 8000 --workers 1
