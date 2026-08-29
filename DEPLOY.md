@@ -114,38 +114,14 @@ The API image rebuild re-downloads the embedding model only if
 
 ## Monitoring (maajun)
 
-`maajun add-repo` registers a repo but writes no `[github.repos.deployment]`
-block, so the daemon has no idea where the app runs, which containers are its
-own, or where to read logs — it can only react to what shows up on GitHub.
-`scripts/maajun-register.py` fills that in. Run it on the VPS:
+`maajun add-repo Morvin-Ian/mogul.manager` on the VPS configures this stack —
+it runs the same discovery `maajun setup` runs, so the deployment block (path,
+port, containers, logs) is filled in from the host rather than by hand.
 
-```sh
-./scripts/maajun-register.py \
-  --repo Morvin-Ian/mogul.manager \
-  --path /root/mogul.manager \
-  --runs "docker compose --env-file .env.prod -f docker-compose.prod.yml" \
-  --stack "FastAPI + Uvicorn (single worker), Vue 3 SPA built static and served by nginx, PostgreSQL 17 + pgvector" \
-  --port 8080 \
-  --container mogul-web --container mogul-api --container mogul-db
-```
-
-Add `--dry-run` first to see the diff. It backs up the config, writes
-atomically, and re-parses the result before replacing the original.
-
-Three values differ from the kenyan-fantasy-league entry, deliberately:
-
-- `--runs` carries `--env-file .env.prod -f docker-compose.prod.yml`. A bare
-  `docker compose` in that directory picks up the *dev* compose file and
-  interpolates blank Postgres credentials.
-- `--port 8080`, not 80. Nothing here binds a public port; `mogul-web` is on
-  `127.0.0.1:8080`, where `/health` answers.
-- No `--log-file`. This stack logs to stdout, captured by Docker; there are no
-  on-disk logs like KFL's `celery.log`. It reads logs via the container names.
-
-`mode` is left at `suggest`. Fix mode wants a `--test-command` to gate on, and
-this repo has no test suite yet; until it does, the daemon would be proposing
-patches with nothing to check them against — on a stack that shares an nginx
-edge with fantasykenya.com.
+`mode` stays `suggest` until this repo has a test suite. Fix mode gates on a
+`--test-command`, and there is nothing here to point one at yet; without it the
+daemon would propose patches with nothing to check them against, on a stack
+that shares an nginx edge with fantasykenya.com.
 
 ---
 
