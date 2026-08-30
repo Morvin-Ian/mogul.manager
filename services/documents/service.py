@@ -18,11 +18,13 @@ from sqlalchemy.orm import selectinload
 from starlette.concurrency import run_in_threadpool
 
 import models
+from agents.providers import ResolvedProvider
 from config import settings
 from database import AsyncSessionLocal, get_db
 from models.collaboration import WorkspaceMember
 from models.documents import Document, DocumentChunk, DocumentStatus, DocumentType
 from models.projects import Project
+from services.ai_keys import resolve_for_user
 from services.documents.chunker import chunk_text
 from services.documents.embeddings import embed_texts
 from services.documents.text_extractor import extract_text
@@ -303,7 +305,12 @@ async def _run_pipeline(db: AsyncSession, doc: Document) -> None:
         )
 
         t = time.perf_counter()
-        doc.summary = await _generate_summary(text[:SUMMARY_PREVIEW_CHARS], doc.title)
+        # The summary is billed to whoever uploaded the document, so it runs
+        # on their provider rather than the server's.
+        provider = await resolve_for_user(doc.user_id, db)
+        doc.summary = await _generate_summary(
+            text[:SUMMARY_PREVIEW_CHARS], doc.title, provider
+        )
         logger.info("[doc=%s] Summary generated %.2fs", doc.id, time.perf_counter() - t)
 
         doc.status = DocumentStatus.ready
@@ -320,14 +327,16 @@ async def _run_pipeline(db: AsyncSession, doc: Document) -> None:
     await db.commit()
 
 
-async def _generate_summary(text_preview: str, title: str) -> str:
+async def _generate_summary(
+    text_preview: str, title: str, provider: ResolvedProvider
+) -> str:
     try:
         client = AsyncOpenAI(
-            api_key=settings.deepseek_api_key.get_secret_value(),
-            base_url=settings.deepseek_base_url,
+            api_key=provider.api_key,
+            base_url=provider.base_url,
         )
         resp = await client.chat.completions.create(
-            model=settings.deepseek_model,
+            model=provider.model,
             messages=[
                 {
                     "role": "system",

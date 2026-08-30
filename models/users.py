@@ -11,6 +11,7 @@ from database import Base
 from models.base import TimestampedModel
 
 if TYPE_CHECKING:
+    from .ai_keys import UserAIKey
     from .chat import Conversation
     from .workspaces import Workspace
 
@@ -32,6 +33,9 @@ class User(TimestampedModel):
     )
     conversations: Mapped[list["Conversation"]] = relationship(
         "Conversation", back_populates="user", cascade="all, delete-orphan"
+    )
+    ai_keys: Mapped[list["UserAIKey"]] = relationship(
+        "UserAIKey", back_populates="user", cascade="all, delete-orphan"
     )
 
     @property

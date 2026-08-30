@@ -4,7 +4,7 @@ import logging
 from openai import AsyncOpenAI
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from config import settings
+from agents.providers import ResolvedProvider, env_provider
 from services.memory import MemoryService
 from utils.prompts import MEMORY_EXTRACTION_SYSTEM
 
@@ -28,12 +28,20 @@ def _is_duplicate(content: str, existing: list) -> bool:
 
 
 class MemoryExtractor:
-    def __init__(self) -> None:
+    def __init__(self, provider: ResolvedProvider | None = None) -> None:
+        self.provider = provider or env_provider()
         self.client = AsyncOpenAI(
-            api_key=settings.deepseek_api_key.get_secret_value(),
-            base_url=settings.deepseek_base_url,
+            api_key=self.provider.api_key,
+            base_url=self.provider.base_url,
         )
-        self.model = settings.deepseek_model
+        self.model = self.provider.model
+
+    @classmethod
+    async def for_user(cls, user_id: int, db: AsyncSession) -> "MemoryExtractor":
+        """Extraction runs on the same provider the user chats with."""
+        from services.ai_keys import resolve_for_user
+
+        return cls(await resolve_for_user(user_id, db))
 
     async def extract_and_store(
         self,

@@ -22,6 +22,8 @@ directly from conversation — no manual form-filling required.
 - **Task management** — create and track tasks with priority, status, estimated hours, and due dates
 - **AI chat** — talk to the agent to take actions (e.g. "create a task for the login bug in the API project") and it will call the right tools and confirm what it did
 - **Streaming responses** — agent replies stream token by token in real time
+- **Bring your own AI key** — each user picks a provider (DeepSeek, Straitly or BAI)
+  and stores their own API key under Profile → AI Provider; keys are encrypted at rest
 
 ---
 
@@ -30,7 +32,9 @@ directly from conversation — no manual form-filling required.
 ### Prerequisites
 
 - [Docker](https://docs.docker.com/get-docker/) & [Docker Compose](https://docs.docker.com/compose/install/)
-- A [DeepSeek](https://platform.deepseek.com/) API key
+- A [DeepSeek](https://platform.deepseek.com/) API key for the server-wide default.
+  Users can override it in the UI with their own key for DeepSeek,
+  [Straitly](https://straitly.ai/) or [BAI](https://chat.b.ai).
 
 ### Setup
 

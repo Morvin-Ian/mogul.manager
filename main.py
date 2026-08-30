@@ -11,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy import or_, select
 
+from agents.providers import ProviderConfigError
 from config import settings
 from database import AsyncSessionLocal
 from models.documents import Document, DocumentStatus
@@ -24,7 +25,7 @@ from routes.notifications import router as notifications_router
 from routes.project import milestones_router, plans_router, tags_router, tasks_router
 from routes.project import router as projects_router
 from routes.reports import router as reports_router
-from routes.user import google_router
+from routes.user import ai_keys_router, google_router
 from routes.user import router as users_router
 from routes.workspace import invitations_router, members_router
 from routes.workspace import router as workspaces_router
@@ -202,6 +203,12 @@ async def write_rate_limit(request: Request, call_next):
     return await call_next(request)
 
 
+@app.exception_handler(ProviderConfigError)
+async def provider_config_error_handler(_: Request, exc: ProviderConfigError):
+    """An unset or unusable AI provider is the user's to fix, not a crash."""
+    return JSONResponse(status_code=400, content={"detail": str(exc)})
+
+
 @app.get("/health")
 async def healthcheck():
     """Liveness/readiness probe — verifies the DB connection."""
@@ -217,6 +224,7 @@ async def healthcheck():
 
 app.include_router(users_router)
 app.include_router(google_router)
+app.include_router(ai_keys_router)
 app.include_router(workspaces_router)
 app.include_router(projects_router)
 app.include_router(tasks_router)

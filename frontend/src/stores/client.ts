@@ -104,6 +104,10 @@ export function post<T>(endpoint: string, body?: unknown): Promise<T> {
   return request<T>(endpoint, { method: 'POST', body: JSON.stringify(body) })
 }
 
+export function put<T>(endpoint: string, body?: unknown): Promise<T> {
+  return request<T>(endpoint, { method: 'PUT', body: JSON.stringify(body) })
+}
+
 export function patch<T>(endpoint: string, body?: unknown): Promise<T> {
   return request<T>(endpoint, { method: 'PATCH', body: JSON.stringify(body) })
 }

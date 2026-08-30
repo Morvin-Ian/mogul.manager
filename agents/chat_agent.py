@@ -10,6 +10,7 @@ from openai.types.chat.chat_completion_message_tool_call import (
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from agents.providers import ProviderConfigError, ResolvedProvider, env_provider
 from config import settings
 from tools import ALL_TOOLS, dispatch
 from utils.prompts import PLANNER_SYSTEM, SUGGEST_PROMPTS, build_chat_system_prompt
@@ -18,6 +19,8 @@ logger = logging.getLogger(__name__)
 
 _MAX_TOOL_ITERATIONS = settings.max_tool_iterations
 
+# DeepSeek leaks its tool-call markup into message content sometimes. The
+# gateways can serve DeepSeek models too, so this runs for every provider.
 _DSML_RE = re.compile(r"<\|+DSML\|+>.*?</\|+DSML\|+tool_calls>", re.DOTALL)
 _DSML_OPEN_RE = re.compile(r"<\|+DSML\|+[^>]*>")
 
@@ -45,13 +48,32 @@ def _strip_dsml(text: str) -> str:
     return cleaned
 
 
-class DeepSeekAgent:
-    def __init__(self):
+class ChatAgent:
+    """The tool-calling agent, pointed at whichever provider a user picked.
+
+    Every supported provider speaks the OpenAI chat-completions protocol, so
+    only the key, endpoint and model differ between them.
+    """
+
+    def __init__(self, provider: ResolvedProvider | None = None):
+        self.provider = provider or env_provider()
+        if not self.provider.api_key:
+            raise ProviderConfigError(
+                "No AI provider is configured. Add an API key under "
+                "Profile → AI Provider."
+            )
         self.client = AsyncOpenAI(
-            api_key=settings.deepseek_api_key.get_secret_value(),
-            base_url=settings.deepseek_base_url,
+            api_key=self.provider.api_key,
+            base_url=self.provider.base_url,
         )
-        self.model = settings.deepseek_model
+        self.model = self.provider.model
+
+    @classmethod
+    async def for_user(cls, user_id: int, db: AsyncSession) -> "ChatAgent":
+        """An agent using this user's own credentials, or the server's."""
+        from services.ai_keys import resolve_for_user
+
+        return cls(await resolve_for_user(user_id, db))
 
     def _build_system_prompt(self, user_context: str = "") -> str:
         return build_chat_system_prompt(user_context)

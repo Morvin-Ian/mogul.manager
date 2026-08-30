@@ -43,9 +43,14 @@ class Settings(BaseSettings):
 
     frontend_url: str = "http://localhost:3000"
 
+    # Server-wide fallback, used for any user who has not set their own key.
     deepseek_api_key: SecretStr = SecretStr("")
     deepseek_base_url: str = "https://api.deepseek.com"
     deepseek_model: str = "deepseek-chat"
+
+    # Encrypts the provider API keys users store. Defaults to secret_key;
+    # set it explicitly so rotating the auth secret does not orphan them.
+    ai_encryption_key: SecretStr | None = None
 
     # Google OAuth
     google_client_id: str = ""

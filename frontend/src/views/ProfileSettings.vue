@@ -47,6 +47,9 @@
           <button class="pc-action-btn" title="Security" @click="scrollTo('security-section')">
             <font-awesome-icon :icon="['fas', 'lock']" />
           </button>
+          <button class="pc-action-btn" title="AI provider" @click="scrollTo('ai-section')">
+            <font-awesome-icon :icon="['fas', 'robot']" />
+          </button>
           <button class="pc-action-btn" title="Danger zone" @click="scrollTo('danger-section')">
             <font-awesome-icon :icon="['fas', 'circle-exclamation']" />
           </button>
@@ -195,6 +198,9 @@
           </form>
         </div>
 
+        <!-- AI provider & API keys -->
+        <AiProviderPanel />
+
         <!-- Danger Zone -->
         <div class="settings-card settings-card-danger" id="danger-section">
           <h3 class="settings-card-title danger-title">Danger Zone</h3>
@@ -238,6 +244,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import AiProviderPanel from '../components/settings/AiProviderPanel.vue'
 
 const auth = useAuthStore()
 const router = useRouter()

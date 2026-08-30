@@ -9,6 +9,7 @@ dependencies = [
     "aiosqlite>=0.22.1",
     "alembic>=1.18.4",
     "boto3>=1.43.2",
+    "cryptography>=42.0.0",
     "fastapi[standard]>=0.136.1",
     "fastembed>=0.3.0",
     "greenlet>=3.5.0",

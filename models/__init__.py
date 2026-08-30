@@ -1,3 +1,4 @@
+from .ai_keys import UserAIKey
 from .attachments import TaskAttachment
 from .activity import ActivityLog
 from .base import TimestampedModel
@@ -47,6 +48,7 @@ __all__ = [
     "Task",
     "TaskPriority",
     "TaskStatus",
+    "UserAIKey",
     "Workspace",
     "WorkspaceMember",
 ]

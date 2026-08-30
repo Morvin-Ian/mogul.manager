@@ -7,10 +7,11 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from agents.deepseek import DeepSeekAgent
+from agents.chat_agent import ChatAgent
 from agents.memory_extractor import MemoryExtractor
-from database import AsyncSessionLocal
+from database import AsyncSessionLocal, get_db
 from schemas.chat.chat import (
     ConversationCreate,
     ConversationDetail,
@@ -45,14 +46,6 @@ def _check_rate_limit(user_id: int) -> bool:
         return False
     _user_timestamps[user_id].append(now)
     return True
-
-
-def get_deepseek() -> DeepSeekAgent:
-    return DeepSeekAgent()
-
-
-def get_extractor() -> MemoryExtractor:
-    return MemoryExtractor()
 
 
 @router.post("/conversations", response_model=ConversationRead, status_code=201)
@@ -141,6 +134,10 @@ async def send_message(
             status_code=429, detail="Too many messages. Please wait a moment."
         )
 
+    # Built before the stream opens: once the response has started there is
+    # no status code left to report a missing API key with.
+    agent = await ChatAgent.for_user(current_user.id, service.db)
+
     await service.add_message(conversation_id, "user", message.content)
 
     if conv.title == "New Conversation":
@@ -163,7 +160,6 @@ async def send_message(
 
         context = await service.get_context(conversation_id)
 
-        agent = get_deepseek()
         async for event in agent.stream_response(
             context,
             service.db,
@@ -184,7 +180,7 @@ async def send_message(
         async def _extract_bg():
             try:
                 async with AsyncSessionLocal() as bg_db:
-                    extractor = get_extractor()
+                    extractor = await MemoryExtractor.for_user(current_user.id, bg_db)
                     await extractor.extract_and_store(
                         user_id=current_user.id,
                         conversation_id=conversation_id,
@@ -201,8 +197,12 @@ async def send_message(
 
 
 @router.post("/suggest")
-async def suggest_field(data: SuggestRequest, _: CurrentUser) -> SuggestResponse:
-    agent = get_deepseek()
+async def suggest_field(
+    data: SuggestRequest,
+    current_user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+) -> SuggestResponse:
+    agent = await ChatAgent.for_user(current_user.id, db)
     suggestion = await agent.suggest_field(
         data.context_type, data.title.strip(), data.field
     )

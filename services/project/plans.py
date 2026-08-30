@@ -80,8 +80,10 @@ class PlanService:
             goal_parts.append(f"Additional context: {description}")
         goal = "\n".join(goal_parts)
 
-        from agents.deepseek import DeepSeekAgent
-        raw_steps = await DeepSeekAgent().decompose(
+        from agents.chat_agent import ChatAgent
+
+        agent = await ChatAgent.for_user(user_id, self.db)
+        raw_steps = await agent.decompose(
             goal=goal,
             existing_tasks=existing_tasks,
         )

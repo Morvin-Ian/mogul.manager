@@ -27,6 +27,30 @@ export interface TokenResponse {
   token_type: string;
 }
 
+export interface AIProvider {
+  slug: string;
+  label: string;
+  description: string;
+  base_url: string;
+  default_model: string;
+  model_example: string;
+  signup_url: string;
+  catalog_url: string;
+  /** Gateways front many vendors, so they cannot default a model. */
+  requires_model: boolean;
+  configured: boolean;
+  is_active: boolean;
+  /** Last four characters of the stored key — never the key itself. */
+  key_hint: string | null;
+  model: string | null;
+  updated_at: string | null;
+}
+
+export interface AIKeyTestResult {
+  ok: boolean;
+  message: string;
+}
+
 export interface Workspace {
   id: number;
   uuid: string;
