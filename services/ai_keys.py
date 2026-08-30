@@ -26,6 +26,7 @@ from utils.crypto import decrypt_secret, encrypt_secret, key_hint
 logger = logging.getLogger(__name__)
 
 VALIDATE_TIMEOUT = 15.0
+MIN_VALIDATION_TOKENS = 16
 
 
 def resolve_model(spec: ProviderSpec, model: str | None) -> str:
@@ -175,9 +176,9 @@ async def validate_credentials(
 ) -> tuple[bool, str]:
     """Ask the provider whether the key works. Returns (ok, message).
 
-    A one-token completion rather than a model listing: it proves the key can
-    actually run the model that was chosen, which is what the user cares
-    about, and every one of these providers speaks it.
+    The smallest possible completion rather than a model listing: it proves
+    the key can actually run the model that was chosen, which is what the
+    user cares about, and every one of these providers speaks it.
     """
     spec = get_spec(provider)
     if spec is None:
@@ -194,7 +195,10 @@ async def validate_credentials(
         await client.chat.completions.create(
             model=chosen,
             messages=[{"role": "user", "content": "ping"}],
-            max_tokens=1,
+            # Not 1: BAI rejects anything below 2, and reasoning models
+            # spend the budget on thinking before emitting a token. We only
+            # care that the call is accepted, never about the reply.
+            max_tokens=MIN_VALIDATION_TOKENS,
         )
         return True, f"Connected to {spec.label} using {chosen}."
     except APIError as exc:
